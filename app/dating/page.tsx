@@ -1,83 +1,15 @@
 // app/dating/page.tsx
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
-import { Search, Filter, MapPin, Gift, MessageCircle } from 'lucide-react'
+import { Search, Filter, MapPin, Gift, MessageCircle, AlertCircle, Lock } from 'lucide-react'
 import { DatingCard } from '../components/cards/DatingCard'
 import { MatchNotificationModal } from '../components/common/MatchNotificationModal'
 import type { ProfileData } from '../components/cards/EscortCard'
 import type { MatchNotification } from '../components/types/chat'
-
-// Mock data for demonstration
-const MOCK_PROFILES: ProfileData[] = [
-    {
-        id: '1',
-        name: 'Jessica',
-        age: 28,
-        distance: 2,
-        bio: 'Avid traveler, book lover, and coffee enthusiast. Looking for someone to share adventures with.',
-        photos: ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
-        isVerified: true,
-        isLiked: false,
-        tags: ['Travel', 'Reading', 'Photography']
-    },
-    {
-        id: '2',
-        name: 'Michael',
-        age: 32,
-        distance: 5,
-        bio: 'Fitness instructor and foodie. Enjoys hiking and exploring new restaurants.',
-        photos: ['https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=800&q=80'],
-        isVerified: true,
-        isLiked: true,
-        tags: ['Fitness', 'Food', 'Hiking']
-    },
-    {
-        id: '3',
-        name: 'Sophia',
-        age: 25,
-        distance: 7,
-        bio: 'Med student by day, musician by night. Looking for someone to share laughs with.',
-        photos: ['https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&q=80'],
-        isVerified: false,
-        isLiked: false,
-        tags: ['Music', 'Medicine', 'Art']
-    },
-    {
-        id: '4',
-        name: 'David',
-        age: 29,
-        distance: 10,
-        bio: 'Software engineer who loves hiking, photography, and trying new craft beers.',
-        photos: ['https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800&q=80'],
-        isVerified: true,
-        isLiked: false,
-        tags: ['Tech', 'Hiking', 'Photography']
-    },
-    {
-        id: '5',
-        name: 'Emily',
-        age: 27,
-        distance: 15,
-        bio: 'Marketing professional with a passion for yoga and travel. Looking for genuine connections.',
-        photos: ['https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&q=80'],
-        isVerified: true,
-        isLiked: false,
-        tags: ['Marketing', 'Yoga', 'Travel']
-    },
-    {
-        id: '6',
-        name: 'James',
-        age: 31,
-        distance: 8,
-        bio: 'Chef and dog lover. Enjoys outdoor activities and cooking for friends.',
-        photos: ['https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80'],
-        isVerified: false,
-        isLiked: true,
-        tags: ['Cooking', 'Dogs', 'Outdoors']
-    }
-]
+import { useDatingProfiles, useSubscription, useAuth } from '@/lib/hooks/butical-api-hooks'
+import type { DatingProfile } from '@/services/butical-api-service'
 
 const CompactReferralBanner = () => (
     <div className="bg-gradient-to-r from-pink-600 to-purple-600 text-white p-3 rounded-lg flex justify-between items-center mb-4">
@@ -95,61 +27,122 @@ const CompactReferralBanner = () => (
 )
 
 export default function DatingPage() {
-    const [profiles, setProfiles] = useState<ProfileData[]>([])
     const [isFilterOpen, setIsFilterOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
-    const [isLoading, setIsLoading] = useState(true)
     const [activeView, setActiveView] = useState<'all' | 'matches'>('all')
     const [showMatchModal, setShowMatchModal] = useState(false)
     const [newMatch, setNewMatch] = useState<MatchNotification | null>(null)
+    const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set())
+    const [selectedLocation, setSelectedLocation] = useState('Nairobi')
+    const [filters, setFilters] = useState({
+        location: 'Nairobi',
+        minAge: undefined as number | undefined,
+        maxAge: undefined as number | undefined,
+        maxDistance: 50,
+        gender: undefined as string | undefined,
+    })
 
-    useEffect(() => {
-        const fetchProfiles = async () => {
-            setIsLoading(true)
-            setTimeout(() => {
-                setProfiles(MOCK_PROFILES)
-                setIsLoading(false)
-            }, 800)
+    // Check subscription and user info
+    const { user } = useAuth()
+    const { hasDatingAccess, loading: subscriptionLoading } = useSubscription()
+
+    // Fetch dating profiles using the hook
+    const { profiles: apiProfiles, loading: isLoading, error, refetch } = useDatingProfiles({
+        location: filters.location,
+        minAge: filters.minAge,
+        maxAge: filters.maxAge,
+        gender: filters.gender,
+    })
+
+    // Safe profiles array
+    const safeDatingProfiles = Array.isArray(apiProfiles) ? apiProfiles : []
+
+    // Helper to get display name from dating profile
+    const getDisplayName = (profile: DatingProfile): string => {
+        if (profile.name) return profile.name
+        if (profile.user) {
+            return profile.user.displayName || profile.user.firstName || 'Anonymous'
         }
+        return 'Anonymous'
+    }
 
-        fetchProfiles()
-    }, [])
+    // Helper to calculate age from dateOfBirth
+    const calculateAge = (dateOfBirth: string | undefined): number => {
+        if (!dateOfBirth) return 0
+        const today = new Date()
+        const birthDate = new Date(dateOfBirth)
+        let age = today.getFullYear() - birthDate.getFullYear()
+        const monthDiff = today.getMonth() - birthDate.getMonth()
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--
+        }
+        return age
+    }
+
+    // Transform API data to ProfileData format
+    const profiles: ProfileData[] = safeDatingProfiles.map((profile: DatingProfile) => ({
+        id: profile.id,
+        name: getDisplayName(profile),
+        age: profile.age || calculateAge(profile.dateOfBirth),
+        distance: 0, // You might want to calculate this on the backend
+        bio: profile.bio || '',
+        photos: profile.photos && profile.photos.length > 0
+            ? profile.photos
+            : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
+        isVerified: profile.isVerified || false,
+        isLiked: likedProfiles.has(profile.id),
+        tags: profile.interests || [],
+    }))
 
     const handleLike = (profileId: string) => {
-        setProfiles(prevProfiles =>
-            prevProfiles.map(profile =>
-                profile.id === profileId
-                    ? { ...profile, isLiked: !profile.isLiked }
-                    : profile
-            )
-        )
+        setLikedProfiles(prev => {
+            const newSet = new Set(prev)
+            if (newSet.has(profileId)) {
+                newSet.delete(profileId)
+            } else {
+                newSet.add(profileId)
 
-        const profile = profiles.find(p => p.id === profileId)
-        if (profile && !profile.isLiked && Math.random() > 0.7) {
-            const match: MatchNotification = {
-                id: Date.now().toString(),
-                matchedUser: {
-                    id: profile.id,
-                    name: profile.name,
-                    age: profile.age,
-                    avatar: profile.photos[0],
-                    bio: profile.bio || ''
-                },
-                matchedAt: new Date(),
-                isNew: true
+                // Simulate match notification (30% chance)
+                const profile = profiles.find(p => p.id === profileId)
+                if (profile && Math.random() > 0.7) {
+                    const match: MatchNotification = {
+                        id: Date.now().toString(),
+                        matchedUser: {
+                            id: profile.id,
+                            name: profile.name,
+                            age: profile.age,
+                            avatar: profile.photos[0],
+                            bio: profile.bio || ''
+                        },
+                        matchedAt: new Date(),
+                        isNew: true
+                    }
+                    setNewMatch(match)
+                    setShowMatchModal(true)
+                }
             }
-            setNewMatch(match)
-            setShowMatchModal(true)
-        }
+            return newSet
+        })
     }
 
     const handleMessage = (profileId: string) => {
         window.location.href = `/chat/${profileId}`
     }
 
-    // Handle view profile - navigate to public dating profile view
     const handleViewProfile = (profileId: string) => {
         window.location.href = `/dating/profile/${profileId}`
+    }
+
+    // Handle location change
+    const handleLocationChange = (location: string) => {
+        setSelectedLocation(location)
+        setFilters(prev => ({ ...prev, location }))
+    }
+
+    // Apply filters
+    const handleApplyFilters = () => {
+        refetch()
+        setIsFilterOpen(false)
     }
 
     const filteredProfiles = profiles.filter(profile => {
@@ -163,7 +156,55 @@ export default function DatingPage() {
         return matchesSearch && matchesView
     })
 
-    const matchCount = profiles.filter(p => p.isLiked).length
+    const matchCount = likedProfiles.size
+
+    // Show loading state while checking subscription
+    if (subscriptionLoading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        )
+    }
+
+    // Show subscription required message if user doesn't have access
+    if (!hasDatingAccess) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+                    <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Lock className="w-8 h-8 text-pink-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Dating Subscription Required</h2>
+                    <p className="text-gray-600 mb-6">
+                        You need an active dating subscription to access dating features. Subscribe now to start meeting new people!
+                    </p>
+                    <div className="space-y-3">
+                        <Link
+                            href="/subscription/dating"
+                            className="block w-full px-6 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors"
+                        >
+                            Subscribe to Dating
+                        </Link>
+                        <Link
+                            href="/"
+                            className="block w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                        >
+                            Go to Home
+                        </Link>
+                    </div>
+                    {user && (
+                        <p className="text-sm text-gray-500 mt-4">
+                            Logged in as {user.role === 'ESCORT' ? 'Escort' : user.role === 'HOOKUP_USER' ? 'Hookup User' : 'User'}
+                        </p>
+                    )}
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -197,7 +238,7 @@ export default function DatingPage() {
 
                             <button className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2">
                                 <MapPin className="w-4 h-4" />
-                                <span className="hidden md:inline">Nairobi</span>
+                                <span className="hidden md:inline">{selectedLocation}</span>
                             </button>
                         </div>
                     </div>
@@ -206,8 +247,8 @@ export default function DatingPage() {
                         <button
                             onClick={() => setActiveView('all')}
                             className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${activeView === 'all'
-                                ? 'bg-pink-500 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-pink-500 text-white'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             All
@@ -215,8 +256,8 @@ export default function DatingPage() {
                         <button
                             onClick={() => setActiveView('matches')}
                             className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors relative ${activeView === 'matches'
-                                ? 'bg-pink-500 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-pink-500 text-white'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             Matches {matchCount > 0 && `(${matchCount})`}
@@ -245,16 +286,38 @@ export default function DatingPage() {
             {isFilterOpen && (
                 <div className="bg-white border-b border-gray-200 p-4">
                     <div className="max-w-7xl mx-auto space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Distance (km)
+                                    Gender
+                                </label>
+                                <select
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                                    onChange={(e) => setFilters(prev => ({
+                                        ...prev,
+                                        gender: e.target.value || undefined
+                                    }))}
+                                >
+                                    <option value="">Any</option>
+                                    <option value="male">Men</option>
+                                    <option value="female">Women</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Distance (km): {filters.maxDistance}
                                 </label>
                                 <input
                                     type="range"
                                     min="1"
                                     max="100"
-                                    defaultValue="50"
+                                    value={filters.maxDistance}
+                                    onChange={(e) => setFilters(prev => ({
+                                        ...prev,
+                                        maxDistance: parseInt(e.target.value)
+                                    }))}
                                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-pink-500"
                                 />
                                 <div className="flex justify-between text-xs text-gray-500 mt-1">
@@ -274,6 +337,11 @@ export default function DatingPage() {
                                         min="18"
                                         max="99"
                                         placeholder="Min"
+                                        value={filters.minAge || ''}
+                                        onChange={(e) => setFilters(prev => ({
+                                            ...prev,
+                                            minAge: e.target.value ? parseInt(e.target.value) : undefined
+                                        }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                     />
                                     <span className="text-gray-500">to</span>
@@ -282,6 +350,11 @@ export default function DatingPage() {
                                         min="18"
                                         max="99"
                                         placeholder="Max"
+                                        value={filters.maxAge || ''}
+                                        onChange={(e) => setFilters(prev => ({
+                                            ...prev,
+                                            maxAge: e.target.value ? parseInt(e.target.value) : undefined
+                                        }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                     />
                                 </div>
@@ -296,12 +369,31 @@ export default function DatingPage() {
                                 Cancel
                             </button>
                             <button
-                                onClick={() => setIsFilterOpen(false)}
+                                onClick={handleApplyFilters}
                                 className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors"
                             >
                                 Apply Filters
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Error Message */}
+            {error && (
+                <div className="max-w-7xl mx-auto px-4 pt-4">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+                        <AlertCircle className="w-5 h-5 text-red-400" />
+                        <div>
+                            <p className="text-red-800 font-medium">Failed to load profiles</p>
+                            <p className="text-red-600 text-sm">{error}</p>
+                        </div>
+                        <button
+                            onClick={() => refetch()}
+                            className="ml-auto px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+                        >
+                            Retry
+                        </button>
                     </div>
                 </div>
             )}

@@ -1,115 +1,58 @@
 // app/escorts/[id]/page.tsx
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import {
     ArrowLeft, MapPin, Star, Clock, Phone, MessageCircle,
-    Crown, Check, Languages, X, Loader2, Share2
+    Crown, Check, X, Loader2, Share2, AlertCircle
 } from 'lucide-react'
-
-// Mock escort data
-const MOCK_ESCORT_DATA: Record<string, any> = {
-    'e1': {
-        id: 'e1',
-        name: 'Sophia',
-        age: 25,
-        location: 'Nairobi, Westlands',
-        description: 'Professional model with years of experience in entertainment industry. I provide discreet, high-quality companionship services for discerning clients. Available for dinner dates, events, and private meetings.',
-        photos: [
-            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&q=80',
-            'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&q=80',
-            'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&q=80',
-        ],
-        rating: 4.8,
-        reviews: 42,
-        hourlyRate: 8000,
-        isVip: true,
-        isVerified: true,
-        contactPhone: '+254 798 765 432',
-        languages: ['English', 'Swahili', 'French'],
-        services: [
-            'Girlfriend Experience (GFE)',
-            'Massage',
-            'Dinner Date',
-            'Travel Companion',
-            'Overnight'
-        ],
-        availability: {
-            monday: { available: true, from: '14:00', to: '23:00' },
-            tuesday: { available: true, from: '14:00', to: '23:00' },
-            wednesday: { available: true, from: '14:00', to: '23:00' },
-            thursday: { available: true, from: '14:00', to: '23:00' },
-            friday: { available: true, from: '12:00', to: '02:00' },
-            saturday: { available: true, from: '12:00', to: '02:00' },
-            sunday: { available: false, from: '', to: '' },
-        }
-    },
-    'e2': {
-        id: 'e2',
-        name: 'Olivia',
-        age: 27,
-        location: 'Nairobi, Kilimani',
-        description: 'Dancer and entertainer. Available for private bookings and special events. Known for my warm personality and professional approach.',
-        photos: [
-            'https://images.unsplash.com/photo-1614023342667-9f59d05c29f0?w=800&q=80',
-            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80',
-        ],
-        rating: 4.5,
-        reviews: 28,
-        hourlyRate: 7000,
-        isVip: false,
-        isVerified: true,
-        contactPhone: '+254 712 555 888',
-        languages: ['English', 'Swahili'],
-        services: [
-            'Massage',
-            'Dance Performance',
-            'Dinner Date',
-            'Role Play'
-        ],
-        availability: {
-            monday: { available: true, from: '18:00', to: '23:00' },
-            tuesday: { available: true, from: '18:00', to: '23:00' },
-            wednesday: { available: false, from: '', to: '' },
-            thursday: { available: true, from: '18:00', to: '23:00' },
-            friday: { available: true, from: '16:00', to: '02:00' },
-            saturday: { available: true, from: '16:00', to: '02:00' },
-            sunday: { available: false, from: '', to: '' },
-        }
-    }
-}
+import { useEscort, usePayment } from '@/lib/hooks/butical-api-hooks'
+import { getImageUrl, getImageUrls } from '@/lib/utils/image'
 
 export default function EscortViewPage() {
     const params = useParams()
     const router = useRouter()
-    const [escort, setEscort] = useState<any>(null)
-    const [isLoading, setIsLoading] = useState(true)
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0)
     const [showPaymentModal, setShowPaymentModal] = useState(false)
     const [mpesaPhone, setMpesaPhone] = useState('')
-    const [isProcessingPayment, setIsProcessingPayment] = useState(false)
     const [isUnlocked, setIsUnlocked] = useState(false)
 
-    useEffect(() => {
-        const fetchEscort = async () => {
-            setIsLoading(true)
-            setTimeout(() => {
-                const escortData = MOCK_ESCORT_DATA[params.id as string]
-                if (escortData) {
-                    setEscort(escortData)
-                    // Check if VIP (VIP profiles are always unlocked)
-                    setIsUnlocked(escortData.isVip)
-                }
-                setIsLoading(false)
-            }, 600)
-        }
+    // Fetch escort data using the hook
+    const { escort, loading: isLoading, error } = useEscort(params.id as string)
 
-        fetchEscort()
-    }, [params.id])
+    // Payment hook
+    const {
+        unlockEscort,
+        loading: isProcessingPayment,
+        error: paymentError
+    } = usePayment()
+
+    // Helper to get display name from escort
+    const getDisplayName = (e: typeof escort): string => {
+        if (!e) return 'Unknown';
+        if (e.displayName) return e.displayName;
+        if (e.user) return `${e.user.firstName} ${e.user.lastName}`.trim();
+        return 'Anonymous';
+    };
+
+    // Helper to get location string
+    const getLocation = (e: typeof escort): string => {
+        if (!e) return 'Unknown location';
+        if (e.location) return e.location;
+        if (e.locations) {
+            const parts = [e.locations.area, e.locations.city, e.locations.country].filter(Boolean);
+            return parts.join(', ') || 'Unknown location';
+        }
+        return 'Unknown location';
+    };
+
+    // Check if escort is verified (handles both old and new field names)
+    const isEscortVerified = escort?.verified || escort?.isVerified || false;
+    const isEscortVip = escort?.vipStatus || escort?.isVIP || false;
 
     const handleUnlock = () => {
-        if (!isUnlocked && !escort?.isVip) {
+        if (!isUnlocked && escort && !isEscortVerified) {
             setShowPaymentModal(true)
         }
     }
@@ -120,21 +63,44 @@ export default function EscortViewPage() {
             return
         }
 
-        setIsProcessingPayment(true)
+        if (!params.id) {
+            return
+        }
 
-        setTimeout(() => {
+        const result = await unlockEscort(params.id as string, mpesaPhone)
+
+        if (result.success) {
             setIsUnlocked(true)
-            setIsProcessingPayment(false)
             setShowPaymentModal(false)
             setMpesaPhone('')
             alert('Payment successful! Contact unlocked.')
-        }, 3000)
+        } else {
+            alert(result.error || 'Payment failed. Please try again.')
+        }
     }
 
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-900 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+                <div className="text-center max-w-md">
+                    <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                    <h1 className="text-2xl font-bold text-white mb-2">Error Loading Profile</h1>
+                    <p className="text-gray-400 mb-6">{error}</p>
+                    <button
+                        onClick={() => router.push('/hookups')}
+                        className="px-6 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600"
+                    >
+                        Back to Browse
+                    </button>
+                </div>
             </div>
         )
     }
@@ -155,6 +121,18 @@ export default function EscortViewPage() {
             </div>
         )
     }
+
+    // Safe photo array with proper image URL handling
+    const photos = getImageUrls(escort.photos)
+
+    // Check if contact should be unlocked (VIP profiles are always unlocked)
+    const isContactUnlocked = isUnlocked || isEscortVerified || !escort.contactHidden
+
+    // Get display values
+    const displayName = getDisplayName(escort)
+    const locationStr = getLocation(escort)
+    const unlockPrice = escort.unlockPrice || escort.pricing?.unlockPrice || 150
+    const hourlyRate = escort.pricing?.hourlyRate || escort.hourlyRate || 300
 
     return (
         <div className="min-h-screen bg-gray-900">
@@ -185,82 +163,79 @@ export default function EscortViewPage() {
                         {/* Main Photo */}
                         <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-gray-800 mb-4">
                             <img
-                                src={escort.photos[selectedPhotoIndex]}
-                                alt={escort.name}
+                                src={photos[selectedPhotoIndex]}
+                                alt={displayName}
                                 className="w-full h-full object-cover"
                             />
-                            {escort.isVip && (
-                                <div className="absolute top-4 left-4 flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1.5 rounded-full">
-                                    <Crown className="w-4 h-4" />
-                                    <span className="text-sm font-semibold">VIP</span>
-                                </div>
-                            )}
-                            {escort.isVerified && (
+                            {isEscortVerified && (
                                 <div className="absolute top-4 right-4 flex items-center gap-1 bg-blue-500 text-white px-3 py-1.5 rounded-full">
                                     <Check className="w-4 h-4" />
                                     <span className="text-sm font-semibold">Verified</span>
                                 </div>
                             )}
+                            {isEscortVip && (
+                                <div className="absolute top-4 left-4 flex items-center gap-1 bg-yellow-500 text-black px-3 py-1.5 rounded-full">
+                                    <Crown className="w-4 h-4" />
+                                    <span className="text-sm font-semibold">VIP</span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Photo Thumbnails */}
-                        <div className="grid grid-cols-4 gap-2">
-                            {escort.photos.map((photo: string, index: number) => (
-                                <button
-                                    key={index}
-                                    onClick={() => setSelectedPhotoIndex(index)}
-                                    className={`aspect-square rounded-lg overflow-hidden ${selectedPhotoIndex === index
-                                        ? 'ring-2 ring-pink-500'
-                                        : 'opacity-60 hover:opacity-100'
-                                        } transition-all`}
-                                >
-                                    <img
-                                        src={photo}
-                                        alt={`${escort.name} ${index + 1}`}
-                                        className="w-full h-full object-cover"
-                                    />
-                                </button>
-                            ))}
-                        </div>
+                        {photos.length > 1 && (
+                            <div className="grid grid-cols-4 gap-2">
+                                {photos.map((photo: string, index: number) => (
+                                    <button
+                                        key={index}
+                                        onClick={() => setSelectedPhotoIndex(index)}
+                                        className={`aspect-square rounded-lg overflow-hidden ${selectedPhotoIndex === index
+                                                ? 'ring-2 ring-pink-500'
+                                                : 'opacity-60 hover:opacity-100'
+                                            } transition-all`}
+                                    >
+                                        <img
+                                            src={photo}
+                                            alt={`${displayName} ${index + 1}`}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                        )}
 
                         {/* Description */}
                         <div className="bg-gray-800 rounded-xl p-6 mt-6">
                             <h2 className="text-xl font-bold text-white mb-4">About Me</h2>
-                            <p className="text-gray-300 leading-relaxed">{escort.description}</p>
+                            <p className="text-gray-300 leading-relaxed">
+                                {escort.about || 'No description available.'}
+                            </p>
                         </div>
 
-                        {/* Services */}
+                        {/* Location & Details */}
                         <div className="bg-gray-800 rounded-xl p-6 mt-4">
-                            <h2 className="text-xl font-bold text-white mb-4">Services Offered</h2>
-                            <div className="grid grid-cols-2 gap-2">
-                                {escort.services.map((service: string) => (
-                                    <div
-                                        key={service}
-                                        className="px-4 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-lg text-sm"
-                                    >
-                                        {service}
+                            <h2 className="text-xl font-bold text-white mb-4">Details</h2>
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <MapPin className="w-5 h-5 text-pink-400" />
+                                    <div>
+                                        <p className="text-sm text-gray-400">Location</p>
+                                        <p className="text-white font-medium">{locationStr}</p>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Availability Schedule */}
-                        <div className="bg-gray-800 rounded-xl p-6 mt-4">
-                            <h2 className="text-xl font-bold text-white mb-4">Availability</h2>
-                            <div className="space-y-2">
-                                {Object.entries(escort.availability).map(([day, schedule]: [string, any]) => (
-                                    <div key={day} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
-                                        <span className="text-white font-medium capitalize">{day}</span>
-                                        {schedule.available ? (
-                                            <div className="flex items-center gap-2 text-green-400">
-                                                <Clock className="w-4 h-4" />
-                                                <span className="text-sm">{schedule.from} - {schedule.to}</span>
-                                            </div>
-                                        ) : (
-                                            <span className="text-gray-500 text-sm">Not available</span>
-                                        )}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Star className="w-5 h-5 text-yellow-400" />
+                                    <div>
+                                        <p className="text-sm text-gray-400">Rating</p>
+                                        <p className="text-white font-medium">4.5 / 5.0 (Based on profile quality)</p>
                                     </div>
-                                ))}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Clock className="w-5 h-5 text-green-400" />
+                                    <div>
+                                        <p className="text-sm text-gray-400">Status</p>
+                                        <p className="text-white font-medium">Available for booking</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -271,36 +246,20 @@ export default function EscortViewPage() {
                             {/* Name & Basic Info */}
                             <div className="mb-6">
                                 <h1 className="text-3xl font-bold text-white mb-2">
-                                    {escort.name}, {escort.age}
+                                    {displayName}
                                 </h1>
                                 <div className="flex items-center text-gray-300 mb-3">
                                     <MapPin className="w-4 h-4 mr-1" />
-                                    <span className="text-sm">{escort.location}</span>
+                                    <span className="text-sm">{locationStr}</span>
                                 </div>
 
-                                {/* Rating */}
+                                {/* View Count */}
                                 <div className="flex items-center gap-3">
                                     <div className="flex items-center gap-1">
-                                        <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                                        <span className="text-white font-semibold">{escort.rating}</span>
-                                        <span className="text-gray-400 text-sm">({escort.reviews} reviews)</span>
+                                        <span className="text-gray-400 text-sm">
+                                            {escort.views || 0} views
+                                        </span>
                                     </div>
-                                </div>
-                            </div>
-
-                            {/* Languages */}
-                            <div className="mb-6">
-                                <h3 className="text-sm font-semibold text-gray-400 mb-2">Languages</h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {escort.languages.map((language: string) => (
-                                        <div
-                                            key={language}
-                                            className="flex items-center gap-1 px-3 py-1 bg-gray-700 text-gray-300 rounded-full text-sm"
-                                        >
-                                            <Languages className="w-3 h-3" />
-                                            {language}
-                                        </div>
-                                    ))}
                                 </div>
                             </div>
 
@@ -308,13 +267,13 @@ export default function EscortViewPage() {
                             <div className="mb-6 p-4 bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 rounded-lg">
                                 <h3 className="text-sm font-semibold text-gray-300 mb-1">Hourly Rate</h3>
                                 <p className="text-3xl font-bold text-white">
-                                    KSh {escort.hourlyRate.toLocaleString()}
+                                    KSh {hourlyRate.toLocaleString()}
                                 </p>
                                 <p className="text-xs text-gray-400 mt-1">per hour</p>
                             </div>
 
                             {/* Contact Information */}
-                            {isUnlocked || escort.isVip ? (
+                            {isContactUnlocked ? (
                                 <div className="mb-6 p-4 bg-green-500/20 border border-green-500/30 rounded-lg">
                                     <div className="flex items-center gap-2 text-green-400 mb-2">
                                         <Check className="w-5 h-5" />
@@ -322,44 +281,45 @@ export default function EscortViewPage() {
                                     </div>
                                     <div className="flex items-center gap-2 text-white">
                                         <Phone className="w-4 h-4" />
-                                        <a href={`tel:${escort.contactPhone}`} className="text-lg font-semibold hover:text-pink-400">
-                                            {escort.contactPhone}
-                                        </a>
+                                        <span className="text-lg font-semibold">
+                                            {escort.contactPhone || 'Contact Available'}
+                                        </span>
                                     </div>
+                                    <p className="text-xs text-gray-400 mt-2">
+                                        Call or message to book this escort
+                                    </p>
                                 </div>
                             ) : (
                                 <div className="mb-6 p-4 bg-gray-700/50 border border-gray-600 rounded-lg text-center">
                                     <p className="text-gray-400 text-sm mb-2">Contact information is locked</p>
-                                    <p className="text-white font-semibold">Pay KSh 300 to unlock</p>
+                                    <p className="text-white font-semibold">Pay KSh {unlockPrice} to unlock</p>
                                 </div>
                             )}
 
                             {/* Action Buttons */}
                             <div className="space-y-3">
-                                {isUnlocked || escort.isVip ? (
+                                {isContactUnlocked ? (
                                     <>
-                                        <a
-                                            href={`tel:${escort.contactPhone}`}
+                                        <button
                                             className="w-full px-4 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-semibold transition-colors flex items-center justify-center gap-2"
                                         >
                                             <Phone className="w-5 h-5" />
                                             <span>Call Now</span>
-                                        </a>
+                                        </button>
 
-                                        <a
-                                            href={`sms:${escort.contactPhone}`}
+                                        <button
                                             className="w-full px-4 py-3 border-2 border-pink-500 text-pink-400 rounded-lg hover:bg-pink-500/10 font-semibold transition-colors flex items-center justify-center gap-2"
                                         >
                                             <MessageCircle className="w-5 h-5" />
                                             <span>Send Message</span>
-                                        </a>
+                                        </button>
                                     </>
                                 ) : (
                                     <button
                                         onClick={handleUnlock}
                                         className="w-full px-4 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-semibold transition-colors"
                                     >
-                                        Unlock Contact - KSh 300
+                                        Unlock Contact - KSh {unlockPrice}
                                     </button>
                                 )}
                             </div>
@@ -396,18 +356,18 @@ export default function EscortViewPage() {
                         <div className="mb-6">
                             <div className="flex items-center gap-3 mb-4">
                                 <img
-                                    src={escort.photos[0]}
-                                    alt={escort.name}
+                                    src={photos[0]}
+                                    alt={displayName}
                                     className="w-16 h-16 rounded-lg object-cover"
                                 />
                                 <div>
-                                    <p className="text-white font-semibold">{escort.name}</p>
-                                    <p className="text-sm text-gray-400">Age {escort.age}</p>
+                                    <p className="text-white font-semibold">{displayName}</p>
+                                    <p className="text-sm text-gray-400">{locationStr}</p>
                                 </div>
                             </div>
 
                             <div className="bg-pink-500/20 border border-pink-500/30 p-4 rounded-lg text-center mb-4">
-                                <span className="text-white font-bold text-3xl">KSh 300</span>
+                                <span className="text-white font-bold text-3xl">KSh {unlockPrice}</span>
                                 <p className="text-sm text-gray-300 mt-1">One-time unlock fee</p>
                             </div>
 
@@ -416,6 +376,12 @@ export default function EscortViewPage() {
                                 <p className="text-sm text-gray-300 mb-2">✓ Direct call & SMS access</p>
                                 <p className="text-sm text-gray-300">✓ Permanent access</p>
                             </div>
+
+                            {paymentError && (
+                                <div className="bg-red-500/20 border border-red-500/30 p-3 rounded-lg mb-4">
+                                    <p className="text-sm text-red-300">{paymentError}</p>
+                                </div>
+                            )}
 
                             <p className="text-sm text-gray-400 mb-4">
                                 Enter your M-Pesa phone number to complete payment.
@@ -429,10 +395,11 @@ export default function EscortViewPage() {
                                     type="tel"
                                     value={mpesaPhone}
                                     onChange={(e) => setMpesaPhone(e.target.value)}
-                                    placeholder="+254 712 345 678"
+                                    placeholder="254712345678"
                                     disabled={isProcessingPayment}
                                     className="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:opacity-50"
                                 />
+                                <p className="text-xs text-gray-400 mt-1">Format: 254XXXXXXXXX (no spaces or +)</p>
                             </div>
                         </div>
 
@@ -458,7 +425,7 @@ export default function EscortViewPage() {
                                         <span>Processing...</span>
                                     </>
                                 ) : (
-                                    <span>Pay KSh 300</span>
+                                    <span>Pay KSh {unlockPrice}</span>
                                 )}
                             </button>
                         </div>

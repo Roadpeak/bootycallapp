@@ -1,66 +1,23 @@
 // app/profile/dating/page.tsx
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
     ArrowLeft, Edit2, Save, X, Upload, MapPin, Briefcase,
     GraduationCap, Heart, MessageCircle, Check, Gift,
     Crown, Star, Zap, AlertCircle, ChevronRight, RefreshCw,
-    CreditCard, Clock, Sparkles
+    CreditCard, Sparkles, Loader2
 } from 'lucide-react'
+import ButicalAPI, { TokenService } from '@/services/butical-api-service'
+import type { User, DatingProfile, Subscription, WalletSummary, ReferralCode } from '@/services/butical-api-service'
 
 // Subscription plan details
 const SUBSCRIPTION_PLANS = {
-    basic: { name: 'Basic', price: 499, color: 'gray', icon: Star },
-    premium: { name: 'Premium', price: 999, color: 'pink', icon: Zap },
-    vip: { name: 'VIP', price: 2499, color: 'purple', icon: Crown }
-}
-
-// Mock user data
-const MOCK_USER = {
-    id: '1',
-    firstName: 'Sarah',
-    lastName: 'Johnson',
-    displayName: 'Sarah J.',
-    email: 'sarah.johnson@example.com',
-    phone: '+254 712 345 678',
-    dateOfBirth: '1995-06-15',
-    age: 28,
-    gender: 'female',
-    sexualOrientation: 'straight',
-    lookingFor: 'men',
-    city: 'Nairobi',
-    country: 'Kenya',
-    bio: 'Avid traveler, book lover, and coffee enthusiast. Looking for someone to share adventures with. Love hiking, photography, and trying new restaurants.',
-    interests: ['Travel', 'Reading', 'Photography', 'Hiking', 'Coffee', 'Food'],
-    education: "Bachelor's in Business Administration",
-    occupation: 'Marketing Manager',
-    photos: [
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80',
-        'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&q=80',
-        'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=800&q=80',
-    ],
-    isVerified: true,
-    stats: {
-        matches: 24,
-        likes: 156,
-        profileViews: 1234
-    },
-    // Subscription data
-    subscription: {
-        plan: 'premium', // 'basic', 'premium', 'vip'
-        status: 'active', // 'active', 'expired', 'expiring_soon'
-        expiresAt: '2025-02-10',
-        startedAt: '2025-01-10',
-        autoRenew: false
-    },
-    // Referral stats
-    referralStats: {
-        totalReferrals: 12,
-        totalEarnings: 3600,
-        pendingEarnings: 450
-    }
+    BASIC: { name: 'Basic', price: 0, color: 'gray', icon: Star },
+    PREMIUM: { name: 'Premium', price: 300, color: 'pink', icon: Zap },
+    VIP: { name: 'VIP', price: 3000, color: 'purple', icon: Crown }
 }
 
 const interestOptions = [
@@ -70,59 +27,210 @@ const interestOptions = [
 ]
 
 export default function DatingProfilePage() {
+    const router = useRouter()
     const [isEditing, setIsEditing] = useState(false)
-    const [user, setUser] = useState(MOCK_USER)
-    const [editedUser, setEditedUser] = useState(MOCK_USER)
+    const [isLoading, setIsLoading] = useState(true)
+    const [isSaving, setIsSaving] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    // User data
+    const [user, setUser] = useState<User | null>(null)
+    const [profile, setProfile] = useState<DatingProfile | null>(null)
+    const [editedProfile, setEditedProfile] = useState<Partial<DatingProfile>>({})
+    const [subscription, setSubscription] = useState<Subscription | null>(null)
+    const [wallet, setWallet] = useState<WalletSummary | null>(null)
+    const [referralCode, setReferralCode] = useState<ReferralCode | null>(null)
+
+    // Photo handling
     const [newPhotos, setNewPhotos] = useState<File[]>([])
+    const [photosToDelete, setPhotosToDelete] = useState<string[]>([])
+
+    // Stats (TODO: Get from API when available)
+    const [stats] = useState({
+        matches: 0,
+        likes: 0,
+        profileViews: 0
+    })
+
+    // Fetch all data on mount
+    useEffect(() => {
+        fetchAllData()
+    }, [])
+
+    const fetchAllData = async () => {
+        try {
+            setIsLoading(true)
+            setError(null)
+
+            // Check if user is logged in
+            const token = TokenService.getAccessToken()
+            if (!token) {
+                router.push('/auth/login')
+                return
+            }
+
+            // Fetch all data in parallel
+            const [userResponse, profileResponse, subscriptionResponse] = await Promise.all([
+                ButicalAPI.users.getMe(),
+                ButicalAPI.datingProfiles.getMe(),
+                ButicalAPI.users.getSubscription().catch(() => null),
+            ])
+
+            // API wraps responses in { status, data: T } - unwrap if needed
+            const unwrap = <T,>(response: any): T => {
+                if (response?.data !== undefined && response?.status !== undefined) {
+                    return response.data as T
+                }
+                return response as T
+            }
+
+            setUser(unwrap(userResponse.data))
+            setProfile(unwrap(profileResponse.data))
+            setEditedProfile(unwrap(profileResponse.data))
+            setSubscription(subscriptionResponse ? unwrap(subscriptionResponse.data) : null)
+
+            // Fetch referral and wallet data
+            try {
+                const [walletResponse, referralResponse] = await Promise.all([
+                    ButicalAPI.wallet.getSummary(),
+                    ButicalAPI.referrals.getMyCode()
+                ])
+                setWallet(unwrap(walletResponse.data))
+                setReferralCode(unwrap(referralResponse.data))
+            } catch (err) {
+                // Referral/wallet might not be available for all users
+                console.log('Referral/wallet data not available')
+            }
+        } catch (err: any) {
+            console.error('Failed to fetch profile data:', err)
+            setError(err.response?.data?.message || 'Failed to load profile. Please try again.')
+
+            // If unauthorized, redirect to login
+            if (err.response?.status === 401) {
+                TokenService.clearTokens()
+                router.push('/auth/login')
+            }
+        } finally {
+            setIsLoading(false)
+        }
+    }
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target
-        setEditedUser(prev => ({ ...prev, [name]: value }))
+        setEditedProfile(prev => ({ ...prev, [name]: value }))
     }
 
     const toggleInterest = (interest: string) => {
-        setEditedUser(prev => ({
+        setEditedProfile(prev => ({
             ...prev,
-            interests: prev.interests.includes(interest)
+            interests: prev.interests?.includes(interest)
                 ? prev.interests.filter(i => i !== interest)
-                : [...prev.interests, interest]
+                : [...(prev.interests || []), interest]
         }))
     }
 
     const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const files = Array.from(e.target.files)
-            setNewPhotos(prev => [...prev, ...files].slice(0, 6))
+            const currentPhotoCount = (editedProfile.photos?.length || 0) + newPhotos.length
+            const availableSlots = 6 - currentPhotoCount
+            setNewPhotos(prev => [...prev, ...files].slice(0, availableSlots))
         }
     }
 
-    const removePhoto = (index: number) => {
-        setEditedUser(prev => ({
+    const removeExistingPhoto = (photoUrl: string) => {
+        setEditedProfile(prev => ({
             ...prev,
-            photos: prev.photos.filter((_, i) => i !== index)
+            photos: prev.photos?.filter(p => p !== photoUrl)
         }))
+        setPhotosToDelete(prev => [...prev, photoUrl])
     }
 
     const removeNewPhoto = (index: number) => {
         setNewPhotos(prev => prev.filter((_, i) => i !== index))
     }
 
-    const handleSave = () => {
-        setUser(editedUser)
-        setIsEditing(false)
-        console.log('Saved:', editedUser)
+    // Convert files to base64
+    const convertFilesToBase64 = async (files: File[]): Promise<string[]> => {
+        const promises = files.map(file => {
+            return new Promise<string>((resolve, reject) => {
+                const reader = new FileReader()
+                reader.onload = () => {
+                    const base64 = reader.result as string
+                    const base64Data = base64.split(',')[1]
+                    resolve(base64Data)
+                }
+                reader.onerror = reject
+                reader.readAsDataURL(file)
+            })
+        })
+        return Promise.all(promises)
+    }
+
+    const handleSave = async () => {
+        try {
+            setIsSaving(true)
+            setError(null)
+
+            // Convert new photos to base64 if any
+            let newPhotoBase64: string[] = []
+            if (newPhotos.length > 0) {
+                newPhotoBase64 = await convertFilesToBase64(newPhotos)
+            }
+
+            // Prepare update data (only send fields that the API accepts)
+            const updateData: any = {
+                bio: editedProfile.bio,
+                interests: editedProfile.interests,
+                location: editedProfile.location,
+                lookingFor: editedProfile.lookingFor,
+                education: editedProfile.education,
+                occupation: editedProfile.occupation,
+                // Combine existing photos (not deleted) with new photos
+                photos: [
+                    ...(editedProfile.photos || []),
+                    ...newPhotoBase64
+                ]
+            }
+
+            console.log('Sending dating profile update:', updateData)
+            console.log('Photo count:', updateData.photos.length)
+
+            // Update profile via API
+            const response = await ButicalAPI.datingProfiles.updateMe(updateData)
+            console.log('Dating profile update response:', response)
+
+            // Unwrap response if needed (API may wrap in { status, data })
+            const responseData = response.data as any
+            const updatedProfile = responseData?.data || responseData
+            setProfile(updatedProfile)
+            setEditedProfile(updatedProfile)
+            setNewPhotos([])
+            setPhotosToDelete([])
+            setIsEditing(false)
+
+            // Show success message (optional)
+            alert('Profile updated successfully!')
+        } catch (err: any) {
+            console.error('Failed to save profile:', err)
+            setError(err.response?.data?.message || 'Failed to save profile. Please try again.')
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     const handleCancel = () => {
-        setEditedUser(user)
+        setEditedProfile(profile || {})
         setNewPhotos([])
+        setPhotosToDelete([])
+        setError(null)
         setIsEditing(false)
     }
 
     // Subscription helpers
     const getDaysRemaining = () => {
-        if (!user.subscription.expiresAt) return 0
-        const expiry = new Date(user.subscription.expiresAt)
+        if (!subscription?.endDate) return 0
+        const expiry = new Date(subscription.endDate)
         const now = new Date()
         const diff = expiry.getTime() - now.getTime()
         return Math.ceil(diff / (1000 * 60 * 60 * 24))
@@ -137,17 +245,97 @@ export default function DatingProfilePage() {
     }
 
     const getCurrentPlan = () => {
-        if (!user.subscription.plan) return null
-        return SUBSCRIPTION_PLANS[user.subscription.plan as keyof typeof SUBSCRIPTION_PLANS]
+        if (!subscription?.type) return SUBSCRIPTION_PLANS.BASIC
+        return SUBSCRIPTION_PLANS[subscription.type as keyof typeof SUBSCRIPTION_PLANS] || SUBSCRIPTION_PLANS.BASIC
     }
 
     const isVIP = () => {
-        return user.subscription.plan === 'vip' && !isExpired()
+        return subscription?.type === 'VIP' && subscription?.status === 'ACTIVE' && !isExpired()
     }
 
     const isPremium = () => {
-        return (user.subscription.plan === 'premium' || user.subscription.plan === 'vip') && !isExpired()
+        return (subscription?.type === 'PREMIUM' || subscription?.type === 'VIP') &&
+            subscription?.status === 'ACTIVE' && !isExpired()
     }
+
+    // Loading state
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <Loader2 className="w-12 h-12 text-pink-500 animate-spin mx-auto mb-4" />
+                    <p className="text-gray-600">Loading your profile...</p>
+                </div>
+            </div>
+        )
+    }
+
+    // Error state
+    if (error && !profile) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <div className="text-center max-w-md">
+                    <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Profile</h2>
+                    <p className="text-gray-600 mb-6">{error}</p>
+                    <button
+                        onClick={fetchAllData}
+                        className="px-6 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 flex items-center gap-2 mx-auto"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
+    // Helper to get display name from dating profile
+    const getDisplayName = (p: DatingProfile): string => {
+        if (p.name) return p.name
+        if (p.user) {
+            return p.user.displayName || p.user.firstName || 'Anonymous'
+        }
+        return 'Anonymous'
+    }
+
+    // Helper to calculate age from dateOfBirth
+    const calculateAge = (dateOfBirth: string | undefined): number => {
+        if (!dateOfBirth) return 0
+        const today = new Date()
+        const birthDate = new Date(dateOfBirth)
+        let age = today.getFullYear() - birthDate.getFullYear()
+        const monthDiff = today.getMonth() - birthDate.getMonth()
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--
+        }
+        return age
+    }
+
+    // Helper to get location string
+    const getLocationString = (p: DatingProfile): string => {
+        if (typeof p.location === 'string') return p.location
+        if (p.location && typeof p.location === 'object') {
+            const loc = p.location as { city?: string; area?: string; country?: string }
+            const parts = [loc.area, loc.city, loc.country].filter(Boolean)
+            return parts.join(', ') || 'Unknown location'
+        }
+        return 'Unknown location'
+    }
+
+    if (!profile) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-gray-600">No profile found</p>
+                </div>
+            </div>
+        )
+    }
+
+    const displayName = getDisplayName(profile)
+    const age = profile?.age || calculateAge(profile?.dateOfBirth)
+    const locationStr = getLocationString(profile)
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -175,17 +363,28 @@ export default function DatingProfilePage() {
                             <div className="flex gap-2">
                                 <button
                                     onClick={handleCancel}
-                                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                                    disabled={isSaving}
+                                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                                 >
                                     <X className="w-4 h-4" />
                                     <span>Cancel</span>
                                 </button>
                                 <button
                                     onClick={handleSave}
-                                    className="flex items-center gap-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors"
+                                    disabled={isSaving}
+                                    className="flex items-center gap-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-50"
                                 >
-                                    <Save className="w-4 h-4" />
-                                    <span>Save</span>
+                                    {isSaving ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            <span>Saving...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="w-4 h-4" />
+                                            <span>Save</span>
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         )}
@@ -195,40 +394,52 @@ export default function DatingProfilePage() {
 
             {/* Main Content */}
             <main className="max-w-4xl mx-auto px-4 py-6">
-                {/* Subscription Status Banner - Active */}
-                {!isExpired() && !isExpiringSoon() && (
-                    <div className={`rounded-xl p-4 mb-6 ${user.subscription.plan === 'vip'
+                {/* Error Message */}
+                {error && (
+                    <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-red-800 text-sm flex-1">{error}</p>
+                        <button
+                            onClick={() => setError(null)}
+                            className="text-red-500 hover:text-red-700"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+                )}
+
+                {/* Subscription Status Banner */}
+                {subscription && subscription.status === 'ACTIVE' && !isExpired() && !isExpiringSoon() && (
+                    <div className={`rounded-xl p-4 mb-6 ${subscription.type === 'VIP'
                             ? 'bg-gradient-to-r from-purple-500 to-pink-600'
-                            : user.subscription.plan === 'premium'
+                            : subscription.type === 'PREMIUM'
                                 ? 'bg-gradient-to-r from-pink-500 to-rose-600'
                                 : 'bg-gradient-to-r from-gray-600 to-gray-700'
                         } text-white`}>
                         <div className="flex items-center justify-between flex-wrap gap-4">
                             <div className="flex items-center gap-3">
-                                {user.subscription.plan === 'vip' && <Crown className="w-8 h-8" />}
-                                {user.subscription.plan === 'premium' && <Zap className="w-8 h-8" />}
-                                {user.subscription.plan === 'basic' && <Star className="w-8 h-8" />}
+                                {subscription.type === 'VIP' && <Crown className="w-8 h-8" />}
+                                {subscription.type === 'PREMIUM' && <Zap className="w-8 h-8" />}
+                                {subscription.type === 'BASIC' && <Star className="w-8 h-8" />}
                                 <div>
                                     <h3 className="font-semibold text-lg">
                                         {getCurrentPlan()?.name} Member
                                     </h3>
                                     <p className="text-sm opacity-90">
-                                        {getDaysRemaining()} days remaining • Expires {new Date(user.subscription.expiresAt).toLocaleDateString()}
+                                        {getDaysRemaining()} days remaining • Expires {new Date(subscription.endDate).toLocaleDateString()}
                                     </p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
-                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${user.subscription.autoRenew
-                                        ? 'bg-white/20'
-                                        : 'bg-white/10'
+                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${subscription.autoRenew ? 'bg-white/20' : 'bg-white/10'
                                     }`}>
-                                    {user.subscription.autoRenew ? '✓ Auto-renew' : 'Auto-renew OFF'}
+                                    {subscription.autoRenew ? '✓ Auto-renew' : 'Auto-renew OFF'}
                                 </span>
                                 <Link
                                     href="/subscription/dating"
                                     className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
                                 >
-                                    {user.subscription.plan === 'vip' ? 'Manage' : 'Upgrade'}
+                                    {subscription.type === 'VIP' ? 'Manage' : 'Upgrade'}
                                 </Link>
                             </div>
                         </div>
@@ -236,7 +447,7 @@ export default function DatingProfilePage() {
                 )}
 
                 {/* Expiring Soon Warning */}
-                {isExpiringSoon() && (
+                {isExpiringSoon() && subscription && (
                     <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl p-4 mb-6">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
@@ -259,7 +470,7 @@ export default function DatingProfilePage() {
                 )}
 
                 {/* Expired Notice */}
-                {isExpired() && (
+                {isExpired() && subscription && (
                     <div className="bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl p-4 mb-6">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
@@ -282,7 +493,7 @@ export default function DatingProfilePage() {
                 )}
 
                 {/* Referral Earnings Banner */}
-                {user.referralStats.totalEarnings > 0 && (
+                {wallet && (wallet.currentBalance || wallet.balance || 0) > 0 && (
                     <Link
                         href="/referral"
                         className="block bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl p-4 mb-6 hover:shadow-lg transition-shadow"
@@ -295,10 +506,10 @@ export default function DatingProfilePage() {
                                 <div>
                                     <h3 className="font-semibold mb-1">Referral Earnings</h3>
                                     <p className="text-2xl font-bold">
-                                        KSh {user.referralStats.totalEarnings.toLocaleString()}
+                                        KSh {(wallet.currentBalance || wallet.balance || 0).toLocaleString()}
                                     </p>
                                     <p className="text-xs text-green-100">
-                                        {user.referralStats.totalReferrals} referrals • KSh {user.referralStats.pendingEarnings} pending
+                                        {referralCode?.referralCount || 0} referrals • Available to withdraw
                                     </p>
                                 </div>
                             </div>
@@ -313,139 +524,113 @@ export default function DatingProfilePage() {
                 <div className="grid grid-cols-3 gap-4 mb-6">
                     <div className="bg-white rounded-lg p-4 text-center">
                         <Heart className="w-6 h-6 text-pink-500 mx-auto mb-2" />
-                        <p className="text-2xl font-bold text-gray-900">{user.stats.matches}</p>
+                        <p className="text-2xl font-bold text-gray-900">{stats.matches}</p>
                         <p className="text-sm text-gray-600">Matches</p>
                     </div>
                     <div className="bg-white rounded-lg p-4 text-center">
                         <MessageCircle className="w-6 h-6 text-pink-500 mx-auto mb-2" />
-                        <p className="text-2xl font-bold text-gray-900">{user.stats.likes}</p>
+                        <p className="text-2xl font-bold text-gray-900">{stats.likes}</p>
                         <p className="text-sm text-gray-600">Likes</p>
                     </div>
                     <div className="bg-white rounded-lg p-4 text-center">
                         <div className="w-6 h-6 text-pink-500 mx-auto mb-2 flex items-center justify-center">
                             👁️
                         </div>
-                        <p className="text-2xl font-bold text-gray-900">{user.stats.profileViews}</p>
+                        <p className="text-2xl font-bold text-gray-900">{stats.profileViews}</p>
                         <p className="text-sm text-gray-600">Views</p>
                     </div>
                 </div>
 
                 {/* Subscription Details Card */}
-                <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-bold text-gray-900">Subscription</h2>
-                        <Link
-                            href="/subscription/dating"
-                            className="text-sm text-pink-600 hover:text-pink-700 font-medium flex items-center gap-1"
-                        >
-                            Manage
-                            <ChevronRight className="w-4 h-4" />
-                        </Link>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${user.subscription.plan === 'vip' ? 'bg-purple-100' :
-                                    user.subscription.plan === 'premium' ? 'bg-pink-100' : 'bg-gray-100'
-                                }`}>
-                                {user.subscription.plan === 'vip' && <Crown className="w-6 h-6 text-purple-600" />}
-                                {user.subscription.plan === 'premium' && <Zap className="w-6 h-6 text-pink-600" />}
-                                {user.subscription.plan === 'basic' && <Star className="w-6 h-6 text-gray-600" />}
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="font-semibold text-gray-900">{getCurrentPlan()?.name} Plan</h3>
-                                <p className="text-sm text-gray-600">
-                                    KSh {getCurrentPlan()?.price.toLocaleString()}/month
-                                </p>
-                            </div>
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${isExpired()
-                                    ? 'bg-red-100 text-red-700'
-                                    : isExpiringSoon()
-                                        ? 'bg-yellow-100 text-yellow-700'
-                                        : 'bg-green-100 text-green-700'
-                                }`}>
-                                {isExpired() ? 'Expired' : isExpiringSoon() ? 'Expiring Soon' : 'Active'}
-                            </span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <p className="text-gray-500">Started</p>
-                                <p className="font-medium text-gray-900">
-                                    {new Date(user.subscription.startedAt).toLocaleDateString()}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-gray-500">Expires</p>
-                                <p className="font-medium text-gray-900">
-                                    {new Date(user.subscription.expiresAt).toLocaleDateString()}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-gray-500">Auto-renew</p>
-                                <p className={`font-medium ${user.subscription.autoRenew ? 'text-green-600' : 'text-gray-900'}`}>
-                                    {user.subscription.autoRenew ? 'Enabled' : 'Disabled'}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-gray-500">Days Remaining</p>
-                                <p className={`font-medium ${isExpiringSoon() ? 'text-yellow-600' : isExpired() ? 'text-red-600' : 'text-gray-900'}`}>
-                                    {getDaysRemaining() > 0 ? getDaysRemaining() : 0} days
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Plan Benefits */}
-                        <div className="pt-4 border-t border-gray-100">
-                            <p className="text-sm font-medium text-gray-700 mb-2">Your Benefits:</p>
-                            <div className="flex flex-wrap gap-2">
-                                {user.subscription.plan === 'basic' && (
-                                    <>
-                                        <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">50 Likes/day</span>
-                                        <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">See who likes you</span>
-                                        <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">Basic matching</span>
-                                    </>
-                                )}
-                                {user.subscription.plan === 'premium' && (
-                                    <>
-                                        <span className="px-3 py-1 bg-pink-100 text-pink-700 rounded-full text-xs">Unlimited Likes</span>
-                                        <span className="px-3 py-1 bg-pink-100 text-pink-700 rounded-full text-xs">Advanced matching</span>
-                                        <span className="px-3 py-1 bg-pink-100 text-pink-700 rounded-full text-xs">Weekly boost</span>
-                                        <span className="px-3 py-1 bg-pink-100 text-pink-700 rounded-full text-xs">5 free unlocks/mo</span>
-                                    </>
-                                )}
-                                {user.subscription.plan === 'vip' && (
-                                    <>
-                                        <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">Unlimited Likes</span>
-                                        <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">Unlimited unlocks</span>
-                                        <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">Daily boost</span>
-                                        <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">VIP badge</span>
-                                        <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">Exclusive events</span>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3 pt-2">
-                            {user.subscription.plan !== 'vip' && (
-                                <Link
-                                    href="/subscription/dating"
-                                    className="flex-1 py-2 bg-pink-500 text-white rounded-lg font-medium text-center hover:bg-pink-600 transition-colors"
-                                >
-                                    Upgrade Plan
-                                </Link>
-                            )}
+                {subscription && (
+                    <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-bold text-gray-900">Subscription</h2>
                             <Link
                                 href="/subscription/dating"
-                                className={`py-2 px-4 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 ${user.subscription.plan === 'vip' ? 'flex-1' : ''
-                                    }`}
+                                className="text-sm text-pink-600 hover:text-pink-700 font-medium flex items-center gap-1"
                             >
-                                <RefreshCw className="w-4 h-4" />
-                                Renew
+                                Manage
+                                <ChevronRight className="w-4 h-4" />
                             </Link>
                         </div>
+
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${subscription.type === 'VIP' ? 'bg-purple-100' :
+                                        subscription.type === 'PREMIUM' ? 'bg-pink-100' : 'bg-gray-100'
+                                    }`}>
+                                    {subscription.type === 'VIP' && <Crown className="w-6 h-6 text-purple-600" />}
+                                    {subscription.type === 'PREMIUM' && <Zap className="w-6 h-6 text-pink-600" />}
+                                    {subscription.type === 'BASIC' && <Star className="w-6 h-6 text-gray-600" />}
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="font-semibold text-gray-900">{getCurrentPlan()?.name} Plan</h3>
+                                    <p className="text-sm text-gray-600">
+                                        KSh {getCurrentPlan()?.price.toLocaleString()}/year
+                                    </p>
+                                </div>
+                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${subscription.status === 'EXPIRED' || isExpired()
+                                        ? 'bg-red-100 text-red-700'
+                                        : isExpiringSoon()
+                                            ? 'bg-yellow-100 text-yellow-700'
+                                            : 'bg-green-100 text-green-700'
+                                    }`}>
+                                    {subscription.status === 'EXPIRED' || isExpired() ? 'Expired' :
+                                        isExpiringSoon() ? 'Expiring Soon' : 'Active'}
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <p className="text-gray-500">Started</p>
+                                    <p className="font-medium text-gray-900">
+                                        {new Date(subscription.startDate).toLocaleDateString()}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-500">Expires</p>
+                                    <p className="font-medium text-gray-900">
+                                        {new Date(subscription.endDate).toLocaleDateString()}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-500">Auto-renew</p>
+                                    <p className={`font-medium ${subscription.autoRenew ? 'text-green-600' : 'text-gray-900'}`}>
+                                        {subscription.autoRenew ? 'Enabled' : 'Disabled'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-500">Days Remaining</p>
+                                    <p className={`font-medium ${isExpiringSoon() ? 'text-yellow-600' :
+                                            isExpired() ? 'text-red-600' : 'text-gray-900'
+                                        }`}>
+                                        {getDaysRemaining() > 0 ? getDaysRemaining() : 0} days
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                {subscription.type !== 'VIP' && (
+                                    <Link
+                                        href="/subscription/dating"
+                                        className="flex-1 py-2 bg-pink-500 text-white rounded-lg font-medium text-center hover:bg-pink-600 transition-colors"
+                                    >
+                                        Upgrade Plan
+                                    </Link>
+                                )}
+                                <Link
+                                    href="/subscription/dating"
+                                    className={`py-2 px-4 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 ${subscription.type === 'VIP' ? 'flex-1' : ''
+                                        }`}
+                                >
+                                    <RefreshCw className="w-4 h-4" />
+                                    Renew
+                                </Link>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Profile Content */}
                 <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -455,25 +640,32 @@ export default function DatingProfilePage() {
 
                         {!isEditing ? (
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                {user.photos.map((photo, index) => (
-                                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden">
-                                        <img
-                                            src={photo}
-                                            alt={`Photo ${index + 1}`}
-                                            className="w-full h-full object-cover"
-                                        />
-                                        {index === 0 && (
-                                            <div className="absolute top-2 left-2 bg-pink-500 text-white text-xs px-2 py-1 rounded">
-                                                Main
-                                            </div>
-                                        )}
+                                {profile.photos && profile.photos.length > 0 ? (
+                                    profile.photos.map((photo, index) => (
+                                        <div key={index} className="relative aspect-square rounded-lg overflow-hidden">
+                                            <img
+                                                src={photo}
+                                                alt={`Photo ${index + 1}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                            {index === 0 && (
+                                                <div className="absolute top-2 left-2 bg-pink-500 text-white text-xs px-2 py-1 rounded">
+                                                    Main
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="col-span-3 text-center py-8 text-gray-500">
+                                        No photos uploaded yet
                                     </div>
-                                ))}
+                                )}
                             </div>
                         ) : (
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    {editedUser.photos.map((photo, index) => (
+                                    {/* Existing photos */}
+                                    {editedProfile.photos?.map((photo, index) => (
                                         <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
                                             <img
                                                 src={photo}
@@ -482,7 +674,7 @@ export default function DatingProfilePage() {
                                             />
                                             <button
                                                 type="button"
-                                                onClick={() => removePhoto(index)}
+                                                onClick={() => removeExistingPhoto(photo)}
                                                 className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
                                             >
                                                 <X size={16} />
@@ -495,6 +687,7 @@ export default function DatingProfilePage() {
                                         </div>
                                     ))}
 
+                                    {/* New photos */}
                                     {newPhotos.map((photo, index) => (
                                         <div key={`new-${index}`} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
                                             <img
@@ -509,10 +702,14 @@ export default function DatingProfilePage() {
                                             >
                                                 <X size={16} />
                                             </button>
+                                            <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
+                                                New
+                                            </div>
                                         </div>
                                     ))}
 
-                                    {(editedUser.photos.length + newPhotos.length) < 6 && (
+                                    {/* Upload button */}
+                                    {((editedProfile.photos?.length || 0) + newPhotos.length) < 6 && (
                                         <label className="aspect-square rounded-lg border-2 border-dashed border-gray-300 hover:border-pink-500 cursor-pointer flex flex-col items-center justify-center transition-colors">
                                             <Upload className="w-8 h-8 text-gray-400 mb-2" />
                                             <span className="text-sm text-gray-500">Add Photo</span>
@@ -544,12 +741,6 @@ export default function DatingProfilePage() {
                                         <span className="text-sm font-medium">VIP</span>
                                     </div>
                                 )}
-                                {user.isVerified && (
-                                    <div className="flex items-center gap-1 text-blue-500">
-                                        <Check className="w-5 h-5" />
-                                        <span className="text-sm font-medium">Verified</span>
-                                    </div>
-                                )}
                             </div>
                         </div>
 
@@ -557,154 +748,80 @@ export default function DatingProfilePage() {
                             <div className="space-y-4">
                                 <div>
                                     <h3 className="text-2xl font-bold text-gray-900">
-                                        {user.displayName || `${user.firstName} ${user.lastName}`}, {user.age}
+                                        {displayName}, {age}
                                     </h3>
                                     <div className="flex items-center text-gray-600 mt-1">
                                         <MapPin className="w-4 h-4 mr-1" />
-                                        <span>{user.city}, {user.country}</span>
+                                        <span>{locationStr}</span>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                                     <div>
                                         <p className="text-sm text-gray-500 mb-1">Gender</p>
-                                        <p className="text-gray-900 font-medium capitalize">{user.gender}</p>
+                                        <p className="text-gray-900 font-medium capitalize">{profile.gender}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500 mb-1">Looking For</p>
-                                        <p className="text-gray-900 font-medium capitalize">{user.lookingFor}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500 mb-1">Orientation</p>
-                                        <p className="text-gray-900 font-medium capitalize">{user.sexualOrientation}</p>
+                                        <p className="text-gray-900 font-medium">{profile.lookingFor || 'Not specified'}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500 mb-1">Email</p>
-                                        <p className="text-gray-900 font-medium">{user.email}</p>
+                                        <p className="text-gray-900 font-medium">{user?.email}</p>
                                     </div>
                                 </div>
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            First Name
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="firstName"
-                                            value={editedUser.firstName}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Last Name
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="lastName"
-                                            value={editedUser.lastName}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                                        />
-                                    </div>
-                                </div>
-
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Display Name
+                                        Name
                                     </label>
                                     <input
                                         type="text"
-                                        name="displayName"
-                                        value={editedUser.displayName}
+                                        name="name"
+                                        value={editedProfile.name || ''}
                                         onChange={handleInputChange}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Gender
-                                        </label>
-                                        <select
-                                            name="gender"
-                                            value={editedUser.gender}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                                        >
-                                            <option value="male">Male</option>
-                                            <option value="female">Female</option>
-                                            <option value="non-binary">Non-binary</option>
-                                            <option value="other">Other</option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Sexual Orientation
-                                        </label>
-                                        <select
-                                            name="sexualOrientation"
-                                            value={editedUser.sexualOrientation}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                                        >
-                                            <option value="straight">Straight</option>
-                                            <option value="gay">Gay</option>
-                                            <option value="lesbian">Lesbian</option>
-                                            <option value="bisexual">Bisexual</option>
-                                            <option value="pansexual">Pansexual</option>
-                                            <option value="asexual">Asexual</option>
-                                        </select>
-                                    </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Location (City)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="locationCity"
+                                        value={typeof editedProfile.location === 'object'
+                                            ? (editedProfile.location as any)?.city || ''
+                                            : editedProfile.location || ''}
+                                        onChange={(e) => {
+                                            setEditedProfile(prev => ({
+                                                ...prev,
+                                                location: {
+                                                    ...(typeof prev.location === 'object' ? prev.location : {}),
+                                                    city: e.target.value
+                                                }
+                                            }))
+                                        }}
+                                        placeholder="e.g., Nairobi"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                                    />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Looking For
                                     </label>
-                                    <select
+                                    <input
+                                        type="text"
                                         name="lookingFor"
-                                        value={editedUser.lookingFor}
+                                        value={editedProfile.lookingFor || ''}
                                         onChange={handleInputChange}
+                                        placeholder="e.g., Meaningful relationship"
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                                    >
-                                        <option value="men">Men</option>
-                                        <option value="women">Women</option>
-                                        <option value="everyone">Everyone</option>
-                                    </select>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            City
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="city"
-                                            value={editedUser.city}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Country
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="country"
-                                            value={editedUser.country}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                                        />
-                                    </div>
+                                    />
                                 </div>
                             </div>
                         )}
@@ -715,13 +832,14 @@ export default function DatingProfilePage() {
                         <h2 className="text-xl font-bold text-gray-900 mb-4">About Me</h2>
 
                         {!isEditing ? (
-                            <p className="text-gray-700 leading-relaxed">{user.bio}</p>
+                            <p className="text-gray-700 leading-relaxed">{profile.bio || 'No bio added yet.'}</p>
                         ) : (
                             <textarea
                                 name="bio"
-                                value={editedUser.bio}
+                                value={editedProfile.bio || ''}
                                 onChange={handleInputChange}
                                 rows={5}
+                                placeholder="Tell others about yourself..."
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent resize-none"
                             />
                         )}
@@ -733,14 +851,18 @@ export default function DatingProfilePage() {
 
                         {!isEditing ? (
                             <div className="flex flex-wrap gap-2">
-                                {user.interests.map((interest) => (
-                                    <span
-                                        key={interest}
-                                        className="px-4 py-2 bg-pink-100 text-pink-700 rounded-full text-sm font-medium"
-                                    >
-                                        {interest}
-                                    </span>
-                                ))}
+                                {profile.interests && profile.interests.length > 0 ? (
+                                    profile.interests.map((interest) => (
+                                        <span
+                                            key={interest}
+                                            className="px-4 py-2 bg-pink-100 text-pink-700 rounded-full text-sm font-medium"
+                                        >
+                                            {interest}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <p className="text-gray-500">No interests added yet</p>
+                                )}
                             </div>
                         ) : (
                             <div className="flex flex-wrap gap-2">
@@ -749,7 +871,7 @@ export default function DatingProfilePage() {
                                         key={interest}
                                         type="button"
                                         onClick={() => toggleInterest(interest)}
-                                        className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${editedUser.interests.includes(interest)
+                                        className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${editedProfile.interests?.includes(interest)
                                                 ? 'bg-pink-500 text-white'
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                             }`}
@@ -767,23 +889,26 @@ export default function DatingProfilePage() {
 
                         {!isEditing ? (
                             <div className="space-y-4">
-                                {user.education && (
+                                {profile.education && (
                                     <div className="flex items-start">
                                         <GraduationCap className="w-5 h-5 text-gray-400 mr-3 mt-0.5" />
                                         <div>
                                             <p className="text-sm text-gray-500">Education</p>
-                                            <p className="text-gray-900 font-medium">{user.education}</p>
+                                            <p className="text-gray-900 font-medium">{profile.education}</p>
                                         </div>
                                     </div>
                                 )}
-                                {user.occupation && (
+                                {profile.occupation && (
                                     <div className="flex items-start">
                                         <Briefcase className="w-5 h-5 text-gray-400 mr-3 mt-0.5" />
                                         <div>
                                             <p className="text-sm text-gray-500">Occupation</p>
-                                            <p className="text-gray-900 font-medium">{user.occupation}</p>
+                                            <p className="text-gray-900 font-medium">{profile.occupation}</p>
                                         </div>
                                     </div>
+                                )}
+                                {!profile.education && !profile.occupation && (
+                                    <p className="text-gray-500">No additional information</p>
                                 )}
                             </div>
                         ) : (
@@ -795,7 +920,7 @@ export default function DatingProfilePage() {
                                     <input
                                         type="text"
                                         name="education"
-                                        value={editedUser.education}
+                                        value={editedProfile.education || ''}
                                         onChange={handleInputChange}
                                         placeholder="e.g., Bachelor's Degree"
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
@@ -808,7 +933,7 @@ export default function DatingProfilePage() {
                                     <input
                                         type="text"
                                         name="occupation"
-                                        value={editedUser.occupation}
+                                        value={editedProfile.occupation || ''}
                                         onChange={handleInputChange}
                                         placeholder="e.g., Software Engineer"
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
@@ -828,7 +953,9 @@ export default function DatingProfilePage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <h3 className="font-semibold text-gray-900 mb-1">Wallet</h3>
-                                <p className="text-sm text-gray-600">Manage earnings</p>
+                                <p className="text-sm text-gray-600">
+                                    {wallet ? `KSh ${(wallet.currentBalance || wallet.balance || 0).toLocaleString()}` : 'View earnings'}
+                                </p>
                             </div>
                             <CreditCard className="w-8 h-8 text-pink-500" />
                         </div>
@@ -855,9 +982,9 @@ export default function DatingProfilePage() {
                             <div>
                                 <h3 className="font-semibold text-gray-900 mb-1">Referral Program</h3>
                                 <p className="text-sm text-gray-600">Earn 30% commission</p>
-                                {user.referralStats.totalReferrals > 0 && (
+                                {wallet && (wallet.currentBalance || wallet.balance || 0) > 0 && (
                                     <p className="text-sm text-green-600 font-semibold mt-1">
-                                        KSh {user.referralStats.totalEarnings.toLocaleString()} earned
+                                        KSh {(wallet.currentBalance || wallet.balance || 0).toLocaleString()} earned
                                     </p>
                                 )}
                             </div>
@@ -872,7 +999,15 @@ export default function DatingProfilePage() {
                     <p className="text-gray-600 mb-4">
                         Once you delete your account, there is no going back. Please be certain.
                     </p>
-                    <button className="px-4 py-2 border-2 border-red-500 text-red-600 rounded-lg hover:bg-red-50 font-medium transition-colors">
+                    <button
+                        onClick={() => {
+                            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                                // TODO: Implement account deletion
+                                alert('Account deletion not yet implemented')
+                            }
+                        }}
+                        className="px-4 py-2 border-2 border-red-500 text-red-600 rounded-lg hover:bg-red-50 font-medium transition-colors"
+                    >
                         Delete Account
                     </button>
                 </div>

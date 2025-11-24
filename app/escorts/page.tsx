@@ -1,168 +1,103 @@
 // app/hookups/page.tsx
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
-import { Search, Filter, MapPin, X, Loader2 } from 'lucide-react'
+import { Search, Filter, MapPin, X, Loader2, AlertCircle } from 'lucide-react'
 import { EscortCard } from '../components/cards/EscortCard'
 import type { ProfileData } from '../components/cards/EscortCard'
+import { useEscorts, usePayment } from '@/lib/hooks/butical-api-hooks'
+import type { Escort } from '@/services/butical-api-service'
 
-// Mock data for demonstration
-const MOCK_PROFILES: ProfileData[] = [
-    {
-        id: 'e1',
-        name: 'Sophia',
-        age: 25,
-        distance: 3,
-        bio: 'Professional model with years of experience in entertainment industry.',
-        photos: ['https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&q=80'],
-        rating: 4.8,
-        price: 300,
-        isUnlocked: false,
-        isVip: true,
-        hasDirectCall: false,
-    },
-    {
-        id: 'e2',
-        name: 'Olivia',
-        age: 27,
-        distance: 5,
-        bio: 'Dancer and entertainer. Available for private bookings and special events.',
-        photos: ['https://images.unsplash.com/photo-1614023342667-9f59d05c29f0?w=800&q=80'],
-        rating: 4.5,
-        price: 300,
-        isUnlocked: true,
-        isVip: false,
-        hasDirectCall: true,
-    },
-    {
-        id: 'e3',
-        name: 'Isabella',
-        age: 24,
-        distance: 7,
-        bio: 'Available for bookings. Discreet and professional service guaranteed.',
-        photos: ['https://images.unsplash.com/photo-1534751516642-a1af1ef26a56?w=800&q=80'],
-        rating: 4.2,
-        price: 300,
-        isUnlocked: false,
-        isVip: false,
-        hasDirectCall: false, // LOCKED - Will show "Unlock Escort"
-    },
-    {
-        id: 'e4',
-        name: 'Emma',
-        age: 26,
-        distance: 10,
-        bio: 'Experienced entertainer available for private bookings and companionship.',
-        photos: ['https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&q=80'],
-        rating: 4.9,
-        price: 300,
-        isUnlocked: false,
-        isVip: false,
-        hasDirectCall: false, // LOCKED - Will show "Unlock Escort"
-    },
-    {
-        id: 'e5',
-        name: 'Ava',
-        age: 29,
-        distance: 15,
-        bio: 'Professional actress and entertainer. Available for select bookings only.',
-        photos: ['https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=800&q=80'],
-        rating: 4.7,
-        price: 300,
-        isUnlocked: false,
-        isVip: true,
-        hasDirectCall: false,
-    },
-    {
-        id: 'e6',
-        name: 'Mia',
-        age: 23,
-        distance: 8,
-        bio: 'New to the platform. Professional and friendly service available today.',
-        photos: ['https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=800&q=80'],
-        rating: 4.3,
-        price: 300,
-        isUnlocked: true,
-        isVip: false,
-        hasDirectCall: true,
-    },
-    {
-        id: 'e7',
-        name: 'Charlotte',
-        age: 28,
-        distance: 12,
-        bio: 'Elegant companion available for dinner dates and special occasions.',
-        photos: ['https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&q=80'],
-        rating: 4.6,
-        price: 300,
-        isUnlocked: false,
-        isVip: false,
-        hasDirectCall: false, // LOCKED - Will show "Unlock Escort"
-    },
-    {
-        id: 'e8',
-        name: 'Amelia',
-        age: 26,
-        distance: 9,
-        bio: 'Friendly and professional service. Available for bookings now.',
-        photos: ['https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&q=80'],
-        rating: 4.4,
-        price: 300,
-        isUnlocked: false,
-        isVip: false,
-        hasDirectCall: false, // LOCKED - Will show "Unlock Escort"
-    },
+// Kenyan towns list
+const allTowns = [
+    'Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Thika',
+    'Kiambu', 'Nyeri Town', 'Naivasha', 'Meru Town', 'Nanyuki',
+    'Embu Town', 'Kisii Town', 'Machakos Town', 'Narok town',
+    'Isiolo Town', 'Voi', 'Kitui Town', 'Limuru', 'Nyahururu',
+    'Kakamega Town', 'Kilifi Town', 'Wangige', 'Bungoma Town',
+    'Bomet', 'Watamu', 'Chuka', 'Migori Town', 'Kitale', 'Mwea',
+    'Kericho Town', 'Bondo', 'Malindi', 'Isinya', 'Lari'
 ]
 
 export default function HookupPage() {
-    const [profiles, setProfiles] = useState<ProfileData[]>([])
     const [isFilterOpen, setIsFilterOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
-    const [isLoading, setIsLoading] = useState(true)
     const [showPaymentModal, setShowPaymentModal] = useState(false)
     const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
     const [showAllTowns, setShowAllTowns] = useState(false)
     const [mpesaPhone, setMpesaPhone] = useState('')
-    const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+    const [selectedLocation, setSelectedLocation] = useState('Nairobi')
+    const [filters, setFilters] = useState({
+        location: 'Nairobi',
+        minRating: undefined as number | undefined,
+        maxDistance: 50,
+        minRate: undefined as number | undefined,
+        maxRate: undefined as number | undefined,
+    })
 
-    const allTowns = [
-        'Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Thika',
-        'Kiambu', 'Nyeri Town', 'Naivasha', 'Meru Town', 'Nanyuki',
-        'Embu Town', 'Kisii Town', 'Machakos Town', 'Narok town',
-        'Isiolo Town', 'Voi', 'Kitui Town', 'Limuru', 'Nyahururu',
-        'Kakamega Town', 'Kilifi Town', 'Wangige', 'Bungoma Town',
-        'Bomet', 'Watamu', 'Chuka', 'Migori Town', 'Kitale', 'Mwea',
-        'Kericho Town', 'Bondo', 'Malindi', 'Isinya', 'Lari'
-    ]
+    // Fetch escorts using the hook
+    const { escorts, loading: isLoading, error, refetch } = useEscorts({
+        location: filters.location,
+        page: 1,
+        limit: 50,
+    })
 
-    useEffect(() => {
-        const fetchProfiles = async () => {
-            setIsLoading(true)
-            setTimeout(() => {
-                setProfiles(MOCK_PROFILES)
-                setIsLoading(false)
-            }, 800)
+    // Payment hook
+    const {
+        unlockEscort,
+        loading: isProcessingPayment,
+        error: paymentError
+    } = usePayment()
+
+    // Safe escorts array
+    const safeEscorts = Array.isArray(escorts) ? escorts : []
+
+    // Helper to get display name from escort
+    const getDisplayName = (escort: Escort): string => {
+        if (escort.displayName) return escort.displayName;
+        if (escort.user) return `${escort.user.firstName} ${escort.user.lastName}`.trim();
+        return 'Anonymous';
+    };
+
+    // Helper to get location string
+    const getLocation = (escort: Escort): string => {
+        if (escort.location) return escort.location;
+        if (escort.locations) {
+            const parts = [escort.locations.area, escort.locations.city, escort.locations.country].filter(Boolean);
+            return parts.join(', ') || 'Unknown location';
         }
+        return 'Unknown location';
+    };
 
-        fetchProfiles()
-    }, [])
+    // Transform API data to ProfileData format
+    const profiles: ProfileData[] = safeEscorts.map((escort: Escort) => ({
+        id: escort.id,
+        name: getDisplayName(escort),
+        age: 0,
+        distance: 0,
+        bio: escort.about || '',
+        photos: escort.photos && escort.photos.length > 0 ? escort.photos : ['https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&q=80'],
+        rating: escort.rating || 4.5,
+        price: escort.unlockPrice || escort.pricing?.unlockPrice || escort.hourlyRate || 300,
+        isUnlocked: !escort.contactHidden,
+        isVip: escort.vipStatus || escort.isVIP || false,
+        hasDirectCall: !escort.contactHidden,
+    }))
 
-    // Handle unlock action - triggers payment modal
+    // Handle unlock action
     const handleUnlock = (profileId: string) => {
         const profile = profiles.find(p => p.id === profileId)
-
         if (profile && !profile.isUnlocked && !profile.isVip) {
             setSelectedProfileId(profileId)
             setShowPaymentModal(true)
         }
     }
 
-    // Handle view contact/profile - navigates to escort detail page
+    // Handle view contact/profile
     const handleCall = (profileId: string) => {
         const profile = profiles.find(p => p.id === profileId)
         if (profile) {
-            // Navigate to escort detail page
             window.location.href = `/escorts/${profileId}`
         }
     }
@@ -174,31 +109,39 @@ export default function HookupPage() {
             return
         }
 
-        setIsProcessingPayment(true)
+        if (!selectedProfileId) {
+            return
+        }
 
-        // Simulate M-Pesa STK push
-        setTimeout(() => {
-            // Simulate payment success
-            if (selectedProfileId) {
-                setProfiles(prevProfiles =>
-                    prevProfiles.map(profile =>
-                        profile.id === selectedProfileId
-                            ? { ...profile, isUnlocked: true }
-                            : profile
-                    )
-                )
-            }
+        const result = await unlockEscort(selectedProfileId, mpesaPhone)
 
-            setIsProcessingPayment(false)
-            setShowPaymentModal(false)
-            setSelectedProfileId(null)
-            setMpesaPhone('')
+        if (result.success) {
+            alert('Payment request sent! Please check your phone for M-Pesa prompt.')
 
-            // Show success message
-            alert('Payment successful! Contact unlocked.')
-        }, 3000)
+            setTimeout(() => {
+                setShowPaymentModal(false)
+                setSelectedProfileId(null)
+                setMpesaPhone('')
+                refetch()
+            }, 3000)
+        } else {
+            alert(result.error || 'Payment failed. Please try again.')
+        }
     }
 
+    // Handle location change
+    const handleLocationChange = (location: string) => {
+        setSelectedLocation(location)
+        setFilters(prev => ({ ...prev, location }))
+    }
+
+    // Apply filters
+    const handleApplyFilters = () => {
+        refetch()
+        setIsFilterOpen(false)
+    }
+
+    // Filter profiles based on search query
     const filteredProfiles = profiles.filter(profile =>
         profile.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         profile.bio?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -223,7 +166,7 @@ export default function HookupPage() {
 
                             <button className="px-3 py-2 border border-gray-600 text-gray-200 rounded-lg hover:bg-gray-700 font-medium transition-colors flex items-center gap-2">
                                 <MapPin className="w-4 h-4" />
-                                <span className="hidden md:inline">Nairobi</span>
+                                <span className="hidden md:inline">{selectedLocation}</span>
                             </button>
                         </div>
                     </div>
@@ -247,7 +190,11 @@ export default function HookupPage() {
                             {(showAllTowns ? allTowns : allTowns.slice(0, 6)).map(town => (
                                 <button
                                     key={town}
-                                    className="px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white text-sm font-medium rounded-lg transition-colors"
+                                    onClick={() => handleLocationChange(town)}
+                                    className={`px-3 py-1.5 text-white text-sm font-medium rounded-lg transition-colors ${selectedLocation === town
+                                            ? 'bg-rose-600'
+                                            : 'bg-rose-500 hover:bg-rose-600'
+                                        }`}
                                 >
                                     {town}
                                 </button>
@@ -272,7 +219,13 @@ export default function HookupPage() {
                                 <label className="block text-sm font-medium text-gray-300 mb-1">
                                     Rating
                                 </label>
-                                <select className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                                <select
+                                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                                    onChange={(e) => setFilters(prev => ({
+                                        ...prev,
+                                        minRating: e.target.value ? parseFloat(e.target.value) : undefined
+                                    }))}
+                                >
                                     <option value="">Any rating</option>
                                     <option value="4.5">4.5+ stars</option>
                                     <option value="4">4+ stars</option>
@@ -282,13 +235,17 @@ export default function HookupPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-1">
-                                    Distance (km)
+                                    Distance (km): {filters.maxDistance}
                                 </label>
                                 <input
                                     type="range"
                                     min="1"
                                     max="100"
-                                    defaultValue="50"
+                                    value={filters.maxDistance}
+                                    onChange={(e) => setFilters(prev => ({
+                                        ...prev,
+                                        maxDistance: parseInt(e.target.value)
+                                    }))}
                                     className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-pink-500"
                                 />
                                 <div className="flex justify-between text-xs text-gray-400 mt-1">
@@ -302,11 +259,22 @@ export default function HookupPage() {
                                 <label className="block text-sm font-medium text-gray-300 mb-1">
                                     Price Range
                                 </label>
-                                <select className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                                <select
+                                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                                    onChange={(e) => {
+                                        const value = e.target.value
+                                        if (value === '300') {
+                                            setFilters(prev => ({ ...prev, minRate: undefined, maxRate: 300 }))
+                                        } else if (value === '500') {
+                                            setFilters(prev => ({ ...prev, minRate: undefined, maxRate: 500 }))
+                                        } else {
+                                            setFilters(prev => ({ ...prev, minRate: undefined, maxRate: undefined }))
+                                        }
+                                    }}
+                                >
                                     <option value="">Any price</option>
-                                    <option value="300">KSh 300</option>
-                                    <option value="500">KSh 500</option>
-                                    <option value="custom">Custom range</option>
+                                    <option value="300">Up to KSh 300</option>
+                                    <option value="500">Up to KSh 500</option>
                                 </select>
                             </div>
                         </div>
@@ -319,12 +287,31 @@ export default function HookupPage() {
                                 Cancel
                             </button>
                             <button
-                                onClick={() => setIsFilterOpen(false)}
+                                onClick={handleApplyFilters}
                                 className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors"
                             >
                                 Apply Filters
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Error Message */}
+            {error && (
+                <div className="max-w-7xl mx-auto px-4 pt-4">
+                    <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 flex items-center gap-3">
+                        <AlertCircle className="w-5 h-5 text-red-400" />
+                        <div>
+                            <p className="text-red-400 font-medium">Failed to load escorts</p>
+                            <p className="text-red-300 text-sm">{error}</p>
+                        </div>
+                        <button
+                            onClick={() => refetch()}
+                            className="ml-auto px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+                        >
+                            Retry
+                        </button>
                     </div>
                 </div>
             )}
@@ -354,15 +341,17 @@ export default function HookupPage() {
                                 <div className="space-y-2 text-sm">
                                     <div className="flex justify-between">
                                         <span className="text-gray-400">Active Escorts</span>
-                                        <span className="font-semibold text-white">1,247</span>
+                                        <span className="font-semibold text-white">{safeEscorts.length}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-gray-400">Online Now</span>
-                                        <span className="font-semibold text-green-400">342</span>
+                                        <span className="text-gray-400">In {selectedLocation}</span>
+                                        <span className="font-semibold text-green-400">{filteredProfiles.length}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-gray-400">New Today</span>
-                                        <span className="font-semibold text-white">28</span>
+                                        <span className="text-gray-400">Verified</span>
+                                        <span className="font-semibold text-white">
+                                            {safeEscorts.filter((e: Escort) => e.verified || e.isVerified).length}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -442,7 +431,7 @@ export default function HookupPage() {
                             </div>
 
                             <div className="bg-pink-500/20 border border-pink-500/30 p-4 rounded-lg text-center mb-4">
-                                <span className="text-white font-bold text-3xl">KSh 300</span>
+                                <span className="text-white font-bold text-3xl">KSh 150</span>
                                 <p className="text-sm text-gray-300 mt-1">One-time unlock fee</p>
                             </div>
 
@@ -458,6 +447,12 @@ export default function HookupPage() {
                                 </p>
                             </div>
 
+                            {paymentError && (
+                                <div className="bg-red-500/20 border border-red-500/30 p-3 rounded-lg mb-4">
+                                    <p className="text-sm text-red-300">{paymentError}</p>
+                                </div>
+                            )}
+
                             <p className="text-sm text-gray-400 mb-4">
                                 Enter your M-Pesa phone number. You'll receive a prompt to complete payment.
                             </p>
@@ -470,10 +465,11 @@ export default function HookupPage() {
                                     type="tel"
                                     value={mpesaPhone}
                                     onChange={(e) => setMpesaPhone(e.target.value)}
-                                    placeholder="+254 712 345 678"
+                                    placeholder="254712345678"
                                     disabled={isProcessingPayment}
                                     className="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:opacity-50"
                                 />
+                                <p className="text-xs text-gray-400 mt-1">Format: 254XXXXXXXXX (no spaces or +)</p>
                             </div>
                         </div>
 
@@ -500,7 +496,7 @@ export default function HookupPage() {
                                         <span>Processing...</span>
                                     </>
                                 ) : (
-                                    <span>Pay KSh 300</span>
+                                    <span>Pay KSh 150</span>
                                 )}
                             </button>
                         </div>

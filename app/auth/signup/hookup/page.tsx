@@ -1,11 +1,16 @@
+// app/auth/signup/hookup/page.tsx
 'use client'
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { Users, Eye, EyeOff } from 'lucide-react'
+import { Users, Eye, EyeOff, AlertCircle, X } from 'lucide-react'
+import ButicalAPI, { TokenService } from '@/services/butical-api-service'
+import type { HookupUserRegistration } from '@/services/butical-api-service'
 
 export default function HookupSignupPage() {
     const [formData, setFormData] = useState({
+        firstName: '',
+        lastName: '',
         email: '',
         phone: '',
         password: '',
@@ -15,6 +20,8 @@ export default function HookupSignupPage() {
 
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+    const [isProcessing, setIsProcessing] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target
@@ -24,15 +31,86 @@ export default function HookupSignupPage() {
         }))
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        // TODO: Handle form submission
-        console.log('Hookup signup:', formData)
+        setError(null)
+        setIsProcessing(true)
+
+        try {
+            // Validate passwords match
+            if (formData.password !== formData.confirmPassword) {
+                throw new Error('Passwords do not match')
+            }
+
+            // Validate required fields
+            if (!formData.firstName || !formData.lastName || !formData.email ||
+                !formData.phone || !formData.password) {
+                throw new Error('Please fill in all required fields')
+            }
+
+            if (formData.password.length < 6) {
+                throw new Error('Password must be at least 6 characters')
+            }
+
+            if (!formData.termsAccepted) {
+                throw new Error('Please accept the terms and conditions')
+            }
+
+            // Prepare registration data
+            const registrationData: HookupUserRegistration = {
+                email: formData.email.trim(),
+                phone: formData.phone.replace(/\s+/g, ''), // Remove spaces
+                password: formData.password,
+                firstName: formData.firstName.trim(),
+                lastName: formData.lastName.trim(),
+                role: 'HOOKUP_USER',
+                termsAccepted: formData.termsAccepted,
+            }
+
+            // Register user
+            const response = await ButicalAPI.auth.register(registrationData)
+            console.log('Registration response:', response)
+
+            // API returns { status, data: { user, accessToken, refreshToken } }
+            const authData = response.data?.data
+
+            // Store tokens if available
+            if (authData?.accessToken) {
+                TokenService.setAccessToken(authData.accessToken)
+                if (authData.refreshToken) {
+                    TokenService.setRefreshToken(authData.refreshToken)
+                }
+            }
+
+            // Always redirect after successful registration
+            console.log('Redirecting to /escorts')
+            window.location.href = '/escorts'
+        } catch (err: any) {
+            console.error('Registration error:', err)
+            setError(err.response?.data?.message || err.message || 'Registration failed. Please try again.')
+            setIsProcessing(false)
+        }
     }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 flex items-center justify-center py-8 px-4">
             <div className="max-w-md w-full">
+                {/* Error Display */}
+                {error && (
+                    <div className="mb-4">
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-red-800 text-sm flex-1">{error}</p>
+                            <button
+                                onClick={() => setError(null)}
+                                className="text-red-500 hover:text-red-700"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="text-center mb-8">
                     <Link href="/" className="inline-flex items-center justify-center mb-4">
@@ -51,6 +129,36 @@ export default function HookupSignupPage() {
                 {/* Form */}
                 <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    First Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    name="firstName"
+                                    value={formData.firstName}
+                                    onChange={handleInputChange}
+                                    required
+                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Last Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    name="lastName"
+                                    value={formData.lastName}
+                                    onChange={handleInputChange}
+                                    required
+                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                                />
+                            </div>
+                        </div>
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Email *
@@ -76,9 +184,10 @@ export default function HookupSignupPage() {
                                 value={formData.phone}
                                 onChange={handleInputChange}
                                 required
-                                placeholder="+254 712 345 678"
+                                placeholder="254712345678"
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
                             />
+                            <p className="text-xs text-gray-500 mt-1">Format: 254XXXXXXXXX</p>
                         </div>
 
                         <div>
@@ -155,9 +264,17 @@ export default function HookupSignupPage() {
 
                         <button
                             type="submit"
-                            className="w-full px-4 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors mt-6"
+                            disabled={isProcessing}
+                            className="w-full px-4 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors mt-6 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
-                            Create Account
+                            {isProcessing ? (
+                                <>
+                                    <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
+                                    Creating Account...
+                                </>
+                            ) : (
+                                'Create Account'
+                            )}
                         </button>
                     </form>
 

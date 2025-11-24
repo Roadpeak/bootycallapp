@@ -1,8 +1,10 @@
+// app/auth/login/page.tsx
 'use client'
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { Heart, Eye, EyeOff } from 'lucide-react'
+import { Heart, Eye, EyeOff, AlertCircle, X } from 'lucide-react'
+import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 
 export default function LoginPage() {
     const [formData, setFormData] = useState({
@@ -12,6 +14,8 @@ export default function LoginPage() {
     })
 
     const [showPassword, setShowPassword] = useState(false)
+    const [isProcessing, setIsProcessing] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target
@@ -21,15 +25,99 @@ export default function LoginPage() {
         }))
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        // TODO: Handle login
-        console.log('Login:', formData)
+        setError(null)
+        setIsProcessing(true)
+
+        try {
+            // Validate required fields
+            if (!formData.emailOrPhone || !formData.password) {
+                throw new Error('Please fill in all fields')
+            }
+
+            // Prepare login credentials
+            const credentials = {
+                email: formData.emailOrPhone.trim(),
+                password: formData.password,
+            }
+
+            // Call login API
+            const response = await ButicalAPI.auth.login(credentials)
+            console.log('Login response:', response)
+
+            // API returns { status, data: { user, accessToken, refreshToken } }
+            const authData = response.data?.data
+
+            // Store tokens if available
+            if (authData?.accessToken) {
+                TokenService.setAccessToken(authData.accessToken)
+                if (authData.refreshToken) {
+                    TokenService.setRefreshToken(authData.refreshToken)
+                }
+            }
+
+            // Redirect based on user role
+            const userRole = authData?.user?.role
+            let redirectPath = '/'
+
+            switch (userRole) {
+                case 'DATING_USER':
+                    redirectPath = '/dating'
+                    break
+                case 'ESCORT':
+                    redirectPath = '/profile/escort'
+                    break
+                case 'HOOKUP_USER':
+                    redirectPath = '/escorts'
+                    break
+                case 'ADMIN':
+                    redirectPath = '/admin'
+                    break
+                default:
+                    redirectPath = '/'
+            }
+
+            // Use window.location for reliable redirect after auth state change
+            console.log('Redirecting to:', redirectPath)
+            window.location.href = redirectPath
+        } catch (err: any) {
+            console.error('Login error:', err)
+
+            // Handle specific error messages
+            if (err.response?.status === 401) {
+                setError('Invalid email/phone or password. Please try again.')
+            } else if (err.response?.status === 404) {
+                setError('No account found with this email/phone. Please sign up first.')
+            } else if (err.response?.status === 429) {
+                setError('Too many login attempts. Please try again later.')
+            } else {
+                setError(err.response?.data?.message || err.message || 'Login failed. Please try again.')
+            }
+        } finally {
+            setIsProcessing(false)
+        }
     }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 flex items-center justify-center py-8 px-4">
             <div className="max-w-md w-full">
+                {/* Error Display */}
+                {error && (
+                    <div className="mb-4">
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-red-800 text-sm flex-1">{error}</p>
+                            <button
+                                onClick={() => setError(null)}
+                                className="text-red-500 hover:text-red-700"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="text-center mb-8">
                     <Link href="/" className="inline-flex items-center justify-center mb-4">
@@ -58,8 +146,9 @@ export default function LoginPage() {
                                 value={formData.emailOrPhone}
                                 onChange={handleInputChange}
                                 required
-                                placeholder="your@email.com or +254 712 345 678"
+                                placeholder="your@email.com or 254712345678"
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                                disabled={isProcessing}
                             />
                         </div>
 
@@ -76,11 +165,13 @@ export default function LoginPage() {
                                     required
                                     placeholder="Enter your password"
                                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                                    disabled={isProcessing}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                    disabled={isProcessing}
                                 >
                                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                 </button>
@@ -95,6 +186,7 @@ export default function LoginPage() {
                                     checked={formData.rememberMe}
                                     onChange={handleInputChange}
                                     className="w-4 h-4 text-pink-500 border-gray-300 rounded focus:ring-pink-500"
+                                    disabled={isProcessing}
                                 />
                                 <span className="ml-2 text-sm text-gray-700">Remember me</span>
                             </label>
@@ -106,9 +198,17 @@ export default function LoginPage() {
 
                         <button
                             type="submit"
-                            className="w-full px-4 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors mt-6"
+                            disabled={isProcessing}
+                            className="w-full px-4 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors mt-6 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
-                            Log In
+                            {isProcessing ? (
+                                <>
+                                    <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
+                                    Logging in...
+                                </>
+                            ) : (
+                                'Log In'
+                            )}
                         </button>
                     </form>
 
@@ -127,6 +227,7 @@ export default function LoginPage() {
                                 <button
                                     type="button"
                                     className="w-full px-4 py-2.5 border border-pink-300 text-pink-600 rounded-lg hover:bg-pink-50 font-medium transition-colors"
+                                    disabled={isProcessing}
                                 >
                                     Sign up for Dating
                                 </button>
@@ -136,6 +237,7 @@ export default function LoginPage() {
                                 <button
                                     type="button"
                                     className="w-full px-4 py-2.5 border border-purple-300 text-purple-600 rounded-lg hover:bg-purple-50 font-medium transition-colors"
+                                    disabled={isProcessing}
                                 >
                                     Join as an Escort
                                 </button>
@@ -145,8 +247,9 @@ export default function LoginPage() {
                                 <button
                                     type="button"
                                     className="w-full px-4 py-2.5 border border-rose-300 text-rose-600 rounded-lg hover:bg-rose-50 font-medium transition-colors"
+                                    disabled={isProcessing}
                                 >
-                                    Quick user Signup
+                                    Quick User Signup
                                 </button>
                             </Link>
                         </div>
@@ -155,8 +258,8 @@ export default function LoginPage() {
 
                 {/* Browse without account */}
                 <div className="mt-6 text-center">
-                    <Link href="/hookups" className="text-sm text-gray-600 hover:text-gray-800">
-                        Or continue browsing hookups without an account →
+                    <Link href="/escorts" className="text-sm text-gray-600 hover:text-gray-800">
+                        Or continue browsing escorts without an account →
                     </Link>
                 </div>
             </div>

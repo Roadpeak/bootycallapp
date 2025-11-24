@@ -1,4 +1,4 @@
-// app/wallet/cashout/page.tsx
+// app/referral/cashout/page.tsx
 'use client'
 
 import React, { useState } from 'react'
@@ -8,9 +8,8 @@ import {
     DollarSign, Clock, Shield, Info
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useWallet } from '@/lib/hooks/butical-api-hooks'
 
-// Mock wallet balance
-const AVAILABLE_BALANCE = 25450
 const MINIMUM_WITHDRAWAL = 1000
 
 export default function CashoutPage() {
@@ -20,6 +19,11 @@ export default function CashoutPage() {
     const [isProcessing, setIsProcessing] = useState(false)
     const [error, setError] = useState('')
     const [success, setSuccess] = useState(false)
+
+    // Fetch wallet data from API
+    const { wallet, withdraw, loading: walletLoading } = useWallet()
+
+    const availableBalance = wallet?.currentBalance || wallet?.balance || 0
 
     const handleQuickAmount = (value: number) => {
         setAmount(value.toString())
@@ -39,7 +43,7 @@ export default function CashoutPage() {
             return false
         }
 
-        if (withdrawalAmount > AVAILABLE_BALANCE) {
+        if (withdrawalAmount > availableBalance) {
             setError('Insufficient balance')
             return false
         }
@@ -64,16 +68,31 @@ export default function CashoutPage() {
         setIsProcessing(true)
         setError('')
 
-        // Simulate API call
-        setTimeout(() => {
-            setIsProcessing(false)
-            setSuccess(true)
+        try {
+            const result = await withdraw(parseFloat(amount), mpesaPhone.replace(/\s/g, ''))
 
-            // Redirect to wallet after 3 seconds
-            setTimeout(() => {
-                router.push('/wallet')
-            }, 3000)
-        }, 3000)
+            if (result.success) {
+                setSuccess(true)
+                // Redirect to wallet after 3 seconds
+                setTimeout(() => {
+                    router.push('/referral/wallet')
+                }, 3000)
+            } else {
+                setError(result.error || 'Withdrawal failed. Please try again.')
+            }
+        } catch (err: any) {
+            setError(err.message || 'Withdrawal failed. Please try again.')
+        } finally {
+            setIsProcessing(false)
+        }
+    }
+
+    if (walletLoading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+            </div>
+        )
     }
 
     if (success) {
@@ -84,18 +103,18 @@ export default function CashoutPage() {
                         <Check className="w-10 h-10 text-green-600" />
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                        Withdrawal Successful!
+                        Withdrawal Initiated!
                     </h2>
                     <p className="text-gray-600 mb-6">
-                        KSh {parseFloat(amount).toLocaleString()} has been sent to {mpesaPhone}
+                        KSh {parseFloat(amount).toLocaleString()} withdrawal request to {mpesaPhone} has been submitted.
                     </p>
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                         <p className="text-sm text-blue-800">
-                            You should receive the M-Pesa confirmation message within 1-2 minutes.
+                            You should receive the M-Pesa confirmation message within 1-2 minutes during business hours.
                         </p>
                     </div>
                     <Link
-                        href="/wallet"
+                        href="/referral/wallet"
                         className="block w-full px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-semibold transition-colors"
                     >
                         Back to Wallet
@@ -112,7 +131,7 @@ export default function CashoutPage() {
                 <div className="max-w-2xl mx-auto px-4 py-4">
                     <div className="flex items-center justify-between">
                         <Link
-                            href="/wallet"
+                            href="/referral/wallet"
                             className="flex items-center text-gray-600 hover:text-gray-900"
                         >
                             <ArrowLeft className="w-5 h-5 mr-2" />
@@ -133,7 +152,7 @@ export default function CashoutPage() {
                         <span className="text-sm text-purple-100">Available to Withdraw</span>
                     </div>
                     <h2 className="text-5xl font-bold">
-                        KSh {AVAILABLE_BALANCE.toLocaleString()}
+                        KSh {availableBalance.toLocaleString()}
                     </h2>
                 </div>
 
@@ -176,8 +195,8 @@ export default function CashoutPage() {
                                 <button
                                     key={value}
                                     onClick={() => handleQuickAmount(value)}
-                                    disabled={value > AVAILABLE_BALANCE}
-                                    className={`px-4 py-3 rounded-lg font-medium transition-colors ${value > AVAILABLE_BALANCE
+                                    disabled={value > availableBalance}
+                                    className={`px-4 py-3 rounded-lg font-medium transition-colors ${value > availableBalance
                                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                             : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
                                         }`}
@@ -187,8 +206,9 @@ export default function CashoutPage() {
                             ))}
                         </div>
                         <button
-                            onClick={() => handleQuickAmount(AVAILABLE_BALANCE)}
-                            className="w-full mt-2 px-4 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-medium transition-colors"
+                            onClick={() => handleQuickAmount(availableBalance)}
+                            disabled={availableBalance < MINIMUM_WITHDRAWAL}
+                            className="w-full mt-2 px-4 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Withdraw All
                         </button>
@@ -228,7 +248,7 @@ export default function CashoutPage() {
                     {/* Withdrawal Button */}
                     <button
                         onClick={handleWithdrawal}
-                        disabled={isProcessing}
+                        disabled={isProcessing || availableBalance < MINIMUM_WITHDRAWAL}
                         className="w-full px-6 py-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {isProcessing ? (
@@ -296,10 +316,10 @@ export default function CashoutPage() {
                             <div>
                                 <h4 className="font-semibold text-gray-900 mb-2">Important Information</h4>
                                 <ul className="space-y-2 text-sm text-gray-600">
-                                    <li>• No withdrawal fees charged</li>
-                                    <li>• Minimum withdrawal: KSh {MINIMUM_WITHDRAWAL.toLocaleString()}</li>
-                                    <li>• Maximum per transaction: KSh 150,000</li>
-                                    <li>• Daily withdrawal limit: KSh 300,000</li>
+                                    <li>No withdrawal fees charged</li>
+                                    <li>Minimum withdrawal: KSh {MINIMUM_WITHDRAWAL.toLocaleString()}</li>
+                                    <li>Maximum per transaction: KSh 150,000</li>
+                                    <li>Daily withdrawal limit: KSh 300,000</li>
                                 </ul>
                             </div>
                         </div>

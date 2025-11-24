@@ -3,6 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { Heart, MessageSquare, Lock, Unlock, Phone, MapPin } from 'lucide-react'
+import { getImageUrl } from '@/lib/utils/image'
 
 // Combined interface for all profile types
 export interface ProfileData {
@@ -66,7 +67,7 @@ export const DatingCard: React.FC<DatingCardProps> = ({
                 {/* Profile Image */}
                 <div className="relative aspect-[3/4] overflow-hidden rounded-t-xl">
                     <img
-                        src={photos[0] || 'https://via.placeholder.com/300x400'}
+                        src={getImageUrl(photos[0])}
                         alt={`${name}'s profile`}
                         className="w-full h-full object-cover transition-transform hover:scale-105 duration-300"
                     />
@@ -168,7 +169,7 @@ export const EscortCard: React.FC<EscortCardProps> = ({
                 {/* Profile Image */}
                 <div className="relative aspect-[3/4] overflow-hidden rounded-t-xl">
                     <img
-                        src={photos[0] || 'https://via.placeholder.com/300x400'}
+                        src={getImageUrl(photos[0])}
                         alt={`${name}'s profile`}
                         className="w-full h-full object-cover transition-transform hover:scale-105 duration-300"
                     />

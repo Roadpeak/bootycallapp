@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-  ],
+, "services/butical-api-service.ts"  ],
   "exclude": ["node_modules"]
 }

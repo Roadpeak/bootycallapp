@@ -20,7 +20,7 @@ const Footer = () => {
                                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-pink-500 rounded-full border-2 border-gray-900"></div>
                             </div>
                             <span className="ml-2 text-2xl font-bold bg-gradient-to-r from-pink-500 to-rose-500 text-transparent bg-clip-text">
-                                BootyCall
+                                LoveBite
                             </span>
                         </Link>
                         <p className="text-sm text-gray-400">
@@ -132,7 +132,7 @@ const Footer = () => {
                             <li className="flex items-start space-x-3">
                                 <Mail className="w-4 h-4 lg:w-5 lg:h-5 text-pink-500 flex-shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="text-xs lg:text-sm break-all">support@bootycall.co.ke</p>
+                                    <p className="text-xs lg:text-sm break-all">support@lovebite.co.ke</p>
                                     <p className="text-xs text-gray-400">We reply within 24hrs</p>
                                 </div>
                             </li>
@@ -176,7 +176,7 @@ const Footer = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                     <div className="flex flex-col md:flex-row justify-between items-center space-y-2 md:space-y-0">
                         <p className="text-sm text-gray-500">
-                            © {new Date().getFullYear()} BootyCall. All rights reserved.
+                            © {new Date().getFullYear()} LoveBite. All rights reserved.
                         </p>
                         <p className="text-sm text-gray-500">
                             Made with <Heart className="w-3 h-3 inline text-pink-500" /> in Kenya

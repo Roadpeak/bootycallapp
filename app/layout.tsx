@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BootyCall - Dating & Hookups in Kenya",
+  title: "LoveBite - Dating & Hookups in Kenya",
   description: "Kenya's premier platform for dating and connections. Find your match or explore exciting encounters.",
 };
 
@@ -24,15 +24,12 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // TODO: Replace with actual auth state from your auth provider
-  const isLoggedIn = false;
-
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Navbar isLoggedIn={isLoggedIn} />
+        <Navbar />
         <main className="min-h-screen pt-[72px] md:pt-[100px]">
           {children}
         </main>

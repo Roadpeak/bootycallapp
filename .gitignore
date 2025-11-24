@@ -13,6 +13,15 @@
 # testing
 /coverage
 
+# .gitignore
+
+# Environment variables
+.env*.local
+.env
+
+# Keep the example file
+!.env.example
+
 # next.js
 /.next/
 /out/

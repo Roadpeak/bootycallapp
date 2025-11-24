@@ -3,15 +3,17 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { Heart, Upload, X, Eye, EyeOff, Check, Crown, Star, Shield, Zap, Gift } from 'lucide-react'
+import { Heart, Upload, X, Eye, EyeOff, Check, Crown, Star, Shield, Zap, Gift, AlertCircle } from 'lucide-react'
+import ButicalAPI, { TokenService } from '@/services/butical-api-service'
+import type { DatingUserRegistration } from '@/services/butical-api-service'
 
 // Subscription plans
 const SUBSCRIPTION_PLANS = [
     {
         id: 'basic',
         name: 'Basic',
-        price: 499,
-        duration: '1 Month',
+        price: 0,
+        duration: 'Free',
         features: [
             '50 Likes per day',
             'See who likes you',
@@ -23,8 +25,8 @@ const SUBSCRIPTION_PLANS = [
     {
         id: 'premium',
         name: 'Premium',
-        price: 999,
-        duration: '1 Month',
+        price: 300,
+        duration: '1 Year',
         features: [
             'Unlimited Likes',
             'See who likes you',
@@ -38,8 +40,8 @@ const SUBSCRIPTION_PLANS = [
     {
         id: 'vip',
         name: 'VIP',
-        price: 2499,
-        duration: '3 Months',
+        price: 3000,
+        duration: '1 Year',
         features: [
             'Everything in Premium',
             'Unlimited escort unlocks',
@@ -80,11 +82,12 @@ export default function DatingSignupPage() {
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [currentStep, setCurrentStep] = useState(1)
-    const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
+    const [selectedPlan, setSelectedPlan] = useState<string | null>('basic')
     const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'card'>('mpesa')
     const [mpesaPhone, setMpesaPhone] = useState('')
     const [isProcessing, setIsProcessing] = useState(false)
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'pending' | 'success' | 'failed'>('idle')
+    const [error, setError] = useState<string | null>(null)
 
     const interestOptions = [
         'Travel', 'Music', 'Movies', 'Sports', 'Reading', 'Cooking',
@@ -123,41 +126,201 @@ export default function DatingSignupPage() {
         setPhotos(prev => prev.filter((_, i) => i !== index))
     }
 
-    const handlePayment = async () => {
-        if (!selectedPlan) return
+    // Convert files to base64
+    const convertFilesToBase64 = async (files: File[]): Promise<string[]> => {
+        const promises = files.map(file => {
+            return new Promise<string>((resolve, reject) => {
+                const reader = new FileReader()
+                reader.onload = () => {
+                    const base64 = reader.result as string
+                    // Remove data:image/xxx;base64, prefix
+                    const base64Data = base64.split(',')[1]
+                    resolve(base64Data)
+                }
+                reader.onerror = reject
+                reader.readAsDataURL(file)
+            })
+        })
+        return Promise.all(promises)
+    }
 
+    const handleRegistration = async () => {
+        setError(null)
         setIsProcessing(true)
+
+        try {
+            // Validate passwords match
+            if (formData.password !== formData.confirmPassword) {
+                throw new Error('Passwords do not match')
+            }
+
+            // Validate required fields
+            if (!formData.firstName || !formData.lastName || !formData.email ||
+                !formData.phone || !formData.password || !formData.gender ||
+                !formData.dateOfBirth || !formData.bio || !formData.lookingFor) {
+                throw new Error('Please fill in all required fields')
+            }
+
+            if (photos.length === 0) {
+                throw new Error('Please upload at least one photo')
+            }
+
+            if (formData.interests.length < 3) {
+                throw new Error('Please select at least 3 interests')
+            }
+
+            if (!formData.ageConfirmed || !formData.termsAccepted) {
+                throw new Error('Please accept the terms and confirm your age')
+            }
+
+            // Convert photos to base64
+            const photoBase64 = await convertFilesToBase64(photos)
+
+            // Prepare registration data
+            const registrationData: DatingUserRegistration = {
+                email: formData.email.trim(),
+                phone: formData.phone.replace(/\s+/g, ''), // Remove spaces
+                password: formData.password,
+                firstName: formData.firstName.trim(),
+                lastName: formData.lastName.trim(),
+                role: 'DATING_USER',
+                gender: formData.gender,
+                dateOfBirth: formData.dateOfBirth,
+                bio: formData.bio.trim(),
+                termsAccepted: formData.termsAccepted,
+                ageConfirmed: formData.ageConfirmed,
+                displayName: formData.displayName.trim() || undefined,
+                sexualOrientation: formData.sexualOrientation || undefined,
+                city: formData.city.trim() || undefined,
+                country: formData.country || undefined,
+                lookingFor: formData.lookingFor || undefined,
+                interests: formData.interests,
+                education: formData.education.trim() || undefined,
+                occupation: formData.occupation.trim() || undefined,
+                referralCode: formData.referralCode.trim() || undefined,
+                photos: photoBase64,
+            }
+
+            // Register user
+            const response = await ButicalAPI.auth.register(registrationData)
+            console.log('Registration response:', response)
+
+            // API returns { status, data: { user, accessToken, refreshToken } }
+            const authData = response.data?.data
+
+            if (authData?.accessToken) {
+                // Store tokens
+                TokenService.setAccessToken(authData.accessToken)
+                if (authData.refreshToken) {
+                    TokenService.setRefreshToken(authData.refreshToken)
+                }
+
+                // If subscription selected (not basic), process payment
+                if (selectedPlan && selectedPlan !== 'basic') {
+                    await handlePayment()
+                } else {
+                    // Redirect to dating page for basic plan
+                    console.log('Redirecting to /dating')
+                    window.location.href = '/dating'
+                }
+            } else {
+                // Registration successful but no token - still redirect
+                console.log('No token in response, redirecting anyway')
+                window.location.href = '/dating'
+            }
+        } catch (err: any) {
+            console.error('Registration error:', err)
+            setError(err.response?.data?.message || err.message || 'Registration failed. Please try again.')
+            setIsProcessing(false)
+        }
+    }
+
+    const handlePayment = async () => {
+        if (!selectedPlan || selectedPlan === 'basic') return
+
         setPaymentStatus('pending')
 
-        // Simulate M-Pesa STK push
         try {
-            // TODO: Replace with actual M-Pesa API call
-            await new Promise(resolve => setTimeout(resolve, 3000))
+            const plan = SUBSCRIPTION_PLANS.find(p => p.id === selectedPlan)
+            if (!plan) throw new Error('Invalid plan selected')
 
-            // Simulate success
-            setPaymentStatus('success')
+            const phoneNumber = (mpesaPhone || formData.phone).replace(/\s+/g, '')
 
-            // Redirect to dashboard after success
-            setTimeout(() => {
-                console.log('Account created with subscription:', {
-                    ...formData,
-                    photos,
-                    subscription: selectedPlan
-                })
-                // window.location.href = '/dating'
-            }, 2000)
-        } catch (error) {
+            // Validate phone format (254XXXXXXXXX)
+            if (!/^254\d{9}$/.test(phoneNumber)) {
+                throw new Error('Invalid phone format. Use 254XXXXXXXXX')
+            }
+
+            // Call appropriate payment endpoint
+            let paymentResponse
+            if (selectedPlan === 'premium') {
+                paymentResponse = await ButicalAPI.payments.subscribeDating(phoneNumber)
+            } else if (selectedPlan === 'vip') {
+                paymentResponse = await ButicalAPI.payments.subscribeVIP(phoneNumber)
+            }
+
+            if (paymentResponse?.data) {
+                setPaymentStatus('success')
+
+                // Redirect after success
+                setTimeout(() => {
+                    window.location.href = '/dating'
+                }, 2000)
+            }
+        } catch (error: any) {
+            console.error('Payment error:', error)
             setPaymentStatus('failed')
+            setError(error.response?.data?.message || 'Payment failed. You can upgrade later from your profile.')
+
+            // Still allow user to proceed after payment failure
+            setTimeout(() => {
+                window.location.href = '/dating'
+            }, 3000)
         } finally {
             setIsProcessing(false)
         }
     }
 
     const nextStep = () => {
+        setError(null)
+
+        // Validate current step before proceeding
+        if (currentStep === 1) {
+            if (!formData.firstName || !formData.lastName || !formData.email ||
+                !formData.phone || !formData.password || !formData.gender ||
+                !formData.dateOfBirth || !formData.lookingFor) {
+                setError('Please fill in all required fields')
+                return
+            }
+            if (formData.password !== formData.confirmPassword) {
+                setError('Passwords do not match')
+                return
+            }
+            if (formData.password.length < 6) {
+                setError('Password must be at least 6 characters')
+                return
+            }
+        } else if (currentStep === 2) {
+            if (!formData.city || !formData.bio || formData.interests.length < 3) {
+                setError('Please complete all required fields (minimum 3 interests)')
+                return
+            }
+        } else if (currentStep === 3) {
+            if (photos.length === 0) {
+                setError('Please upload at least one photo')
+                return
+            }
+            if (!formData.ageConfirmed || !formData.termsAccepted) {
+                setError('Please accept the terms and confirm your age')
+                return
+            }
+        }
+
         setCurrentStep(prev => Math.min(prev + 1, 4))
     }
 
     const prevStep = () => {
+        setError(null)
         setCurrentStep(prev => Math.max(prev - 1, 1))
     }
 
@@ -167,6 +330,22 @@ export default function DatingSignupPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 py-8 px-4">
+            {/* Error Display */}
+            {error && (
+                <div className="max-w-3xl mx-auto mb-4">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-red-800 text-sm flex-1">{error}</p>
+                        <button
+                            onClick={() => setError(null)}
+                            className="text-red-500 hover:text-red-700"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className="max-w-3xl mx-auto">
                 {/* Header */}
                 <div className="text-center mb-8">
@@ -284,9 +463,10 @@ export default function DatingSignupPage() {
                                     value={formData.phone}
                                     onChange={handleInputChange}
                                     required
-                                    placeholder="+254 712 345 678"
+                                    placeholder="254712345678"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                 />
+                                <p className="text-xs text-gray-500 mt-1">Format: 254XXXXXXXXX</p>
                             </div>
 
                             <div>
@@ -345,6 +525,7 @@ export default function DatingSignupPage() {
                                     value={formData.dateOfBirth}
                                     onChange={handleInputChange}
                                     required
+                                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                 />
                             </div>
@@ -371,13 +552,12 @@ export default function DatingSignupPage() {
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Sexual Orientation *
+                                        Sexual Orientation
                                     </label>
                                     <select
                                         name="sexualOrientation"
                                         value={formData.sexualOrientation}
                                         onChange={handleInputChange}
-                                        required
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                     >
                                         <option value="">Select orientation</option>
@@ -665,7 +845,7 @@ export default function DatingSignupPage() {
 
                                         <div className="text-center mb-4">
                                             <span className="text-3xl font-bold text-gray-900">
-                                                KSh {plan.price.toLocaleString()}
+                                                {plan.price === 0 ? 'Free' : `KSh ${plan.price.toLocaleString()}`}
                                             </span>
                                         </div>
 
@@ -690,7 +870,7 @@ export default function DatingSignupPage() {
                             </div>
 
                             {/* Payment Section */}
-                            {selectedPlan && (
+                            {selectedPlan && selectedPlan !== 'basic' && (
                                 <div className="mt-8 p-6 bg-gray-50 rounded-xl">
                                     <h3 className="text-lg font-bold text-gray-900 mb-4">Payment Method</h3>
 
@@ -736,7 +916,7 @@ export default function DatingSignupPage() {
                                                     type="tel"
                                                     value={mpesaPhone || formData.phone}
                                                     onChange={(e) => setMpesaPhone(e.target.value)}
-                                                    placeholder="+254 7XX XXX XXX"
+                                                    placeholder="254712345678"
                                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                                 />
                                                 <p className="text-xs text-gray-500 mt-1">
@@ -851,15 +1031,16 @@ export default function DatingSignupPage() {
                             <button
                                 type="button"
                                 onClick={nextStep}
-                                className="px-6 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors"
+                                disabled={isProcessing}
+                                className="px-6 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors disabled:opacity-50"
                             >
                                 Next
                             </button>
                         ) : (
                             <button
                                 type="button"
-                                onClick={handlePayment}
-                                disabled={!selectedPlan || isProcessing || paymentStatus === 'success'}
+                                onClick={handleRegistration}
+                                disabled={isProcessing || paymentStatus === 'success'}
                                 className="px-6 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                             >
                                 {isProcessing ? (
@@ -867,10 +1048,10 @@ export default function DatingSignupPage() {
                                         <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
                                         Processing...
                                     </>
+                                ) : selectedPlan !== 'basic' ? (
+                                    `Complete & Pay KSh ${getSelectedPlanDetails()?.price.toLocaleString() || '0'}`
                                 ) : (
-                                    <>
-                                        Complete & Pay KSh {getSelectedPlanDetails()?.price.toLocaleString() || '0'}
-                                    </>
+                                    'Complete Registration'
                                 )}
                             </button>
                         )}

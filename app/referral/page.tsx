@@ -6,86 +6,45 @@ import Link from 'next/link'
 import {
     ArrowLeft, Copy, Share2, DollarSign, Users, TrendingUp,
     Check, Gift, Facebook, Twitter, Mail, MessageCircle,
-    ChevronRight, ExternalLink, Wallet, ArrowUpRight
+    ChevronRight, ExternalLink, Wallet, ArrowUpRight, Loader2
 } from 'lucide-react'
-
-// Mock referral data
-const MOCK_REFERRAL_DATA = {
-    referralCode: 'BOOTYCALL2024',
-    totalEarnings: 15750,
-    pendingEarnings: 2400,
-    availableBalance: 13350,
-    totalReferrals: 23,
-    activeReferrals: 18,
-    referralLink: 'https://bootycall.app/signup?ref=BOOTYCALL2024',
-    recentReferrals: [
-        {
-            id: '1',
-            name: 'John D.',
-            type: 'Dating Subscription',
-            amount: 150,
-            status: 'completed',
-            date: '2025-01-15'
-        },
-        {
-            id: '2',
-            name: 'Sarah K.',
-            type: 'Escort VIP',
-            amount: 2400,
-            status: 'completed',
-            date: '2025-01-14'
-        },
-        {
-            id: '3',
-            name: 'Mike T.',
-            type: 'Escort Unlock',
-            amount: 90,
-            status: 'pending',
-            date: '2025-01-13'
-        },
-        {
-            id: '4',
-            name: 'Emily R.',
-            type: 'Dating Subscription',
-            amount: 150,
-            status: 'completed',
-            date: '2025-01-12'
-        },
-        {
-            id: '5',
-            name: 'David M.',
-            type: 'Escort Unlock',
-            amount: 90,
-            status: 'completed',
-            date: '2025-01-11'
-        }
-    ],
-    stats: {
-        thisMonth: 4500,
-        lastMonth: 6200,
-        conversionRate: 78
-    }
-}
+import { useReferrals, useWallet } from '@/lib/hooks/butical-api-hooks'
 
 export default function ReferralPage() {
     const [copied, setCopied] = useState(false)
     const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview')
 
+    // Fetch referral and wallet data from API
+    const { referralCode, myReferrals, totalEarnings, loading: referralsLoading } = useReferrals()
+    const { wallet, loading: walletLoading } = useWallet()
+
+    const isLoading = referralsLoading || walletLoading
+
+    // Compute values from API data
+    const referralLink = referralCode ? `https://lovebite.app/signup?ref=${referralCode}` : ''
+    const availableBalance = wallet?.currentBalance || wallet?.balance || 0
+    const pendingEarnings = wallet?.pendingWithdrawals || 0
+    const totalReferralsCount = myReferrals.length
+
     const handleCopyCode = () => {
-        navigator.clipboard.writeText(MOCK_REFERRAL_DATA.referralCode)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
+        if (referralCode) {
+            navigator.clipboard.writeText(referralCode)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 2000)
+        }
     }
 
     const handleCopyLink = () => {
-        navigator.clipboard.writeText(MOCK_REFERRAL_DATA.referralLink)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
+        if (referralLink) {
+            navigator.clipboard.writeText(referralLink)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 2000)
+        }
     }
 
     const handleShare = (platform: string) => {
-        const text = `Join BootyCall and get premium access! Use my referral code: ${MOCK_REFERRAL_DATA.referralCode}`
-        const url = MOCK_REFERRAL_DATA.referralLink
+        const text = `Join LoveBite and get premium access! Use my referral code: ${referralCode || ''}`
+        const url = referralLink
 
         switch (platform) {
             case 'whatsapp':
@@ -98,9 +57,17 @@ export default function ReferralPage() {
                 window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`)
                 break
             case 'email':
-                window.location.href = `mailto:?subject=Join BootyCall&body=${encodeURIComponent(text + '\n\n' + url)}`
+                window.location.href = `mailto:?subject=Join LoveBite&body=${encodeURIComponent(text + '\n\n' + url)}`
                 break
         }
+    }
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
+            </div>
+        )
     }
 
     return (
@@ -150,18 +117,18 @@ export default function ReferralPage() {
                             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                                 <p className="text-pink-100 text-sm mb-1">Total Earnings</p>
                                 <p className="text-3xl font-bold">
-                                    KSh {MOCK_REFERRAL_DATA.totalEarnings.toLocaleString()}
+                                    KSh {totalEarnings.toLocaleString()}
                                 </p>
                             </div>
                             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                                <p className="text-pink-100 text-sm mb-1">This Month</p>
+                                <p className="text-pink-100 text-sm mb-1">Available Balance</p>
                                 <p className="text-3xl font-bold">
-                                    KSh {MOCK_REFERRAL_DATA.stats.thisMonth.toLocaleString()}
+                                    KSh {availableBalance.toLocaleString()}
                                 </p>
                             </div>
                             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                                 <p className="text-pink-100 text-sm mb-1">Total Referrals</p>
-                                <p className="text-3xl font-bold">{MOCK_REFERRAL_DATA.totalReferrals}</p>
+                                <p className="text-3xl font-bold">{totalReferralsCount}</p>
                             </div>
                         </div>
                     </div>
@@ -184,7 +151,7 @@ export default function ReferralPage() {
                             See all your transactions and earnings
                         </p>
                         <p className="text-2xl font-bold text-purple-600">
-                            KSh {MOCK_REFERRAL_DATA.availableBalance.toLocaleString()}
+                            KSh {availableBalance.toLocaleString()}
                         </p>
                         <p className="text-xs text-gray-500">Available balance</p>
                     </Link>
@@ -219,12 +186,13 @@ export default function ReferralPage() {
                         </label>
                         <div className="flex gap-2">
                             <div className="flex-1 px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg font-mono text-xl font-bold text-gray-900 flex items-center justify-between">
-                                <span>{MOCK_REFERRAL_DATA.referralCode}</span>
+                                <span>{referralCode || 'Loading...'}</span>
                                 {copied && <Check className="w-5 h-5 text-green-500" />}
                             </div>
                             <button
                                 onClick={handleCopyCode}
-                                className="px-6 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-semibold transition-colors flex items-center gap-2"
+                                disabled={!referralCode}
+                                className="px-6 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-semibold transition-colors flex items-center gap-2 disabled:opacity-50"
                             >
                                 <Copy className="w-5 h-5" />
                                 <span className="hidden md:inline">Copy</span>
@@ -238,11 +206,12 @@ export default function ReferralPage() {
                         </label>
                         <div className="flex gap-2">
                             <div className="flex-1 px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg text-sm text-gray-700 truncate">
-                                {MOCK_REFERRAL_DATA.referralLink}
+                                {referralLink || 'Loading...'}
                             </div>
                             <button
                                 onClick={handleCopyLink}
-                                className="px-6 py-3 border-2 border-pink-500 text-pink-600 rounded-lg hover:bg-pink-50 font-semibold transition-colors flex items-center gap-2"
+                                disabled={!referralLink}
+                                className="px-6 py-3 border-2 border-pink-500 text-pink-600 rounded-lg hover:bg-pink-50 font-semibold transition-colors flex items-center gap-2 disabled:opacity-50"
                             >
                                 <Copy className="w-5 h-5" />
                                 <span className="hidden md:inline">Copy Link</span>
@@ -350,7 +319,7 @@ export default function ReferralPage() {
                                 <DollarSign className="w-5 h-5 text-green-600" />
                             </div>
                             <p className="text-2xl font-bold text-green-900">
-                                KSh {MOCK_REFERRAL_DATA.availableBalance.toLocaleString()}
+                                KSh {availableBalance.toLocaleString()}
                             </p>
                             <p className="text-xs text-green-600 mt-1">Ready to withdraw</p>
                         </div>
@@ -361,20 +330,20 @@ export default function ReferralPage() {
                                 <TrendingUp className="w-5 h-5 text-yellow-600" />
                             </div>
                             <p className="text-2xl font-bold text-yellow-900">
-                                KSh {MOCK_REFERRAL_DATA.pendingEarnings.toLocaleString()}
+                                KSh {pendingEarnings.toLocaleString()}
                             </p>
                             <p className="text-xs text-yellow-600 mt-1">Under verification</p>
                         </div>
 
                         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-blue-700">Active Referrals</span>
+                                <span className="text-sm text-blue-700">Total Referrals</span>
                                 <Users className="w-5 h-5 text-blue-600" />
                             </div>
                             <p className="text-2xl font-bold text-blue-900">
-                                {MOCK_REFERRAL_DATA.activeReferrals}
+                                {totalReferralsCount}
                             </p>
-                            <p className="text-xs text-blue-600 mt-1">Currently active</p>
+                            <p className="text-xs text-blue-600 mt-1">People you referred</p>
                         </div>
                     </div>
 
@@ -416,7 +385,7 @@ export default function ReferralPage() {
                                         : 'text-gray-600 hover:text-gray-900'
                                     }`}
                             >
-                                History
+                                Referrals ({totalReferralsCount})
                             </button>
                         </div>
                     </div>
@@ -428,68 +397,69 @@ export default function ReferralPage() {
 
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                                     <div className="p-4 bg-gray-50 rounded-lg">
-                                        <p className="text-sm text-gray-600 mb-1">This Month</p>
+                                        <p className="text-sm text-gray-600 mb-1">Total Earnings</p>
                                         <p className="text-xl font-bold text-gray-900">
-                                            KSh {MOCK_REFERRAL_DATA.stats.thisMonth.toLocaleString()}
+                                            KSh {totalEarnings.toLocaleString()}
                                         </p>
                                     </div>
                                     <div className="p-4 bg-gray-50 rounded-lg">
-                                        <p className="text-sm text-gray-600 mb-1">Last Month</p>
+                                        <p className="text-sm text-gray-600 mb-1">Available</p>
                                         <p className="text-xl font-bold text-gray-900">
-                                            KSh {MOCK_REFERRAL_DATA.stats.lastMonth.toLocaleString()}
+                                            KSh {availableBalance.toLocaleString()}
                                         </p>
                                     </div>
                                     <div className="p-4 bg-gray-50 rounded-lg">
-                                        <p className="text-sm text-gray-600 mb-1">Conversion Rate</p>
+                                        <p className="text-sm text-gray-600 mb-1">Total Referrals</p>
                                         <p className="text-xl font-bold text-gray-900">
-                                            {MOCK_REFERRAL_DATA.stats.conversionRate}%
+                                            {totalReferralsCount}
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                    <h5 className="font-semibold text-blue-900 mb-2">💡 Pro Tips</h5>
+                                    <h5 className="font-semibold text-blue-900 mb-2">Pro Tips</h5>
                                     <ul className="space-y-2 text-sm text-blue-800">
-                                        <li>• Share your code on social media for maximum reach</li>
-                                        <li>• Target people interested in dating or entertainment services</li>
-                                        <li>• Explain the benefits of the platform when sharing</li>
-                                        <li>• The more referrals, the more you earn!</li>
+                                        <li>Share your code on social media for maximum reach</li>
+                                        <li>Target people interested in dating or entertainment services</li>
+                                        <li>Explain the benefits of the platform when sharing</li>
+                                        <li>The more referrals, the more you earn!</li>
                                     </ul>
                                 </div>
                             </div>
                         ) : (
                             <div>
-                                <h4 className="font-semibold text-gray-900 mb-4">Recent Referrals</h4>
+                                <h4 className="font-semibold text-gray-900 mb-4">Your Referrals</h4>
 
-                                <div className="space-y-3">
-                                    {MOCK_REFERRAL_DATA.recentReferrals.map((referral) => (
-                                        <div
-                                            key={referral.id}
-                                            className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                                        >
-                                            <div className="flex-1">
-                                                <h5 className="font-semibold text-gray-900">{referral.name}</h5>
-                                                <p className="text-sm text-gray-600">{referral.type}</p>
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    {new Date(referral.date).toLocaleDateString()}
-                                                </p>
+                                {myReferrals.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {myReferrals.map((referral) => (
+                                            <div
+                                                key={referral.id}
+                                                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                                            >
+                                                <div className="flex-1">
+                                                    <h5 className="font-semibold text-gray-900">{referral.displayName}</h5>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        Joined {new Date(referral.createdAt).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                                        Active
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="font-bold text-gray-900">
-                                                    +KSh {referral.amount.toLocaleString()}
-                                                </p>
-                                                <span
-                                                    className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${referral.status === 'completed'
-                                                            ? 'bg-green-100 text-green-700'
-                                                            : 'bg-yellow-100 text-yellow-700'
-                                                        }`}
-                                                >
-                                                    {referral.status}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8">
+                                        <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                                        <p className="text-gray-600 mb-2">No referrals yet</p>
+                                        <p className="text-sm text-gray-500">
+                                            Share your code to start earning!
+                                        </p>
+                                    </div>
+                                )}
 
                                 <Link
                                     href="/referral/wallet"
@@ -509,11 +479,11 @@ export default function ReferralPage() {
                         Terms & Conditions
                     </h4>
                     <ul className="space-y-1 text-xs text-gray-600">
-                        <li>• 30% commission applies to all qualifying payments (subscriptions, unlocks, VIP)</li>
-                        <li>• Earnings are verified within 24-48 hours after payment</li>
-                        <li>• Minimum withdrawal amount is KSh 1,000</li>
-                        <li>• Fraudulent referrals will result in account suspension</li>
-                        <li>• Commission rates may change with prior notice</li>
+                        <li>30% commission applies to all qualifying payments (subscriptions, unlocks, VIP)</li>
+                        <li>Earnings are verified within 24-48 hours after payment</li>
+                        <li>Minimum withdrawal amount is KSh 1,000</li>
+                        <li>Fraudulent referrals will result in account suspension</li>
+                        <li>Commission rates may change with prior notice</li>
                     </ul>
                 </div>
             </main>
