@@ -64,10 +64,10 @@ export default function DatingProfilePage() {
 
             // Check if user is logged in
             const token = TokenService.getAccessToken()
-            if (!token) {
-                router.push('/auth/login')
-                return
-            }
+            // if (!token) {
+            //     router.push('/auth/login')
+            //     return
+            // }
 
             // Fetch all data in parallel
             const [userResponse, profileResponse, subscriptionResponse] = await Promise.all([

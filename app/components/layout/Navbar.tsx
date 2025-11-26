@@ -103,14 +103,16 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
                         fetchReferralStats()
                     } catch (userError: any) {
                         console.warn('Navbar: Failed to fetch user data:', userError)
-                        // Only clear tokens if it's a 401 unauthorized error
-                        if (userError.response?.status === 401) {
-                            console.log('Navbar: 401 error, clearing tokens')
-                            TokenService.clearTokens()
-                            setIsLoggedIn(false)
-                            setUser(null)
-                        }
-                        // For other errors, keep the logged in state but without user data
+                        console.warn('Navbar: Error details:', {
+                            status: userError.response?.status,
+                            data: userError.response?.data,
+                            message: userError.message
+                        })
+
+                        // Don't immediately clear tokens on 401 - the interceptor will handle token refresh
+                        // Only clear tokens if refresh has already failed (indicated by being redirected to login)
+                        // For now, just keep the logged in state and try again on next navigation
+                        console.log('Navbar: Keeping logged in state despite error')
                     }
                 } else {
                     setIsLoggedIn(false)

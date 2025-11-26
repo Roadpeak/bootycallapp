@@ -84,8 +84,13 @@ export interface LoginCredentials {
 
 export interface AuthResponse {
     user: User
-    accessToken: string
+    accessToken?: string
     refreshToken?: string
+    // Alternative nested structure that the API might use
+    tokens?: {
+        accessToken: string
+        refreshToken: string
+    }
 }
 
 // API Response wrapper - the actual API wraps responses in { status, data } or { status, message }
@@ -577,6 +582,7 @@ apiClient.interceptors.response.use(
             try {
                 const refreshToken = TokenService.getRefreshToken()
                 if (refreshToken) {
+                    console.log('Attempting to refresh token...')
                     const response = await axios.post(`${BASE_URL}/auth/refresh`, {
                         refreshToken,
                     })
@@ -588,12 +594,18 @@ apiClient.interceptors.response.use(
                         TokenService.setRefreshToken(newRefreshToken)
                     }
 
+                    console.log('Token refreshed successfully')
                     originalRequest.headers.Authorization = `Bearer ${accessToken}`
                     return apiClient(originalRequest)
+                } else {
+                    console.warn('No refresh token available for 401 error')
                 }
             } catch (refreshError) {
+                console.error('Token refresh failed:', refreshError)
                 TokenService.clearTokens()
-                if (typeof window !== 'undefined') {
+                // Only redirect if we're not already on an auth page
+                if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/auth/')) {
+                    console.log('Redirecting to login due to failed token refresh')
                     window.location.href = '/auth/login'
                 }
                 return Promise.reject(refreshError)
@@ -728,6 +740,16 @@ const ButicalAPI = {
             apiClient.put<Review>(`/reviews/${reviewId}`, data),
         deleteReview: (reviewId: string) =>
             apiClient.delete(`/reviews/${reviewId}`),
+    },
+
+    // CHAT
+    chat: {
+        getConversations: () => apiClient.get('/chat/conversations'),
+        startConversation: (recipientId: string) => apiClient.post(`/chat/conversations/${recipientId}`),
+        getMessages: (conversationId: string, params?: { page?: number; limit?: number }) =>
+            apiClient.get(`/chat/conversations/${conversationId}/messages`, { params }),
+        markAsRead: (conversationId: string) => apiClient.post(`/chat/conversations/${conversationId}/read`),
+        checkAccess: (userId: string) => apiClient.get(`/chat/check-access/${userId}`),
     },
 
     // UPLOADS (Cloudinary)

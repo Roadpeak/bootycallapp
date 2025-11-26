@@ -71,14 +71,18 @@ export default function HookupSignupPage() {
             const response = await ButicalAPI.auth.register(registrationData)
             console.log('Registration response:', response)
 
-            // API returns { status, data: { user, accessToken, refreshToken } }
+            // API returns { status, data: { tokens: { accessToken, refreshToken }, user: {...} } }
             const authData = response.data?.data
 
+            // Extract tokens - they might be nested in a 'tokens' object
+            const accessToken = authData?.tokens?.accessToken || authData?.accessToken
+            const refreshToken = authData?.tokens?.refreshToken || authData?.refreshToken
+
             // Store tokens if available
-            if (authData?.accessToken) {
-                TokenService.setAccessToken(authData.accessToken)
-                if (authData.refreshToken) {
-                    TokenService.setRefreshToken(authData.refreshToken)
+            if (accessToken) {
+                TokenService.setAccessToken(accessToken)
+                if (refreshToken) {
+                    TokenService.setRefreshToken(refreshToken)
                 }
             }
 

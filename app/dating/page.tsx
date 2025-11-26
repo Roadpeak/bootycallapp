@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Search, Filter, MapPin, Gift, MessageCircle, AlertCircle, Lock } from 'lucide-react'
 import { DatingCard } from '../components/cards/DatingCard'
 import { MatchNotificationModal } from '../components/common/MatchNotificationModal'
+import MobileBottomNav from '../components/layout/MobileBottomNav'
 import type { ProfileData } from '../components/cards/EscortCard'
 import type { MatchNotification } from '../components/types/chat'
 import { useDatingProfiles, useSubscription, useAuth } from '@/lib/hooks/butical-api-hooks'
@@ -158,58 +159,52 @@ export default function DatingPage() {
 
     const matchCount = likedProfiles.size
 
-    // Show loading state while checking subscription
-    if (subscriptionLoading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading...</p>
-                </div>
-            </div>
-        )
-    }
+    // Show subscription banner for users without access (but don't block the page)
+    const SubscriptionBanner = () => {
+        if (subscriptionLoading || hasDatingAccess) return null
 
-    // Show subscription required message if user doesn't have access
-    if (!hasDatingAccess) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-                <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
-                    <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Lock className="w-8 h-8 text-pink-600" />
+            <div className="bg-white border-b border-gray-200">
+                <div className="max-w-7xl mx-auto px-4 py-4">
+                    <div className="bg-gradient-to-r from-pink-500 to-purple-600 text-white p-4 rounded-xl shadow-lg">
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                <Lock className="w-6 h-6 text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-lg font-bold mb-1">Unlock Full Dating Features</h3>
+                                <p className="text-pink-100 text-sm mb-3">
+                                    Subscribe to dating to like profiles, send messages, and get matches!
+                                </p>
+                                <div className="flex gap-3 flex-wrap">
+                                    <Link
+                                        href="/subscription/dating"
+                                        className="px-4 py-2 bg-white text-pink-600 rounded-lg hover:bg-pink-50 font-medium transition-colors text-sm"
+                                    >
+                                        Subscribe Now
+                                    </Link>
+                                    <Link
+                                        href="/"
+                                        className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 font-medium transition-colors text-sm"
+                                    >
+                                        Learn More
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Dating Subscription Required</h2>
-                    <p className="text-gray-600 mb-6">
-                        You need an active dating subscription to access dating features. Subscribe now to start meeting new people!
-                    </p>
-                    <div className="space-y-3">
-                        <Link
-                            href="/subscription/dating"
-                            className="block w-full px-6 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors"
-                        >
-                            Subscribe to Dating
-                        </Link>
-                        <Link
-                            href="/"
-                            className="block w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
-                        >
-                            Go to Home
-                        </Link>
-                    </div>
-                    {user && (
-                        <p className="text-sm text-gray-500 mt-4">
-                            Logged in as {user.role === 'ESCORT' ? 'Escort' : user.role === 'HOOKUP_USER' ? 'Hookup User' : 'User'}
-                        </p>
-                    )}
                 </div>
             </div>
         )
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
+            {/* Subscription Banner */}
+            <SubscriptionBanner />
+
             {/* Header */}
-            <header className="sticky top-[72px] md:top-[100px] z-10 bg-white border-b border-gray-200 p-4">
+            <header className="sticky top-0 z-10 bg-white border-b border-gray-200 p-4">
                 <div className="max-w-7xl mx-auto">
                     <div className="flex justify-between items-center mb-3">
                         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dating</h1>
@@ -379,8 +374,8 @@ export default function DatingPage() {
                 </div>
             )}
 
-            {/* Error Message */}
-            {error && (
+            {/* Error Message - Only show if it's NOT a subscription error */}
+            {error && !error.toLowerCase().includes('subscription') && !error.toLowerCase().includes('subscribe') && (
                 <div className="max-w-7xl mx-auto px-4 pt-4">
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
                         <AlertCircle className="w-5 h-5 text-red-400" />
@@ -433,12 +428,16 @@ export default function DatingPage() {
                 ) : (
                     <div className="text-center py-12">
                         <div className="text-gray-500 text-lg mb-2">
-                            {activeView === 'matches' ? 'No matches yet' : 'No profiles found'}
+                            {!hasDatingAccess
+                                ? 'Subscribe to view dating profiles'
+                                : activeView === 'matches' ? 'No matches yet' : 'No profiles found'}
                         </div>
                         <p className="text-gray-600">
-                            {activeView === 'matches'
-                                ? 'Start liking profiles to see your matches here'
-                                : 'Try adjusting your search or filters'}
+                            {!hasDatingAccess
+                                ? 'Get access to our dating community and start making connections'
+                                : activeView === 'matches'
+                                    ? 'Start liking profiles to see your matches here'
+                                    : 'Try adjusting your search or filters'}
                         </p>
                     </div>
                 )}
@@ -454,6 +453,12 @@ export default function DatingPage() {
                     }}
                 />
             )}
+
+            {/* Mobile Bottom Navigation */}
+            <MobileBottomNav
+                matchCount={matchCount}
+                messageCount={0}
+            />
         </div>
     )
 }

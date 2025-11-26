@@ -12,6 +12,7 @@ import ButicalAPI from '@/services/butical-api-service'
 import type { DatingProfile } from '@/services/butical-api-service'
 import { useSubscription, useAuth } from '@/lib/hooks/butical-api-hooks'
 import { getImageUrl } from '@/lib/utils/image'
+import ChatService from '@/services/chat-service'
 
 export default function DatingProfileViewPage() {
     const params = useParams()
@@ -76,6 +77,12 @@ export default function DatingProfileViewPage() {
     const handleLike = async () => {
         if (!profile) return
 
+        // Check if user has dating access
+        if (!hasDatingAccess) {
+            router.push('/subscription/dating')
+            return
+        }
+
         const wasLiked = isLiked
         setIsLiked(!wasLiked) // Optimistic update
 
@@ -102,13 +109,41 @@ export default function DatingProfileViewPage() {
         }
     }
 
-    const handleMessage = () => {
+    const handleMessage = async () => {
         if (!profile) return
-        router.push(`/chat/${profile.id}`)
+
+        // Check if user has dating access
+        if (!hasDatingAccess) {
+            router.push('/subscription/dating')
+            return
+        }
+
+        try {
+            // Check if user can chat with this profile
+            const accessCheck = await ChatService.checkChatAccess(profile.userId)
+
+            if (!accessCheck.canChat) {
+                // Redirect to subscription page if access denied
+                router.push('/subscription/dating')
+                return
+            }
+
+            // Start or get conversation
+            const conversation = await ChatService.startConversation(profile.userId)
+            router.push(`/chat/${conversation.id}`)
+        } catch (err: any) {
+            console.error('Failed to start conversation:', err)
+            // If error is 403, redirect to subscription
+            if (err.response?.status === 403) {
+                router.push('/subscription/dating')
+            } else {
+                setError(err.response?.data?.message || 'Failed to start conversation')
+            }
+        }
     }
 
-    // Show loading state while checking subscription
-    if (subscriptionLoading || isLoading) {
+    // Show loading state
+    if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
@@ -119,32 +154,32 @@ export default function DatingProfileViewPage() {
         )
     }
 
-    // Show subscription required message if user doesn't have access
-    if (!hasDatingAccess) {
+    // Show error state
+    if (error) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
-                    <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Lock className="w-8 h-8 text-pink-600" />
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <AlertCircle className="w-8 h-8 text-red-600" />
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Dating Subscription Required</h2>
-                    <p className="text-gray-600 mb-6">
-                        You need an active dating subscription to view dating profiles. Subscribe now to start meeting new people!
-                    </p>
-                    <div className="space-y-3">
-                        <Link
-                            href="/subscription/dating"
-                            className="block w-full px-6 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors"
-                        >
-                            Subscribe to Dating
-                        </Link>
-                        <Link
-                            href="/"
-                            className="block w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
-                        >
-                            Go to Home
-                        </Link>
-                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Profile</h2>
+                    <p className="text-gray-600 mb-6">{error}</p>
+                    <Link
+                        href="/dating"
+                        className="block w-full px-6 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors"
+                    >
+                        Back to Dating
+                    </Link>
+                </div>
+            </div>
+        )
+    }
+
+    if (!profile) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+                    <p className="text-gray-600">Profile not found</p>
                     {user && (
                         <p className="text-sm text-gray-500 mt-4">
                             Logged in as {user.role === 'ESCORT' ? 'Escort' : user.role === 'HOOKUP_USER' ? 'Hookup User' : 'User'}
@@ -356,6 +391,15 @@ export default function DatingProfileViewPage() {
                                 )}
                             </div>
 
+                            {/* Subscription Banner (if no access) */}
+                            {!hasDatingAccess && (
+                                <div className="mb-4 p-3 bg-pink-50 border border-pink-200 rounded-lg">
+                                    <p className="text-xs text-pink-800 text-center">
+                                        Subscribe to like profiles and send messages
+                                    </p>
+                                </div>
+                            )}
+
                             {/* Action Buttons */}
                             <div className="space-y-3">
                                 <button
@@ -366,7 +410,7 @@ export default function DatingProfileViewPage() {
                                         }`}
                                 >
                                     <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-                                    <span>{isLiked ? 'Liked' : 'Like'}</span>
+                                    <span>{isLiked ? 'Liked' : hasDatingAccess ? 'Like' : 'Subscribe to Like'}</span>
                                 </button>
 
                                 <button
@@ -374,7 +418,7 @@ export default function DatingProfileViewPage() {
                                     className="w-full px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-semibold transition-colors flex items-center justify-center gap-2"
                                 >
                                     <MessageCircle className="w-5 h-5" />
-                                    <span>Send Message</span>
+                                    <span>{hasDatingAccess ? 'Send Message' : 'Subscribe to Message'}</span>
                                 </button>
                             </div>
 

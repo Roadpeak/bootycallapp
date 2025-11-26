@@ -150,7 +150,7 @@ export default function HookupPage() {
     return (
         <div className="min-h-screen bg-gray-900">
             {/* Header */}
-            <header className="sticky top-[72px] md:top-[100px] z-10 bg-gray-800 border-b border-gray-700 p-4">
+            <header className="sticky top-0 z-10 bg-gray-800 border-b border-gray-700 p-4">
                 <div className="max-w-7xl mx-auto">
                     <div className="flex justify-between items-center mb-3">
                         <h1 className="text-2xl md:text-3xl font-bold text-white">Browse Escorts</h1>

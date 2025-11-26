@@ -11,47 +11,21 @@ import {
 // Dating subscription plans
 const DATING_PLANS = [
     {
-        id: 'basic',
-        name: 'Basic',
-        price: 499,
-        duration: '1 Month',
-        features: [
-            '50 Likes per day',
-            'See who likes you',
-            'Basic matching',
-            'Standard support'
-        ],
-        popular: false
-    },
-    {
         id: 'premium',
-        name: 'Premium',
-        price: 999,
-        duration: '1 Month',
+        name: 'Dating Premium',
+        price: 300,
+        duration: '1 Year',
         features: [
             'Unlimited Likes',
             'See who likes you',
-            'Advanced matching',
-            'Priority support',
-            'Boost profile weekly',
-            'Free escort unlocks (5/month)'
+            'Advanced matching algorithm',
+            'Send unlimited messages',
+            'View full profiles',
+            'Profile verification badge',
+            'Priority customer support',
+            'Free access to all escort contacts'
         ],
         popular: true
-    },
-    {
-        id: 'vip',
-        name: 'VIP',
-        price: 2499,
-        duration: '3 Months',
-        features: [
-            'Everything in Premium',
-            'Unlimited escort unlocks',
-            'Profile verification badge',
-            'VIP support',
-            'Daily profile boosts',
-            'Exclusive events access'
-        ],
-        popular: false
     }
 ]
 
@@ -242,8 +216,8 @@ export default function DatingSubscriptionPage() {
                     </p>
                 </div>
 
-                {/* Subscription Plans */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                {/* Subscription Plan */}
+                <div className="max-w-md mx-auto mb-8">
                     {DATING_PLANS.map((plan) => (
                         <div
                             key={plan.id}
@@ -270,31 +244,28 @@ export default function DatingSubscriptionPage() {
 
                             <div className={`p-6 ${plan.popular ? 'pt-12' : ''}`}>
                                 {/* Plan Icon */}
-                                <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 ${plan.id === 'basic' ? 'bg-gray-100' :
-                                        plan.id === 'premium' ? 'bg-pink-100' : 'bg-purple-100'
-                                    }`}>
-                                    {plan.id === 'basic' && <Star className="w-7 h-7 text-gray-600" />}
-                                    {plan.id === 'premium' && <Zap className="w-7 h-7 text-pink-600" />}
-                                    {plan.id === 'vip' && <Crown className="w-7 h-7 text-purple-600" />}
+                                <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-gradient-to-br from-pink-500 to-rose-500 mx-auto">
+                                    <Heart className="w-8 h-8 text-white" />
                                 </div>
 
                                 {/* Plan Name & Price */}
-                                <h3 className="text-xl font-bold text-gray-900 mb-1">{plan.name}</h3>
-                                <p className="text-sm text-gray-500 mb-4">{plan.duration}</p>
+                                <div className="text-center">
+                                    <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                                    <p className="text-sm text-gray-500 mb-4">{plan.duration}</p>
 
-                                <div className="mb-6">
-                                    <span className="text-4xl font-bold text-gray-900">
-                                        KSh {plan.price.toLocaleString()}
-                                    </span>
+                                    <div className="mb-6">
+                                        <span className="text-5xl font-bold text-pink-600">
+                                            KSh {plan.price.toLocaleString()}
+                                        </span>
+                                        <span className="text-gray-500 text-lg">/year</span>
+                                    </div>
                                 </div>
 
                                 {/* Features */}
                                 <ul className="space-y-3 mb-6">
                                     {plan.features.map((feature, index) => (
-                                        <li key={index} className="flex items-start gap-2">
-                                            <Check className={`w-5 h-5 flex-shrink-0 mt-0.5 ${plan.id === 'basic' ? 'text-gray-500' :
-                                                    plan.id === 'premium' ? 'text-pink-500' : 'text-purple-500'
-                                                }`} />
+                                        <li key={index} className="flex items-start gap-3">
+                                            <Check className="w-5 h-5 flex-shrink-0 mt-0.5 text-pink-500" />
                                             <span className="text-sm text-gray-700">{feature}</span>
                                         </li>
                                     ))}
@@ -303,16 +274,9 @@ export default function DatingSubscriptionPage() {
                                 {/* Action Button */}
                                 <button
                                     onClick={() => handleSelectPlan(plan.id)}
-                                    className={`w-full py-3 rounded-lg font-semibold transition-colors ${isCurrentPlan(plan.id)
-                                            ? 'bg-pink-500 text-white hover:bg-pink-600'
-                                            : plan.id === 'basic'
-                                                ? 'bg-gray-900 text-white hover:bg-gray-800'
-                                                : plan.id === 'premium'
-                                                    ? 'bg-pink-500 text-white hover:bg-pink-600'
-                                                    : 'bg-purple-500 text-white hover:bg-purple-600'
-                                        }`}
+                                    className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg font-bold text-lg hover:from-pink-600 hover:to-rose-600 transition-all shadow-lg hover:shadow-xl"
                                 >
-                                    {isCurrentPlan(plan.id) ? 'Renew' : isExpired() ? 'Subscribe' : 'Upgrade'}
+                                    {isCurrentPlan(plan.id) ? 'Renew Subscription' : isExpired() ? 'Subscribe Now' : 'Upgrade Now'}
                                 </button>
                             </div>
                         </div>

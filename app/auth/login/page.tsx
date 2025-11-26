@@ -36,29 +36,61 @@ export default function LoginPage() {
                 throw new Error('Please fill in all fields')
             }
 
-            // Prepare login credentials
-            const credentials = {
-                email: formData.emailOrPhone.trim(),
+            // Prepare login credentials - detect if email or phone
+            const emailOrPhone = formData.emailOrPhone.trim()
+            const isPhone = /^\d+$/.test(emailOrPhone) // Check if it's all digits
+
+            const credentials: any = {
                 password: formData.password,
+            }
+
+            // Set either email or phone based on input
+            if (isPhone) {
+                credentials.phone = emailOrPhone
+                credentials.email = emailOrPhone // Also send as email for backward compatibility
+            } else {
+                credentials.email = emailOrPhone
             }
 
             // Call login API
             const response = await ButicalAPI.auth.login(credentials)
             console.log('Login response:', response)
+            console.log('Login response data:', response.data)
 
-            // API returns { status, data: { user, accessToken, refreshToken } }
-            const authData = response.data?.data
+            // API returns { status, data: { tokens: { accessToken, refreshToken }, user: {...} } }
+            const authData = response.data?.data || response.data
+            console.log('Auth data extracted:', authData)
+
+            // Extract tokens - they might be nested in a 'tokens' object
+            const accessToken = authData?.tokens?.accessToken || authData?.accessToken
+            const refreshToken = authData?.tokens?.refreshToken || authData?.refreshToken
+            const user = authData?.user
+
+            console.log('Tokens found:', {
+                hasAccessToken: !!accessToken,
+                hasRefreshToken: !!refreshToken,
+                hasUser: !!user
+            })
 
             // Store tokens if available
-            if (authData?.accessToken) {
-                TokenService.setAccessToken(authData.accessToken)
-                if (authData.refreshToken) {
-                    TokenService.setRefreshToken(authData.refreshToken)
+            if (accessToken) {
+                console.log('Storing access token...')
+                TokenService.setAccessToken(accessToken)
+                if (refreshToken) {
+                    console.log('Storing refresh token...')
+                    TokenService.setRefreshToken(refreshToken)
                 }
+                console.log('Tokens stored. Access token:', accessToken.substring(0, 20) + '...')
+            } else {
+                // If no token but successful response, might be an API issue
+                console.error('Login succeeded but no token received:', response)
+                console.error('Full response structure:', JSON.stringify(response.data, null, 2))
+                throw new Error('No authentication token received from server')
             }
 
             // Redirect based on user role
-            const userRole = authData?.user?.role
+            const userRole = user?.role
+            console.log('User role:', userRole)
             let redirectPath = '/'
 
             switch (userRole) {
@@ -80,6 +112,13 @@ export default function LoginPage() {
 
             // Use window.location for reliable redirect after auth state change
             console.log('Redirecting to:', redirectPath)
+
+            // Small delay to ensure tokens are saved to localStorage
+            await new Promise(resolve => setTimeout(resolve, 100))
+            console.log('Tokens should be saved. Checking localStorage...')
+            console.log('Access token in storage:', !!TokenService.getAccessToken())
+            console.log('Refresh token in storage:', !!TokenService.getRefreshToken())
+
             window.location.href = redirectPath
         } catch (err: any) {
             console.error('Login error:', err)
