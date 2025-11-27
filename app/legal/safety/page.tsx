@@ -41,7 +41,7 @@ export default function SafetyPage() {
                             <h3 className="text-lg font-bold text-red-900 mb-2">Emergency Contacts</h3>
                             <ul className="text-red-800 space-y-1">
                                 <li><strong>Police Emergency:</strong> 999 or 112</li>
-                                <li><strong>Butical Support:</strong> +254 742 449 676 (24/7)</li>
+                                <li><strong>LoveBite Global Support:</strong> +254 742 449 676 (24/7)</li>
                                 <li><strong>Gender Violence Hotline:</strong> 1195</li>
                             </ul>
                         </div>
@@ -154,7 +154,7 @@ export default function SafetyPage() {
                                 <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                                 <div>
                                     <p className="font-medium text-gray-900">Use the platform messaging</p>
-                                    <p className="text-sm text-gray-600">Keep conversations on Butical initially. This provides a record if issues arise.</p>
+                                    <p className="text-sm text-gray-600">Keep conversations on LoveBite Global initially. This provides a record if issues arise.</p>
                                 </div>
                             </div>
                         </div>
@@ -350,7 +350,7 @@ export default function SafetyPage() {
                                 <p className="text-xs text-gray-500">Legal aid and support for women and children</p>
                             </div>
                             <div className="border border-gray-200 rounded-lg p-4">
-                                <h4 className="font-semibold text-gray-900 mb-2">Butical Support</h4>
+                                <h4 className="font-semibold text-gray-900 mb-2">LoveBite Global Support</h4>
                                 <p className="text-sm text-gray-600 mb-2">WhatsApp: +254 742 449 676</p>
                                 <p className="text-xs text-gray-500">24/7 platform support and safety assistance</p>
                             </div>

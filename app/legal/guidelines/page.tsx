@@ -22,7 +22,7 @@ export default function GuidelinesPage() {
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">Community Guidelines</h1>
                     <p className="text-gray-600">Last updated: November 27, 2024</p>
                     <p className="text-gray-700 mt-4">
-                        Butical is built on respect, safety, and authenticity. These guidelines help maintain a positive environment for everyone.
+                        LoveBite Global is built on respect, safety, and authenticity. These guidelines help maintain a positive environment for everyone.
                     </p>
                 </div>
 
@@ -146,7 +146,7 @@ export default function GuidelinesPage() {
 
                         <div className="bg-pink-50 border-l-4 border-pink-500 p-4 mb-4">
                             <p className="text-gray-700">
-                                <strong>Important:</strong> Butical facilitates connections for legitimate companionship services only. All activities must comply with local laws.
+                                <strong>Important:</strong> LoveBite Global facilitates connections for legitimate companionship services only. All activities must comply with local laws.
                             </p>
                         </div>
 
@@ -289,7 +289,7 @@ export default function GuidelinesPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-gray-900 mb-4">12. Updates to Guidelines</h2>
                         <p className="text-gray-700 leading-relaxed">
-                            These guidelines may be updated periodically to reflect new features, user feedback, or legal requirements. Continued use of Butical constitutes acceptance of the current guidelines.
+                            These guidelines may be updated periodically to reflect new features, user feedback, or legal requirements. Continued use of LoveBite Global constitutes acceptance of the current guidelines.
                         </p>
                     </section>
 
@@ -307,7 +307,7 @@ export default function GuidelinesPage() {
 
                     <section className="border-t pt-6 bg-pink-50 -mx-8 -mb-8 p-8 rounded-b-lg">
                         <p className="text-gray-700 text-center font-medium">
-                            Together, we can build a safe, respectful, and authentic community. Thank you for being part of Butical!
+                            Together, we can build a safe, respectful, and authentic community. Thank you for being part of LoveBite Global!
                         </p>
                     </section>
                 </div>

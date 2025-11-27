@@ -24,7 +24,7 @@ export default function AboutPage() {
                             <Heart className="w-8 h-8" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-bold mb-2">About Butical</h1>
+                            <h1 className="text-3xl font-bold mb-2">About LoveBite Global</h1>
                             <p className="text-pink-100">Connecting Hearts, Building Relationships</p>
                         </div>
                     </div>
@@ -35,7 +35,7 @@ export default function AboutPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-gray-900 mb-4">Our Story</h2>
                         <p className="text-gray-700 leading-relaxed mb-4">
-                            Butical was born from a simple belief: everyone deserves meaningful connections. In Kenya's fast-paced world, finding genuine relationships can be challenging. We created Butical to bridge that gap, providing a safe, authentic platform for people to connect, whether they're looking for love, companionship, or professional escort services.
+                            LoveBite Global was born from a simple belief: everyone deserves meaningful connections. In Kenya's fast-paced world, finding genuine relationships can be challenging. We created LoveBite Global to bridge that gap, providing a safe, authentic platform for people to connect, whether they're looking for love, companionship, or professional escort services.
                         </p>
                         <p className="text-gray-700 leading-relaxed">
                             Since our launch, we've helped thousands of Kenyans find their perfect match, build lasting relationships, and connect with professional companions. Our platform combines modern technology with a deep understanding of local culture and values.
@@ -100,7 +100,7 @@ export default function AboutPage() {
                                 </div>
                                 <h3 className="text-xl font-semibold text-gray-900 mb-3">Referral Program</h3>
                                 <p className="text-gray-600 text-sm mb-3">
-                                    Earn generous commissions by referring friends and family to Butical.
+                                    Earn generous commissions by referring friends and family to LoveBite Global.
                                 </p>
                                 <ul className="text-sm text-gray-600 space-y-2">
                                     <li>✓ 50% commission on payments</li>
@@ -144,7 +144,7 @@ export default function AboutPage() {
                                 <div>
                                     <h3 className="font-semibold text-gray-900 mb-2">Inclusivity</h3>
                                     <p className="text-gray-600 text-sm">
-                                        Butical welcomes everyone regardless of gender, orientation, background, or preferences. We celebrate diversity and create space for all to connect authentically.
+                                        LoveBite Global welcomes everyone regardless of gender, orientation, background, or preferences. We celebrate diversity and create space for all to connect authentically.
                                     </p>
                                 </div>
                             </div>
@@ -176,7 +176,7 @@ export default function AboutPage() {
                     </section>
 
                     <section>
-                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Why Choose Butical?</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Why Choose LoveBite Global?</h2>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="bg-gray-50 rounded-lg p-4">
@@ -217,7 +217,7 @@ export default function AboutPage() {
                             <div className="bg-gray-50 rounded-lg p-4">
                                 <h4 className="font-semibold text-gray-900 mb-2">🎁 Earn While You Connect</h4>
                                 <p className="text-sm text-gray-600">
-                                    Our 50% referral commission program lets you earn passive income by sharing Butical with friends.
+                                    Our 50% referral commission program lets you earn passive income by sharing LoveBite Global with friends.
                                 </p>
                             </div>
                         </div>
@@ -226,7 +226,7 @@ export default function AboutPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-gray-900 mb-4">Our Commitment to Safety</h2>
                         <p className="text-gray-700 leading-relaxed mb-4">
-                            Safety isn't just a feature - it's the foundation of Butical. We employ multiple layers of protection:
+                            Safety isn't just a feature - it's the foundation of LoveBite Global. We employ multiple layers of protection:
                         </p>
                         <ul className="space-y-3 text-gray-700">
                             <li className="flex items-start gap-3">
@@ -307,7 +307,7 @@ export default function AboutPage() {
                     <section className="border-t pt-8 bg-gradient-to-r from-pink-50 to-purple-50 -mx-8 -mb-8 p-8 rounded-b-lg">
                         <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">Join Our Community</h2>
                         <p className="text-gray-700 text-center mb-6">
-                            Whether you're looking for love, friendship, or companionship, Butical is here to help you make meaningful connections.
+                            Whether you're looking for love, friendship, or companionship, LoveBite Global is here to help you make meaningful connections.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <Link

@@ -28,7 +28,7 @@ export default function PrivacyPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Introduction</h2>
                         <p className="text-gray-700 leading-relaxed mb-4">
-                            At Butical, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our dating and escort connection platform.
+                            At LoveBite Global, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our dating and escort connection platform.
                         </p>
                         <p className="text-gray-700 leading-relaxed">
                             By using our Service, you consent to the data practices described in this policy. If you do not agree with this policy, please discontinue use of our Service immediately.

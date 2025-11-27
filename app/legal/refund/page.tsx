@@ -28,10 +28,10 @@ export default function RefundPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Overview</h2>
                         <p className="text-gray-700 leading-relaxed mb-4">
-                            At Butical, we strive to provide excellent service to all our users. This Refund Policy outlines the circumstances under which refunds may be issued for subscriptions and other payments made on our platform.
+                            At LoveBite Global, we strive to provide excellent service to all our users. This Refund Policy outlines the circumstances under which refunds may be issued for subscriptions and other payments made on our platform.
                         </p>
                         <p className="text-gray-700 leading-relaxed">
-                            By making a payment on Butical, you acknowledge that you have read and agree to this Refund Policy.
+                            By making a payment on LoveBite Global, you acknowledge that you have read and agree to this Refund Policy.
                         </p>
                     </section>
 

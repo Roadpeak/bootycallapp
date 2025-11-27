@@ -28,7 +28,7 @@ export default function TermsPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Acceptance of Terms</h2>
                         <p className="text-gray-700 leading-relaxed mb-4">
-                            By accessing and using Butical (the "Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+                            By accessing and using LoveBite Global (the "Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
                         </p>
                         <p className="text-gray-700 leading-relaxed">
                             These Terms of Service govern your use of our dating and escort connection platform. By creating an account, you represent that you are at least 18 years of age and have the legal capacity to enter into this agreement.
@@ -38,7 +38,7 @@ export default function TermsPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-gray-900 mb-4">2. Service Description</h2>
                         <p className="text-gray-700 leading-relaxed mb-4">
-                            Butical provides two primary services:
+                            LoveBite Global provides two primary services:
                         </p>
                         <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
                             <li><strong>Dating Service:</strong> Connect with singles for meaningful relationships, casual dating, or friendships</li>
@@ -120,7 +120,7 @@ export default function TermsPage() {
 
                         <h3 className="text-xl font-semibold text-gray-900 mb-3">7.2 Our Content</h3>
                         <p className="text-gray-700 leading-relaxed">
-                            All content on Butical, including text, graphics, logos, and software, is owned by us or our licensors and protected by intellectual property laws.
+                            All content on LoveBite Global, including text, graphics, logos, and software, is owned by us or our licensors and protected by intellectual property laws.
                         </p>
                     </section>
 
@@ -197,7 +197,7 @@ export default function TermsPage() {
 
                     <section className="border-t pt-6">
                         <p className="text-gray-600 text-sm">
-                            By using Butical, you acknowledge that you have read, understood, and agree to be bound by these Terms & Conditions.
+                            By using LoveBite Global, you acknowledge that you have read, understood, and agree to be bound by these Terms & Conditions.
                         </p>
                     </section>
                 </div>
