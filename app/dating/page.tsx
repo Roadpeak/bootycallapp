@@ -14,6 +14,20 @@ import { useDatingProfiles, useSubscription, useAuth } from '@/lib/hooks/butical
 import type { DatingProfile } from '@/services/butical-api-service'
 import { TokenService } from '@/services/butical-api-service'
 
+// All 47 counties in Kenya
+const kenyanCounties = [
+    'Baringo', 'Bomet', 'Bungoma', 'Busia', 'Elgeyo-Marakwet',
+    'Embu', 'Garissa', 'Homa Bay', 'Isiolo', 'Kajiado',
+    'Kakamega', 'Kericho', 'Kiambu', 'Kilifi', 'Kirinyaga',
+    'Kisii', 'Kisumu', 'Kitui', 'Kwale', 'Laikipia',
+    'Lamu', 'Machakos', 'Makueni', 'Mandera', 'Marsabit',
+    'Meru', 'Migori', 'Mombasa', 'Murang\'a', 'Nairobi',
+    'Nakuru', 'Nandi', 'Narok', 'Nyamira', 'Nyandarua',
+    'Nyeri', 'Samburu', 'Siaya', 'Taita-Taveta', 'Tana River',
+    'Tharaka-Nithi', 'Trans Nzoia', 'Turkana', 'Uasin Gishu', 'Vihiga',
+    'Wajir', 'West Pokot'
+]
+
 const CompactReferralBanner = () => (
     <div className="bg-gradient-to-r from-pink-600 to-purple-600 text-white p-3 rounded-lg flex justify-between items-center mb-4">
         <div className="flex items-center">
@@ -33,6 +47,7 @@ function DatingPageContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const [isFilterOpen, setIsFilterOpen] = useState(false)
+    const [isLocationOpen, setIsLocationOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [activeView, setActiveView] = useState<'all' | 'matches'>('all')
     const [showMatchModal, setShowMatchModal] = useState(false)
@@ -252,10 +267,34 @@ function DatingPageContent() {
                                 <span className="hidden md:inline">Filter</span>
                             </button>
 
-                            <button className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2">
-                                <MapPin className="w-4 h-4" />
-                                <span className="hidden md:inline">{selectedLocation}</span>
-                            </button>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setIsLocationOpen(!isLocationOpen)}
+                                    className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2"
+                                >
+                                    <MapPin className="w-4 h-4" />
+                                    <span className="hidden md:inline">{selectedLocation}</span>
+                                </button>
+
+                                {isLocationOpen && (
+                                    <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto z-20">
+                                        {kenyanCounties.map((county) => (
+                                            <button
+                                                key={county}
+                                                onClick={() => {
+                                                    handleLocationChange(county)
+                                                    setIsLocationOpen(false)
+                                                }}
+                                                className={`w-full text-left px-4 py-2 hover:bg-pink-50 transition-colors ${
+                                                    selectedLocation === county ? 'bg-pink-100 text-pink-700 font-medium' : 'text-gray-700'
+                                                }`}
+                                            >
+                                                {county}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 

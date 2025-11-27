@@ -9,23 +9,26 @@ import type { ProfileData } from '../components/cards/EscortCard'
 import { useEscorts, usePayment } from '@/lib/hooks/butical-api-hooks'
 import type { Escort } from '@/services/butical-api-service'
 
-// Kenyan towns list
-const allTowns = [
-    'Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Thika',
-    'Kiambu', 'Nyeri Town', 'Naivasha', 'Meru Town', 'Nanyuki',
-    'Embu Town', 'Kisii Town', 'Machakos Town', 'Narok town',
-    'Isiolo Town', 'Voi', 'Kitui Town', 'Limuru', 'Nyahururu',
-    'Kakamega Town', 'Kilifi Town', 'Wangige', 'Bungoma Town',
-    'Bomet', 'Watamu', 'Chuka', 'Migori Town', 'Kitale', 'Mwea',
-    'Kericho Town', 'Bondo', 'Malindi', 'Isinya', 'Lari'
+// All 47 counties in Kenya
+const kenyanCounties = [
+    'Baringo', 'Bomet', 'Bungoma', 'Busia', 'Elgeyo-Marakwet',
+    'Embu', 'Garissa', 'Homa Bay', 'Isiolo', 'Kajiado',
+    'Kakamega', 'Kericho', 'Kiambu', 'Kilifi', 'Kirinyaga',
+    'Kisii', 'Kisumu', 'Kitui', 'Kwale', 'Laikipia',
+    'Lamu', 'Machakos', 'Makueni', 'Mandera', 'Marsabit',
+    'Meru', 'Migori', 'Mombasa', 'Murang\'a', 'Nairobi',
+    'Nakuru', 'Nandi', 'Narok', 'Nyamira', 'Nyandarua',
+    'Nyeri', 'Samburu', 'Siaya', 'Taita-Taveta', 'Tana River',
+    'Tharaka-Nithi', 'Trans Nzoia', 'Turkana', 'Uasin Gishu', 'Vihiga',
+    'Wajir', 'West Pokot'
 ]
 
 export default function HookupPage() {
     const [isFilterOpen, setIsFilterOpen] = useState(false)
+    const [isLocationOpen, setIsLocationOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [showPaymentModal, setShowPaymentModal] = useState(false)
     const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
-    const [showAllTowns, setShowAllTowns] = useState(false)
     const [mpesaPhone, setMpesaPhone] = useState('')
     const [selectedLocation, setSelectedLocation] = useState('Nairobi')
     const [filters, setFilters] = useState({
@@ -164,10 +167,34 @@ export default function HookupPage() {
                                 <span className="hidden md:inline">Filter</span>
                             </button>
 
-                            <button className="px-3 py-2 border border-gray-600 text-gray-200 rounded-lg hover:bg-gray-700 font-medium transition-colors flex items-center gap-2">
-                                <MapPin className="w-4 h-4" />
-                                <span className="hidden md:inline">{selectedLocation}</span>
-                            </button>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setIsLocationOpen(!isLocationOpen)}
+                                    className="px-3 py-2 border border-gray-600 text-gray-200 rounded-lg hover:bg-gray-700 font-medium transition-colors flex items-center gap-2"
+                                >
+                                    <MapPin className="w-4 h-4" />
+                                    <span className="hidden md:inline">{selectedLocation}</span>
+                                </button>
+
+                                {isLocationOpen && (
+                                    <div className="absolute top-full right-0 mt-2 w-64 bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-80 overflow-y-auto z-20">
+                                        {kenyanCounties.map((county) => (
+                                            <button
+                                                key={county}
+                                                onClick={() => {
+                                                    handleLocationChange(county)
+                                                    setIsLocationOpen(false)
+                                                }}
+                                                className={`w-full text-left px-4 py-2 hover:bg-gray-700 transition-colors ${
+                                                    selectedLocation === county ? 'bg-gray-700 text-pink-400 font-medium' : 'text-gray-200'
+                                                }`}
+                                            >
+                                                {county}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -183,28 +210,22 @@ export default function HookupPage() {
                         />
                     </div>
 
-                    {/* Escorts from other towns */}
+                    {/* Popular Counties Quick Access */}
                     <div className="mt-4">
-                        <h2 className="text-sm font-semibold text-gray-300 mb-3">Escorts from other towns</h2>
+                        <h2 className="text-sm font-semibold text-gray-300 mb-3">Popular Counties</h2>
                         <div className="flex flex-wrap gap-2">
-                            {(showAllTowns ? allTowns : allTowns.slice(0, 6)).map(town => (
+                            {['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Kiambu', 'Eldoret'].map(county => (
                                 <button
-                                    key={town}
-                                    onClick={() => handleLocationChange(town)}
-                                    className={`px-3 py-1.5 text-white text-sm font-medium rounded-lg transition-colors ${selectedLocation === town
+                                    key={county}
+                                    onClick={() => handleLocationChange(county)}
+                                    className={`px-3 py-1.5 text-white text-sm font-medium rounded-lg transition-colors ${selectedLocation === county
                                             ? 'bg-rose-600'
                                             : 'bg-rose-500 hover:bg-rose-600'
                                         }`}
                                 >
-                                    {town}
+                                    {county}
                                 </button>
                             ))}
-                            <button
-                                onClick={() => setShowAllTowns(!showAllTowns)}
-                                className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm font-medium rounded-lg transition-colors"
-                            >
-                                {showAllTowns ? 'Show Less' : `View All (${allTowns.length})`}
-                            </button>
                         </div>
                     </div>
                 </div>
