@@ -1,13 +1,16 @@
 // app/auth/signup/escort/page.tsx
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { TrendingUp, Upload, X, Eye, EyeOff, Check, AlertCircle } from 'lucide-react'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 import type { EscortRegistration } from '@/services/butical-api-service'
 
-export default function EscortSignupPage() {
+function EscortSignupPageContent() {
+    const searchParams = useSearchParams()
+
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -28,6 +31,14 @@ export default function EscortSignupPage() {
         termsAccepted: false,
         ageConfirmed: false,
     })
+
+    // Auto-fill referral code from URL query parameter
+    useEffect(() => {
+        const refCode = searchParams.get('ref')
+        if (refCode) {
+            setFormData(prev => ({ ...prev, referralCode: refCode }))
+        }
+    }, [searchParams])
 
     const [photos, setPhotos] = useState<File[]>([])
     const [showPassword, setShowPassword] = useState(false)
@@ -1017,5 +1028,20 @@ export default function EscortSignupPage() {
                 </div>
             </div>
         </div>
+    )
+}
+
+export default function EscortSignupPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        }>
+            <EscortSignupPageContent />
+        </Suspense>
     )
 }

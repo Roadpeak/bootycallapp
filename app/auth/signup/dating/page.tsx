@@ -1,7 +1,8 @@
 // app/auth/signup/dating/page.tsx
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Heart, Upload, X, Eye, EyeOff, Check, Crown, Star, Shield, Zap, Gift, AlertCircle } from 'lucide-react'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
@@ -54,7 +55,9 @@ const SUBSCRIPTION_PLANS = [
     }
 ]
 
-export default function DatingSignupPage() {
+function DatingSignupPageContent() {
+    const searchParams = useSearchParams()
+
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -77,6 +80,14 @@ export default function DatingSignupPage() {
         termsAccepted: false,
         ageConfirmed: false,
     })
+
+    // Auto-fill referral code from URL query parameter
+    useEffect(() => {
+        const refCode = searchParams.get('ref')
+        if (refCode) {
+            setFormData(prev => ({ ...prev, referralCode: refCode }))
+        }
+    }, [searchParams])
 
     const [photos, setPhotos] = useState<File[]>([])
     const [showPassword, setShowPassword] = useState(false)
@@ -1072,5 +1083,20 @@ export default function DatingSignupPage() {
                 </div>
             </div>
         </div>
+    )
+}
+
+export default function DatingSignupPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        }>
+            <DatingSignupPageContent />
+        </Suspense>
     )
 }
