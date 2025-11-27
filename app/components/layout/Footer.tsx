@@ -64,8 +64,8 @@ const Footer = () => {
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/hookups" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
-                                    Hookups
+                                <Link href="/escorts" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
+                                    Escorts
                                 </Link>
                             </li>
                             <li>
@@ -79,7 +79,7 @@ const Footer = () => {
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/about" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
+                                <Link href="/legal/about" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
                                     About Us
                                 </Link>
                             </li>
@@ -91,27 +91,27 @@ const Footer = () => {
                         <h3 className="text-white font-semibold mb-4 text-sm lg:text-base">Legal</h3>
                         <ul className="space-y-2">
                             <li>
-                                <Link href="/terms" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
+                                <Link href="/legal/terms" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
                                     Terms & Conditions
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/privacy" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
+                                <Link href="/legal/privacy" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
                                     Privacy Policy
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/refund-policy" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
+                                <Link href="/legal/refund" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
                                     Refund Policy
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/community-guidelines" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
+                                <Link href="/legal/guidelines" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
                                     Community Guidelines
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/safety" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
+                                <Link href="/legal/safety" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
                                     Safety Tips
                                 </Link>
                             </li>
@@ -125,15 +125,19 @@ const Footer = () => {
                             <li className="flex items-start space-x-3">
                                 <Phone className="w-4 h-4 lg:w-5 lg:h-5 text-pink-500 flex-shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="text-xs lg:text-sm">+254 712 345 678</p>
+                                    <a href="tel:+254742449676" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
+                                        +254 742 449 676
+                                    </a>
                                     <p className="text-xs text-gray-400">24/7 Support</p>
                                 </div>
                             </li>
                             <li className="flex items-start space-x-3">
                                 <Mail className="w-4 h-4 lg:w-5 lg:h-5 text-pink-500 flex-shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="text-xs lg:text-sm break-all">support@lovebite.co.ke</p>
-                                    <p className="text-xs text-gray-400">We reply within 24hrs</p>
+                                    <a href="https://wa.me/254742449676" target="_blank" rel="noopener noreferrer" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
+                                        WhatsApp Support
+                                    </a>
+                                    <p className="text-xs text-gray-400">Instant response</p>
                                 </div>
                             </li>
                             <li className="flex items-start space-x-3">
