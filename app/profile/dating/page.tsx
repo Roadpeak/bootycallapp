@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
     ArrowLeft, Edit2, Save, X, Upload, MapPin, Briefcase,
-    GraduationCap, Heart, MessageCircle, Check, Gift,
+    GraduationCap, Check, Gift,
     Crown, Star, Zap, AlertCircle, ChevronRight, RefreshCw,
     CreditCard, Sparkles, Loader2
 } from 'lucide-react'
@@ -44,13 +44,6 @@ export default function DatingProfilePage() {
     // Photo handling
     const [newPhotos, setNewPhotos] = useState<File[]>([])
     const [photosToDelete, setPhotosToDelete] = useState<string[]>([])
-
-    // Stats (TODO: Get from API when available)
-    const [stats] = useState({
-        matches: 0,
-        likes: 0,
-        profileViews: 0
-    })
 
     // Fetch all data on mount
     useEffect(() => {
@@ -423,7 +416,7 @@ export default function DatingProfilePage() {
                                 {subscription.type === 'BASIC' && <Star className="w-8 h-8" />}
                                 <div>
                                     <h3 className="font-semibold text-lg">
-                                        {getCurrentPlan()?.name} Member
+                                        Active Subscription
                                     </h3>
                                     <p className="text-sm opacity-90">
                                         {getDaysRemaining()} days remaining • Expires {new Date(subscription.expiresAt || subscription.endDate || '').toLocaleDateString()}
@@ -435,12 +428,6 @@ export default function DatingProfilePage() {
                                     }`}>
                                     {subscription.autoRenew ? '✓ Auto-renew' : 'Auto-renew OFF'}
                                 </span>
-                                <Link
-                                    href="/subscription/dating"
-                                    className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
-                                >
-                                    {subscription.type === 'VIP' ? 'Manage' : 'Upgrade'}
-                                </Link>
                             </div>
                         </div>
                     </div>
@@ -520,26 +507,6 @@ export default function DatingProfilePage() {
                     </Link>
                 )}
 
-                {/* Profile Stats */}
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                    <div className="bg-white rounded-lg p-4 text-center">
-                        <Heart className="w-6 h-6 text-pink-500 mx-auto mb-2" />
-                        <p className="text-2xl font-bold text-gray-900">{stats.matches}</p>
-                        <p className="text-sm text-gray-600">Matches</p>
-                    </div>
-                    <div className="bg-white rounded-lg p-4 text-center">
-                        <MessageCircle className="w-6 h-6 text-pink-500 mx-auto mb-2" />
-                        <p className="text-2xl font-bold text-gray-900">{stats.likes}</p>
-                        <p className="text-sm text-gray-600">Likes</p>
-                    </div>
-                    <div className="bg-white rounded-lg p-4 text-center">
-                        <div className="w-6 h-6 text-pink-500 mx-auto mb-2 flex items-center justify-center">
-                            👁️
-                        </div>
-                        <p className="text-2xl font-bold text-gray-900">{stats.profileViews}</p>
-                        <p className="text-sm text-gray-600">Views</p>
-                    </div>
-                </div>
 
                 {/* Subscription Details Card */}
                 {subscription && (
@@ -557,17 +524,13 @@ export default function DatingProfilePage() {
 
                         <div className="space-y-4">
                             <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${subscription.type === 'VIP' ? 'bg-purple-100' :
-                                        subscription.type === 'PREMIUM' ? 'bg-pink-100' : 'bg-gray-100'
-                                    }`}>
-                                    {subscription.type === 'VIP' && <Crown className="w-6 h-6 text-purple-600" />}
-                                    {subscription.type === 'PREMIUM' && <Zap className="w-6 h-6 text-pink-600" />}
-                                    {subscription.type === 'BASIC' && <Star className="w-6 h-6 text-gray-600" />}
+                                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-pink-100">
+                                    <Zap className="w-6 h-6 text-pink-600" />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="font-semibold text-gray-900">{getCurrentPlan()?.name} Plan</h3>
+                                    <h3 className="font-semibold text-gray-900">Dating Subscription</h3>
                                     <p className="text-sm text-gray-600">
-                                        KSh {getCurrentPlan()?.price.toLocaleString()}/year
+                                        KSh 300/year
                                     </p>
                                 </div>
                                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${subscription.status === 'EXPIRED' || isExpired()
@@ -583,7 +546,7 @@ export default function DatingProfilePage() {
 
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                    <p className="text-gray-500">Started</p>
+                                    <p className="text-gray-500">Subscription Started</p>
                                     <p className="font-medium text-gray-900">
                                         {subscription.startDate ? new Date(subscription.startDate).toLocaleDateString() : 'N/A'}
                                     </p>
@@ -611,21 +574,12 @@ export default function DatingProfilePage() {
                             </div>
 
                             <div className="flex gap-3 pt-2">
-                                {subscription.type !== 'VIP' && (
-                                    <Link
-                                        href="/subscription/dating"
-                                        className="flex-1 py-2 bg-pink-500 text-white rounded-lg font-medium text-center hover:bg-pink-600 transition-colors"
-                                    >
-                                        Upgrade Plan
-                                    </Link>
-                                )}
                                 <Link
                                     href="/subscription/dating"
-                                    className={`py-2 px-4 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 ${subscription.type === 'VIP' ? 'flex-1' : ''
-                                        }`}
+                                    className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                                 >
                                     <RefreshCw className="w-4 h-4" />
-                                    Renew
+                                    Renew Subscription
                                 </Link>
                             </div>
                         </div>
@@ -968,9 +922,9 @@ export default function DatingProfilePage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <h3 className="font-semibold text-gray-900 mb-1">Subscription</h3>
-                                <p className="text-sm text-gray-600">{getCurrentPlan()?.name} Plan</p>
+                                <p className="text-sm text-gray-600">KSh 300/year</p>
                             </div>
-                            <Crown className="w-8 h-8 text-pink-500" />
+                            <Zap className="w-8 h-8 text-pink-500" />
                         </div>
                     </Link>
 

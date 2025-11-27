@@ -53,33 +53,8 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
         referralCount: 0
     })
 
-    // Sample notifications (TODO: Replace with API)
-    const notifications = [
-        {
-            id: 1,
-            type: 'like',
-            message: 'Jessica liked your profile',
-            time: '2 mins ago',
-            image: 'https://randomuser.me/api/portraits/women/44.jpg',
-            unread: true
-        },
-        {
-            id: 2,
-            type: 'message',
-            message: 'New message from Michael',
-            time: '1 hour ago',
-            image: 'https://randomuser.me/api/portraits/men/86.jpg',
-            unread: true
-        },
-        {
-            id: 3,
-            type: 'match',
-            message: 'You matched with Sarah!',
-            time: '3 hours ago',
-            image: 'https://randomuser.me/api/portraits/women/24.jpg',
-            unread: false
-        }
-    ]
+    // Notifications from API
+    const [notifications, setNotifications] = useState<any[]>([])
 
     // Check authentication and fetch user data
     useEffect(() => {
@@ -458,7 +433,7 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
 
                             {notificationsOpen && (
                                 <div
-                                    className="dropdown-menu absolute right-0 mt-1 w-80 bg-white rounded-xl shadow-lg border border-pink-100 py-2"
+                                    className="dropdown-menu absolute right-0 md:right-0 left-0 md:left-auto mt-1 w-80 max-w-[calc(100vw-2rem)] mx-auto md:mx-0 bg-white rounded-xl shadow-lg border border-pink-100 py-2"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <div className="px-4 py-2 border-b border-pink-100 flex justify-between items-center">
@@ -473,36 +448,42 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
                                     </div>
 
                                     <div className="max-h-80 overflow-y-auto">
-                                        {notifications.map((notification) => (
-                                            <div
-                                                key={notification.id}
-                                                className={`px-4 py-3 flex items-start hover:bg-pink-50 transition-colors ${notification.unread ? 'bg-pink-50/50' : ''
-                                                    }`}
-                                            >
-                                                <img
-                                                    src={notification.image}
-                                                    alt="User"
-                                                    className="w-10 h-10 rounded-full object-cover mr-3"
-                                                />
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm text-gray-900">
-                                                        {notification.message}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500 mt-1">
-                                                        {notification.time}
-                                                    </p>
+                                        {notifications.length > 0 ? (
+                                            notifications.map((notification) => (
+                                                <div
+                                                    key={notification.id}
+                                                    className={`px-4 py-3 flex items-start hover:bg-pink-50 transition-colors ${notification.unread ? 'bg-pink-50/50' : ''
+                                                        }`}
+                                                >
+                                                    <img
+                                                        src={notification.image}
+                                                        alt="User"
+                                                        className="w-10 h-10 rounded-full object-cover mr-3"
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm text-gray-900">
+                                                            {notification.message}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500 mt-1">
+                                                            {notification.time}
+                                                        </p>
+                                                    </div>
+                                                    {notification.type === 'like' && (
+                                                        <Heart className="w-4 h-4 text-pink-500 flex-shrink-0" />
+                                                    )}
+                                                    {notification.type === 'message' && (
+                                                        <MessageCircle className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                                                    )}
+                                                    {notification.type === 'match' && (
+                                                        <Sparkles className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                                                    )}
                                                 </div>
-                                                {notification.type === 'like' && (
-                                                    <Heart className="w-4 h-4 text-pink-500 flex-shrink-0" />
-                                                )}
-                                                {notification.type === 'message' && (
-                                                    <MessageCircle className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                                                )}
-                                                {notification.type === 'match' && (
-                                                    <Sparkles className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-                                                )}
+                                            ))
+                                        ) : (
+                                            <div className="px-4 py-8 text-center text-gray-500">
+                                                <p className="text-sm">No notifications yet</p>
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
                                 </div>
                             )}
