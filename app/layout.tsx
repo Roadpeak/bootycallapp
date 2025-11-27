@@ -18,6 +18,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "LoveBite - Dating & Hookups in Kenya",
   description: "Kenya's premier platform for dating and connections. Find your match or explore exciting encounters.",
+  icons: {
+    icon: '/images/lovebitelogo.png',
+    apple: '/images/lovebitelogo.png',
+  },
 };
 
 export default function RootLayout({

@@ -13,15 +13,11 @@ const Footer = () => {
                     {/* Brand Section */}
                     <div className="space-y-4 col-span-2 lg:col-span-1">
                         <Link href="/" className="flex items-center">
-                            <div className="relative">
-                                <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-600 rounded-full flex items-center justify-center">
-                                    <Heart className="w-5 h-5 text-white" />
-                                </div>
-                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-pink-500 rounded-full border-2 border-gray-900"></div>
-                            </div>
-                            <span className="ml-2 text-2xl font-bold bg-gradient-to-r from-pink-500 to-rose-500 text-transparent bg-clip-text">
-                                LoveBite
-                            </span>
+                            <img
+                                src="/images/lovebitelogo.png"
+                                alt="LoveBite Logo"
+                                className="w-32 h-auto"
+                            />
                         </Link>
                         <p className="text-sm text-gray-400">
                             Kenya's premier platform for dating and connections. Find your match or explore exciting encounters.
