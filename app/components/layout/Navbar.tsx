@@ -23,7 +23,8 @@ import {
     Facebook,
     Twitter,
     Gift,
-    DollarSign
+    DollarSign,
+    Send
 } from 'lucide-react'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 import type { User as UserType, WalletSummary, ReferralCode } from '@/services/butical-api-service'
@@ -243,13 +244,13 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
                     {/* Desktop View */}
                     <div className="hidden md:flex justify-between items-center">
                         <div className="flex items-center space-x-6">
-                            <a href="tel:+254742449676" className="flex items-center hover:text-pink-300 transition-colors">
+                            <a href="tel:+254745131915" className="flex items-center hover:text-pink-300 transition-colors">
                                 <Phone className="w-3.5 h-3.5 mr-1.5" />
-                                <span>+254 742 449 676</span>
+                                <span>+254 745 131 915</span>
                             </a>
 
                             <a
-                                href="https://wa.me/254742449676"
+                                href="https://wa.me/254745131915"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center hover:text-pink-300 transition-colors"
@@ -275,11 +276,19 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
                                 <a href="#" className="hover:text-pink-300 transition-colors">
                                     <Twitter className="w-3.5 h-3.5" />
                                 </a>
+                                <a href="https://t.me/lovebiteglobal" target="_blank" rel="noopener noreferrer" className="hover:text-pink-300 transition-colors">
+                                    <Send className="w-3.5 h-3.5" />
+                                </a>
+                                <a href="https://www.tiktok.com/@lovebiteglobal" target="_blank" rel="noopener noreferrer" className="hover:text-pink-300 transition-colors">
+                                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                                    </svg>
+                                </a>
                             </div>
 
                             <div className="border-l border-gray-700 pl-4 flex items-center">
                                 <span className="text-gray-400 mr-2">Need help?</span>
-                                <a href="#" className="text-pink-400 hover:text-pink-300 transition-colors font-medium">
+                                <a href="mailto:lovebiteglobalv2030@gmail.com" className="text-pink-400 hover:text-pink-300 transition-colors font-medium">
                                     Contact us
                                 </a>
                             </div>
@@ -289,7 +298,7 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
                     {/* Mobile View - WhatsApp and Socials */}
                     <div className="md:hidden flex justify-between items-center">
                         <a
-                            href="https://wa.me/254742449676"
+                            href="https://wa.me/254745131915"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center hover:text-pink-300 transition-colors"
@@ -307,6 +316,14 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
                             </a>
                             <a href="#" className="hover:text-pink-300 transition-colors">
                                 <Twitter className="w-3.5 h-3.5" />
+                            </a>
+                            <a href="https://t.me/lovebiteglobal" target="_blank" rel="noopener noreferrer" className="hover:text-pink-300 transition-colors">
+                                <Send className="w-3.5 h-3.5" />
+                            </a>
+                            <a href="https://www.tiktok.com/@lovebiteglobal" target="_blank" rel="noopener noreferrer" className="hover:text-pink-300 transition-colors">
+                                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                                </svg>
                             </a>
                         </div>
                     </div>

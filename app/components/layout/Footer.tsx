@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { Heart, Instagram, Facebook, Twitter, Youtube, Mail, Phone, MapPin } from 'lucide-react'
+import { Heart, Instagram, Facebook, Twitter, Youtube, Mail, Phone, MapPin, Send } from 'lucide-react'
 
 const Footer = () => {
     return (
@@ -42,10 +42,22 @@ const Footer = () => {
                                 <Twitter className="w-4 h-4" />
                             </a>
                             <a
-                                href="#"
+                                href="https://t.me/lovebiteglobal"
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="w-9 h-9 rounded-full bg-gray-800 hover:bg-pink-500 flex items-center justify-center transition-colors"
                             >
-                                <Youtube className="w-4 h-4" />
+                                <Send className="w-4 h-4" />
+                            </a>
+                            <a
+                                href="https://www.tiktok.com/@lovebiteglobal"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-9 h-9 rounded-full bg-gray-800 hover:bg-pink-500 flex items-center justify-center transition-colors"
+                            >
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                                </svg>
                             </a>
                         </div>
                     </div>
@@ -121,8 +133,8 @@ const Footer = () => {
                             <li className="flex items-start space-x-3">
                                 <Phone className="w-4 h-4 lg:w-5 lg:h-5 text-pink-500 flex-shrink-0 mt-0.5" />
                                 <div>
-                                    <a href="tel:+254742449676" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
-                                        +254 742 449 676
+                                    <a href="tel:+254745131915" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
+                                        +254 745 131 915
                                     </a>
                                     <p className="text-xs text-gray-400">24/7 Support</p>
                                 </div>
@@ -130,7 +142,16 @@ const Footer = () => {
                             <li className="flex items-start space-x-3">
                                 <Mail className="w-4 h-4 lg:w-5 lg:h-5 text-pink-500 flex-shrink-0 mt-0.5" />
                                 <div>
-                                    <a href="https://wa.me/254742449676" target="_blank" rel="noopener noreferrer" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
+                                    <a href="mailto:lovebiteglobalv2030@gmail.com" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
+                                        lovebiteglobalv2030@gmail.com
+                                    </a>
+                                    <p className="text-xs text-gray-400">Email support</p>
+                                </div>
+                            </li>
+                            <li className="flex items-start space-x-3">
+                                <Send className="w-4 h-4 lg:w-5 lg:h-5 text-pink-500 flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <a href="https://wa.me/254745131915" target="_blank" rel="noopener noreferrer" className="text-xs lg:text-sm hover:text-pink-400 transition-colors">
                                         WhatsApp Support
                                     </a>
                                     <p className="text-xs text-gray-400">Instant response</p>
