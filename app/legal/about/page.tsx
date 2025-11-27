@@ -35,10 +35,10 @@ export default function AboutPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-gray-900 mb-4">Our Story</h2>
                         <p className="text-gray-700 leading-relaxed mb-4">
-                            LoveBite Global was born from a simple belief: everyone deserves meaningful connections. In Kenya's fast-paced world, finding genuine relationships can be challenging. We created LoveBite Global to bridge that gap, providing a safe, authentic platform for people to connect, whether they're looking for love, companionship, or professional escort services.
+                            LoveBite Global was born from a simple belief: everyone deserves meaningful connections. In Kenya's fast-paced world, finding genuine relationships can be challenging. We created LoveBite Global to bridge that gap, providing a safe, authentic platform for people to connect, whether they're looking for love, companionship, or professional escort services. As one of the best escorts in Kenya platforms, we serve clients nationwide seeking escorts near me and quality companionship.
                         </p>
                         <p className="text-gray-700 leading-relaxed">
-                            Since our launch, we've helped thousands of Kenyans find their perfect match, build lasting relationships, and connect with professional companions. Our platform combines modern technology with a deep understanding of local culture and values.
+                            Since our launch, we've helped thousands of Kenyans find their perfect match, build lasting relationships, and connect with top escorts in Kenya. Our platform combines modern technology with a deep understanding of local culture and values, making it easy to find sexy ladies near me and genuine connections across the country.
                         </p>
                     </section>
 
@@ -176,6 +176,161 @@ export default function AboutPage() {
                     </section>
 
                     <section>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Nationwide Coverage Across Kenya</h2>
+                        <p className="text-gray-700 leading-relaxed mb-6">
+                            LoveBite Global proudly serves all 47 counties in Kenya, connecting people from every corner of the nation. Whether you're looking for hookup in Nairobi, escorts in Mombasa, or companionship in your local area, our platform has you covered. We feature verified profiles of escorts near me and dating partners across all regions.
+                        </p>
+
+                        <div className="mb-6">
+                            <h3 className="text-xl font-semibold text-gray-900 mb-4">Major Cities & Counties We Serve</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
+                                <div className="bg-pink-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Nairobi</p>
+                                    <p className="text-xs text-gray-600">Capital City</p>
+                                </div>
+                                <div className="bg-purple-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Mombasa</p>
+                                    <p className="text-xs text-gray-600">Coast Region</p>
+                                </div>
+                                <div className="bg-pink-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Kisumu</p>
+                                    <p className="text-xs text-gray-600">Lakeside City</p>
+                                </div>
+                                <div className="bg-purple-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Nakuru</p>
+                                    <p className="text-xs text-gray-600">Rift Valley</p>
+                                </div>
+                                <div className="bg-pink-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Eldoret</p>
+                                    <p className="text-xs text-gray-600">North Rift</p>
+                                </div>
+                                <div className="bg-purple-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Thika</p>
+                                    <p className="text-xs text-gray-600">Central Kenya</p>
+                                </div>
+                                <div className="bg-pink-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Machakos</p>
+                                    <p className="text-xs text-gray-600">Eastern Region</p>
+                                </div>
+                                <div className="bg-purple-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Meru</p>
+                                    <p className="text-xs text-gray-600">Mt. Kenya</p>
+                                </div>
+                                <div className="bg-pink-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Nyeri</p>
+                                    <p className="text-xs text-gray-600">Central Highlands</p>
+                                </div>
+                                <div className="bg-purple-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Kakamega</p>
+                                    <p className="text-xs text-gray-600">Western Kenya</p>
+                                </div>
+                                <div className="bg-pink-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Kisii</p>
+                                    <p className="text-xs text-gray-600">Gusii Region</p>
+                                </div>
+                                <div className="bg-purple-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Kitale</p>
+                                    <p className="text-xs text-gray-600">Trans Nzoia</p>
+                                </div>
+                                <div className="bg-pink-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Malindi</p>
+                                    <p className="text-xs text-gray-600">Coastal Town</p>
+                                </div>
+                                <div className="bg-purple-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Naivasha</p>
+                                    <p className="text-xs text-gray-600">Great Rift Valley</p>
+                                </div>
+                                <div className="bg-pink-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Embu</p>
+                                    <p className="text-xs text-gray-600">Eastern Region</p>
+                                </div>
+                                <div className="bg-purple-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Kericho</p>
+                                    <p className="text-xs text-gray-600">Tea Country</p>
+                                </div>
+                                <div className="bg-pink-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Bungoma</p>
+                                    <p className="text-xs text-gray-600">Western Kenya</p>
+                                </div>
+                                <div className="bg-purple-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Garissa</p>
+                                    <p className="text-xs text-gray-600">North Eastern</p>
+                                </div>
+                                <div className="bg-pink-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Kilifi</p>
+                                    <p className="text-xs text-gray-600">Coast Region</p>
+                                </div>
+                                <div className="bg-purple-50 rounded-lg p-3">
+                                    <p className="font-medium text-gray-900">Escorts in Nanyuki</p>
+                                    <p className="text-xs text-gray-600">Laikipia</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg p-6 mb-6">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-3">All 47 Counties Covered</h3>
+                            <p className="text-sm text-gray-700 mb-4">
+                                Our comprehensive network includes escorts and dating partners in every Kenyan county:
+                            </p>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-xs text-gray-600">
+                                <p>• Nairobi County</p>
+                                <p>• Mombasa County</p>
+                                <p>• Kisumu County</p>
+                                <p>• Nakuru County</p>
+                                <p>• Uasin Gishu County</p>
+                                <p>• Kiambu County</p>
+                                <p>• Machakos County</p>
+                                <p>• Meru County</p>
+                                <p>• Nyeri County</p>
+                                <p>• Kakamega County</p>
+                                <p>• Kisii County</p>
+                                <p>• Trans Nzoia County</p>
+                                <p>• Kilifi County</p>
+                                <p>• Bungoma County</p>
+                                <p>• Kericho County</p>
+                                <p>• Laikipia County</p>
+                                <p>• Embu County</p>
+                                <p>• Garissa County</p>
+                                <p>• Kajiado County</p>
+                                <p>• Murang'a County</p>
+                                <p>• Nyamira County</p>
+                                <p>• Nandi County</p>
+                                <p>• Siaya County</p>
+                                <p>• Kwale County</p>
+                                <p>• Migori County</p>
+                                <p>• Busia County</p>
+                                <p>• Homa Bay County</p>
+                                <p>• Vihiga County</p>
+                                <p>• Baringo County</p>
+                                <p>• Bomet County</p>
+                                <p>• Elgeyo Marakwet County</p>
+                                <p>• Nyandarua County</p>
+                                <p>• Kirinyaga County</p>
+                                <p>• Tharaka Nithi County</p>
+                                <p>• Kitui County</p>
+                                <p>• Makueni County</p>
+                                <p>• Narok County</p>
+                                <p>• West Pokot County</p>
+                                <p>• Samburu County</p>
+                                <p>• Taita Taveta County</p>
+                                <p>• Tana River County</p>
+                                <p>• Lamu County</p>
+                                <p>• Turkana County</p>
+                                <p>• Wajir County</p>
+                                <p>• Mandera County</p>
+                                <p>• Marsabit County</p>
+                                <p>• Isiolo County</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                            <p className="text-sm text-gray-700">
+                                <strong>Looking for escorts near me?</strong> Our location-based search makes it easy to find the best escorts in Kenya right in your area. Whether you need hookup in Nairobi, companionship in Mombasa, or want to meet sexy ladies near me in any town, LoveBite Global connects you with verified, top escorts in Kenya nationwide.
+                            </p>
+                        </div>
+                    </section>
+
+                    <section>
                         <h2 className="text-2xl font-bold text-gray-900 mb-4">Why Choose LoveBite Global?</h2>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -284,22 +439,24 @@ export default function AboutPage() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="border border-gray-200 rounded-lg p-4">
                                 <h4 className="font-semibold text-gray-900 mb-3">WhatsApp</h4>
-                                <a href="https://wa.me/254742449676" className="text-pink-600 hover:text-pink-700">
-                                    +254 742 449 676
+                                <a href="https://wa.me/254745131915" className="text-pink-600 hover:text-pink-700">
+                                    +254 745 131 915
                                 </a>
                                 <p className="text-xs text-gray-500 mt-2">Fastest response time</p>
                             </div>
                             <div className="border border-gray-200 rounded-lg p-4">
                                 <h4 className="font-semibold text-gray-900 mb-3">Phone</h4>
-                                <a href="tel:+254742449676" className="text-pink-600 hover:text-pink-700">
-                                    +254 742 449 676
+                                <a href="tel:+254745131915" className="text-pink-600 hover:text-pink-700">
+                                    +254 745 131 915
                                 </a>
                                 <p className="text-xs text-gray-500 mt-2">Available 24/7</p>
                             </div>
                             <div className="border border-gray-200 rounded-lg p-4">
-                                <h4 className="font-semibold text-gray-900 mb-3">Support Hours</h4>
-                                <p className="text-gray-700">24/7</p>
-                                <p className="text-xs text-gray-500 mt-2">Every day of the year</p>
+                                <h4 className="font-semibold text-gray-900 mb-3">Email</h4>
+                                <a href="mailto:lovebiteglobalv2030@gmail.com" className="text-pink-600 hover:text-pink-700 text-sm">
+                                    lovebiteglobalv2030@gmail.com
+                                </a>
+                                <p className="text-xs text-gray-500 mt-2">Email support</p>
                             </div>
                         </div>
                     </section>
