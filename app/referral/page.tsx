@@ -21,7 +21,7 @@ export default function ReferralPage() {
     const isLoading = referralsLoading || walletLoading
 
     // Compute values from API data
-    const referralLink = referralCode ? `https://lovebite.com/signup?ref=${referralCode}` : ''
+    const referralLink = referralCode ? `https://lovebiteglobal.com/signup?ref=${referralCode}` : ''
     const availableBalance = wallet?.currentBalance || wallet?.balance || 0
     const pendingEarnings = wallet?.pendingWithdrawals || 0
     const totalReferralsCount = myReferrals.length
