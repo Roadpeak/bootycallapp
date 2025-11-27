@@ -171,6 +171,7 @@ export interface Escort {
     contactPhone: string
     locations: EscortLocation
     photos: string[]
+    videos?: string[]
     services: EscortService[]
     pricing: EscortPricing
     availability: EscortAvailability
@@ -185,6 +186,13 @@ export interface Escort {
     user: EscortUser
     createdAt: string
     contactHidden: boolean
+    // Additional profile fields
+    dateOfBirth?: string
+    gender?: string
+    ethnicity?: string
+    category?: string
+    city?: string
+    isNew?: boolean
     // Computed/display properties (for backwards compatibility)
     displayName?: string
     location?: string

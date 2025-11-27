@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { Heart, MessageSquare, Lock, Unlock, Phone, MapPin } from 'lucide-react'
+import { Heart, MessageSquare, Lock, Unlock, Phone, MapPin, Image as ImageIcon, Video, Star } from 'lucide-react'
 import { getImageUrl } from '@/lib/utils/image'
 
 // Combined interface for all profile types
@@ -24,6 +24,14 @@ export interface ProfileData {
     isVip?: boolean
     hasDirectCall?: boolean
     services?: (string | { name: string })[]
+    // Additional escort fields
+    location?: string
+    city?: string
+    ethnicity?: string
+    category?: string
+    photoCount?: number
+    videoCount?: number
+    isNew?: boolean
 }
 
 interface DatingCardProps {
@@ -150,12 +158,10 @@ export const EscortCard: React.FC<EscortCardProps> = ({
     onCall,
     className = '',
 }) => {
-    const { id, name, age, distance, bio, photos, price, isUnlocked, isVip, hasDirectCall, services } = profile
-
-    // Helper to get service name from service (can be string or object)
-    const getServiceName = (service: string | { name: string }): string => {
-        return typeof service === 'string' ? service : service.name
-    }
+    const {
+        id, name, age, location, city, ethnicity, category, photos, photoCount, videoCount,
+        isVerified, isVip, isNew, price, isUnlocked, hasDirectCall
+    } = profile
 
     const handleUnlock = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -169,100 +175,87 @@ export const EscortCard: React.FC<EscortCardProps> = ({
         if (onCall) onCall(id)
     }
 
+    // Calculate actual photo and video counts
+    const actualPhotoCount = photoCount !== undefined ? photoCount : (photos?.length || 0)
+    const actualVideoCount = videoCount !== undefined ? videoCount : 0
+
     return (
-        <div className={`bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow ${className}`}>
+        <div className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden ${className}`}>
             <Link href={`/escorts/${id}`}>
                 {/* Profile Image */}
-                <div className="relative aspect-[3/4] overflow-hidden rounded-t-xl">
+                <div className="relative aspect-[3/4] overflow-hidden">
                     <img
                         src={getImageUrl(photos[0])}
                         alt={`${name}'s profile`}
                         className="w-full h-full object-cover transition-transform hover:scale-105 duration-300"
                     />
 
-                    {/* VIP Badge */}
-                    {isVip && (
-                        <div className="absolute top-2 right-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-                            VIP
+                    {/* New Badge */}
+                    {isNew && (
+                        <div className="absolute top-2 right-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                            <Star className="w-3 h-3 fill-current" />
+                            New
                         </div>
                     )}
-
-                    {/* Gradient overlay at bottom with name */}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent p-3">
-                        <h3 className="text-white font-bold text-lg drop-shadow-md">
-                            {name}, {age}
-                        </h3>
-                        {distance && (
-                            <p className="text-white/90 text-sm drop-shadow-md">
-                                {typeof distance === 'number' ? `${distance} km away` : distance}
-                            </p>
-                        )}
-                    </div>
                 </div>
 
                 {/* Profile Info */}
-                <div className="p-3">
-                    {/* Price Row - Only for locked profiles */}
-                    {!hasDirectCall && !isUnlocked && !isVip && price && (
-                        <div className="flex justify-end mb-2">
-                            <span className="text-sm font-bold text-rose-400">
-                                KSh {price}
+                <div className="p-3 space-y-2">
+                    {/* Name */}
+                    <h3 className="text-pink-600 font-bold text-lg flex items-center gap-1">
+                        {name}
+                        {isVerified && (
+                            <Star className="w-4 h-4 fill-pink-500 text-pink-500" />
+                        )}
+                    </h3>
+
+                    {/* Location */}
+                    <div className="flex items-start gap-1.5 text-gray-700">
+                        <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5 text-pink-500" />
+                        <span className="text-sm">
+                            {city && location ? `${city}, ${location}` : city || location || 'Kenya'}
+                        </span>
+                    </div>
+
+                    {/* Category/Ethnicity */}
+                    {(category || ethnicity) && (
+                        <div className="flex items-center gap-1.5 text-gray-700">
+                            <span className="text-pink-500">👤</span>
+                            <span className="text-sm font-medium">
+                                {category || ethnicity}
                             </span>
                         </div>
                     )}
 
-                    {/* Bio */}
-                    {bio && (
-                        <p className="text-sm text-gray-300 mb-2 line-clamp-2 leading-relaxed">
-                            {bio}
-                        </p>
-                    )}
-
-                    {/* Services */}
-                    {services && services.length > 0 && (
-                        <div className="mb-3 flex flex-wrap gap-1.5">
-                            {services.slice(0, 3).map((service, index) => (
-                                <span
-                                    key={index}
-                                    className="bg-rose-500/20 text-rose-300 text-xs font-medium px-2 py-0.5 rounded-full border border-rose-500/30"
-                                >
-                                    {getServiceName(service)}
-                                </span>
-                            ))}
-                            {services.length > 3 && (
-                                <span className="text-gray-400 text-xs font-medium">
-                                    +{services.length - 3}
-                                </span>
-                            )}
+                    {/* Age, Photos, Videos */}
+                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                            <span className="text-pink-500">👤</span>
+                            <span>{age} Years</span>
                         </div>
-                    )}
+                        <div className="flex items-center gap-1">
+                            <ImageIcon className="w-4 h-4 text-pink-500" />
+                            <span>{actualPhotoCount}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <Video className="w-4 h-4 text-pink-500" />
+                            <span>{actualVideoCount}</span>
+                        </div>
+                    </div>
 
-                    {/* Action Button */}
-                    <div className="w-full">
-                        {hasDirectCall ? (
-                            <button
-                                onClick={handleCall}
-                                className="w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white"
-                            >
-                                <Phone className="w-4 h-4" />
-                                Call Now
-                            </button>
-                        ) : isVip || isUnlocked ? (
-                            <button
-                                onClick={handleCall}
-                                className="w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white"
-                            >
-                                <Phone className="w-4 h-4" />
-                                Call Now
-                            </button>
-                        ) : (
-                            <button
-                                onClick={handleUnlock}
-                                className="w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 bg-pink-500 hover:bg-pink-600 text-white"
-                            >
-                                <Lock className="w-4 h-4" />
-                                Unlock Escort
-                            </button>
+                    {/* Status Badges */}
+                    <div className="flex items-center gap-2">
+                        {isVerified && (
+                            <div className="flex items-center gap-1 text-pink-600 text-xs font-medium">
+                                <Star className="w-3 h-3 fill-current" />
+                                <span>Verified</span>
+                            </div>
+                        )}
+                        {isVip && (
+                            <div className="flex items-center gap-1 text-purple-600 text-xs font-medium">
+                                <Star className="w-3 h-3 fill-current" />
+                                <span>VIP</span>
+                            </div>
                         )}
                     </div>
                 </div>

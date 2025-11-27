@@ -73,18 +73,38 @@ export default function HookupPage() {
         return 'Unknown location';
     };
 
+    // Helper to calculate age from date of birth
+    const calculateAge = (dateOfBirth?: string): number => {
+        if (!dateOfBirth) return 25; // Default age
+        const birthDate = new Date(dateOfBirth);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        return age > 0 ? age : 25;
+    };
+
     // Transform API data to ProfileData format
     const profiles: ProfileData[] = safeEscorts.map((escort: Escort) => ({
         id: escort.id,
         name: getDisplayName(escort),
-        age: 0,
-        distance: 0,
+        age: calculateAge(escort.dateOfBirth),
+        location: escort.locations?.area || escort.location || '',
+        city: escort.locations?.city || escort.city || 'Kenya',
+        ethnicity: escort.ethnicity,
+        category: escort.category,
         bio: escort.about || '',
         photos: escort.photos && escort.photos.length > 0 ? escort.photos : ['https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&q=80'],
+        photoCount: escort.photos?.length || 0,
+        videoCount: escort.videos?.length || 0,
+        isVerified: escort.isVerified || escort.verified || false,
+        isVip: escort.vipStatus || escort.isVIP || false,
+        isNew: escort.isNew || false,
         rating: escort.rating || 4.5,
         price: escort.unlockPrice || escort.pricing?.unlockPrice || 150,
         isUnlocked: !escort.contactHidden,
-        isVip: escort.vipStatus || escort.isVIP || false,
         hasDirectCall: !escort.contactHidden,
         services: escort.services || [],
     }))
