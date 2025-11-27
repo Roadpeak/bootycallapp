@@ -10,7 +10,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { useWallet } from '@/lib/hooks/butical-api-hooks'
 
-const MINIMUM_WITHDRAWAL = 1000
+const MINIMUM_WITHDRAWAL = 100
 
 export default function CashoutPage() {
     const router = useRouter()
@@ -191,7 +191,7 @@ export default function CashoutPage() {
                             Quick Select
                         </label>
                         <div className="grid grid-cols-4 gap-2">
-                            {[1000, 5000, 10000, 20000].map((value) => (
+                            {[100, 500, 1000, 5000].map((value) => (
                                 <button
                                     key={value}
                                     onClick={() => handleQuickAmount(value)}
@@ -201,7 +201,7 @@ export default function CashoutPage() {
                                             : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
                                         }`}
                                 >
-                                    {value >= 1000 ? `${value / 1000}K` : value}
+                                    {value >= 1000 ? `${value / 1000}K` : `KSh ${value}`}
                                 </button>
                             ))}
                         </div>
