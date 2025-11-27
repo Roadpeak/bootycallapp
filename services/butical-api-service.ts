@@ -115,13 +115,16 @@ export interface User {
 }
 
 export interface Subscription {
-    id: string
+    id?: string
     userId: string
-    type: 'BASIC' | 'PREMIUM' | 'VIP'
-    status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED'
-    startDate: string
-    endDate: string
-    autoRenew: boolean
+    role?: 'DATING_USER' | 'ESCORT'
+    type?: 'BASIC' | 'PREMIUM' | 'VIP'
+    status?: 'ACTIVE' | 'EXPIRED' | 'CANCELLED'
+    isSubscribed: boolean
+    expiresAt: string
+    startDate?: string
+    endDate?: string
+    autoRenew?: boolean
 }
 
 // Escort Types - matches API response structure

@@ -229,8 +229,8 @@ export default function DatingProfilePage() {
 
     // Subscription helpers
     const getDaysRemaining = () => {
-        if (!subscription?.endDate) return 0
-        const expiry = new Date(subscription.endDate)
+        if (!subscription?.expiresAt && !subscription?.endDate) return 0
+        const expiry = new Date(subscription.expiresAt || subscription.endDate || '')
         const now = new Date()
         const diff = expiry.getTime() - now.getTime()
         return Math.ceil(diff / (1000 * 60 * 60 * 24))
@@ -250,12 +250,12 @@ export default function DatingProfilePage() {
     }
 
     const isVIP = () => {
-        return subscription?.type === 'VIP' && subscription?.status === 'ACTIVE' && !isExpired()
+        return subscription?.type === 'VIP' && (subscription?.status === 'ACTIVE' || subscription?.isSubscribed) && !isExpired()
     }
 
     const isPremium = () => {
         return (subscription?.type === 'PREMIUM' || subscription?.type === 'VIP') &&
-            subscription?.status === 'ACTIVE' && !isExpired()
+            (subscription?.status === 'ACTIVE' || subscription?.isSubscribed) && !isExpired()
     }
 
     // Loading state
@@ -409,7 +409,7 @@ export default function DatingProfilePage() {
                 )}
 
                 {/* Subscription Status Banner */}
-                {subscription && subscription.status === 'ACTIVE' && !isExpired() && !isExpiringSoon() && (
+                {subscription && (subscription.status === 'ACTIVE' || subscription.isSubscribed) && !isExpired() && !isExpiringSoon() && (
                     <div className={`rounded-xl p-4 mb-6 ${subscription.type === 'VIP'
                             ? 'bg-gradient-to-r from-purple-500 to-pink-600'
                             : subscription.type === 'PREMIUM'
@@ -426,7 +426,7 @@ export default function DatingProfilePage() {
                                         {getCurrentPlan()?.name} Member
                                     </h3>
                                     <p className="text-sm opacity-90">
-                                        {getDaysRemaining()} days remaining • Expires {new Date(subscription.endDate).toLocaleDateString()}
+                                        {getDaysRemaining()} days remaining • Expires {new Date(subscription.expiresAt || subscription.endDate || '').toLocaleDateString()}
                                     </p>
                                 </div>
                             </div>
@@ -585,13 +585,13 @@ export default function DatingProfilePage() {
                                 <div>
                                     <p className="text-gray-500">Started</p>
                                     <p className="font-medium text-gray-900">
-                                        {new Date(subscription.startDate).toLocaleDateString()}
+                                        {subscription.startDate ? new Date(subscription.startDate).toLocaleDateString() : 'N/A'}
                                     </p>
                                 </div>
                                 <div>
                                     <p className="text-gray-500">Expires</p>
                                     <p className="font-medium text-gray-900">
-                                        {new Date(subscription.endDate).toLocaleDateString()}
+                                        {new Date(subscription.expiresAt || subscription.endDate || '').toLocaleDateString()}
                                     </p>
                                 </div>
                                 <div>

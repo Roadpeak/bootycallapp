@@ -356,8 +356,8 @@ export default function EscortPage() {
 
     // Subscription helpers
     const getDaysRemaining = () => {
-        if (!subscription?.endDate) return 0
-        const expiry = new Date(subscription.endDate)
+        if (!subscription?.expiresAt && !subscription?.endDate) return 0
+        const expiry = new Date(subscription.expiresAt || subscription.endDate || '')
         const now = new Date()
         const diff = expiry.getTime() - now.getTime()
         return Math.ceil(diff / (1000 * 60 * 60 * 24))
@@ -501,7 +501,7 @@ export default function EscortPage() {
                 )}
 
                 {/* Subscription Status Banner */}
-                {hasSubscription() && subscription && subscription.status === 'ACTIVE' && !isExpired() && !isExpiringSoon() && (
+                {hasSubscription() && subscription && (subscription.status === 'ACTIVE' || subscription.isSubscribed) && !isExpired() && !isExpiringSoon() && (
                     <div className={`rounded-xl p-4 mb-6 ${subscription.type === 'VIP'
                             ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
                             : subscription.type === 'PREMIUM'
@@ -518,7 +518,7 @@ export default function EscortPage() {
                                         {getCurrentPlan()?.name} Plan
                                     </h3>
                                     <p className="text-sm opacity-90">
-                                        {getDaysRemaining()} days remaining • Expires {new Date(subscription.endDate).toLocaleDateString()}
+                                        {getDaysRemaining()} days remaining • Expires {new Date(subscription.expiresAt || subscription.endDate || '').toLocaleDateString()}
                                     </p>
                                 </div>
                             </div>
@@ -707,13 +707,13 @@ export default function EscortPage() {
                                 <div>
                                     <p className="text-gray-500">Started</p>
                                     <p className="font-medium text-gray-900">
-                                        {new Date(subscription.startDate).toLocaleDateString()}
+                                        {subscription.startDate ? new Date(subscription.startDate).toLocaleDateString() : 'N/A'}
                                     </p>
                                 </div>
                                 <div>
                                     <p className="text-gray-500">Expires</p>
                                     <p className="font-medium text-gray-900">
-                                        {new Date(subscription.endDate).toLocaleDateString()}
+                                        {new Date(subscription.expiresAt || subscription.endDate || '').toLocaleDateString()}
                                     </p>
                                 </div>
                                 <div>
