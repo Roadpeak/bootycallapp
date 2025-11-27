@@ -433,7 +433,7 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
 
                             {notificationsOpen && (
                                 <div
-                                    className="dropdown-menu absolute right-0 md:right-0 left-0 md:left-auto mt-1 w-80 max-w-[calc(100vw-2rem)] mx-auto md:mx-0 bg-white rounded-xl shadow-lg border border-pink-100 py-2"
+                                    className="dropdown-menu fixed md:absolute right-4 md:right-0 left-4 md:left-auto mt-1 w-auto md:w-80 bg-white rounded-xl shadow-lg border border-pink-100 py-2 z-50"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <div className="px-4 py-2 border-b border-pink-100 flex justify-between items-center">
