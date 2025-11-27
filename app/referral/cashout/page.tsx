@@ -108,10 +108,18 @@ export default function CashoutPage() {
                     <p className="text-gray-600 mb-6">
                         KSh {parseFloat(amount).toLocaleString()} withdrawal request to {mpesaPhone} has been submitted.
                     </p>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                        <p className="text-sm text-blue-800">
-                            You should receive the M-Pesa confirmation message within 1-2 minutes during business hours.
-                        </p>
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+                        <div className="flex items-start gap-2">
+                            <Clock className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <p className="text-sm font-semibold text-orange-900 mb-1">
+                                    Payment Schedule - Friday Only
+                                </p>
+                                <p className="text-sm text-orange-800">
+                                    All payments are processed on Fridays. You will receive your M-Pesa payment on the next Friday.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                     <Link
                         href="/referral/wallet"
@@ -275,17 +283,22 @@ export default function CashoutPage() {
 
                 {/* Information Cards */}
                 <div className="space-y-4">
-                    {/* Processing Time */}
-                    <div className="bg-white rounded-xl shadow-sm p-6">
+                    {/* Friday Payment Notice */}
+                    <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-300 rounded-xl shadow-sm p-6">
                         <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                <Clock className="w-6 h-6 text-blue-600" />
+                            <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                <Clock className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h4 className="font-semibold text-gray-900 mb-2">Processing Time</h4>
-                                <p className="text-sm text-gray-600">
-                                    Withdrawals are processed instantly during business hours (8 AM - 8 PM).
-                                    Requests outside these hours will be processed the next business day.
+                                <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                                    <AlertCircle className="w-5 h-5 text-orange-600" />
+                                    Payment Schedule - Friday Only
+                                </h4>
+                                <p className="text-sm text-gray-800 font-medium mb-2">
+                                    All payments are processed on Fridays only. If you withdraw on any other day, you will need to wait until Friday to receive your cash.
+                                </p>
+                                <p className="text-xs text-gray-600">
+                                    Please plan your withdrawals accordingly.
                                 </p>
                             </div>
                         </div>

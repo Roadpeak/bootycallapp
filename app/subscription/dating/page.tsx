@@ -177,7 +177,7 @@ export default function DatingSubscriptionPage() {
                         </Link>
                         <h1 className="text-xl font-bold text-gray-900">Subscription</h1>
                         <Link
-                            href="/wallet"
+                            href="/referral/wallet"
                             className="text-sm text-pink-600 hover:text-pink-700 font-medium"
                         >
                             Wallet

@@ -902,7 +902,7 @@ export default function DatingProfilePage() {
                 {/* Quick Actions */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                     <Link
-                        href="/wallet"
+                        href="/referral/wallet"
                         className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
                     >
                         <div className="flex items-center justify-between">

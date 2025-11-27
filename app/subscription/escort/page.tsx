@@ -165,7 +165,7 @@ export default function EscortSubscriptionPage() {
                         </Link>
                         <h1 className="text-xl font-bold text-gray-900">Subscription</h1>
                         <Link
-                            href="/wallet"
+                            href="/referral/wallet"
                             className="text-sm text-purple-600 hover:text-purple-700 font-medium"
                         >
                             Wallet
