@@ -7,7 +7,6 @@ import Link from 'next/link'
 import {
     Heart,
     MessageCircle,
-    Search,
     Bell,
     User,
     ChevronDown,
@@ -409,13 +408,8 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
             <div className="flex items-center">
                 {isLoggedIn ? (
                     <>
-                        {/* Search button */}
-                        <button className="p-2 text-gray-500 hover:text-pink-600 hover:bg-pink-50 rounded-full transition-all">
-                            <Search className="w-5 h-5" />
-                        </button>
-
                         {/* Notifications */}
-                        <div className="relative ml-2">
+                        <div className="relative">
                             <button
                                 className="dropdown-toggle p-2 text-gray-500 hover:text-pink-600 hover:bg-pink-50 rounded-full transition-all relative"
                                 onClick={(e) => {
