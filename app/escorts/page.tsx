@@ -79,7 +79,7 @@ export default function HookupPage() {
         bio: escort.about || '',
         photos: escort.photos && escort.photos.length > 0 ? escort.photos : ['https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&q=80'],
         rating: escort.rating || 4.5,
-        price: escort.unlockPrice || escort.pricing?.unlockPrice || escort.hourlyRate || 300,
+        price: escort.unlockPrice || escort.pricing?.unlockPrice || 150,
         isUnlocked: !escort.contactHidden,
         isVip: escort.vipStatus || escort.isVIP || false,
         hasDirectCall: !escort.contactHidden,

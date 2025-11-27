@@ -7,6 +7,7 @@ import {
     ArrowLeft, Crown, Check, Star, Zap, Shield, Eye, TrendingUp,
     Gift, Phone, ChevronRight, Sparkles, X
 } from 'lucide-react'
+import ButicalAPI from '@/services/butical-api-service'
 
 // Escort subscription plans
 const ESCORT_PLANS = [
@@ -68,17 +69,72 @@ export default function EscortSubscriptionPage() {
         setPaymentStatus('pending')
 
         try {
-            // Simulate payment processing
-            await new Promise(resolve => setTimeout(resolve, 3000))
-            setPaymentStatus('success')
+            // Initiate payment based on method
+            if (paymentMethod === 'mpesa') {
+                if (!mpesaPhone) {
+                    throw new Error('Please enter your M-Pesa phone number')
+                }
 
-            setTimeout(() => {
-                setShowPaymentModal(false)
-                // Redirect or update UI
-            }, 2000)
-        } catch (error) {
+                // Initiate M-Pesa payment
+                const response = await ButicalAPI.payments.subscribeVIP(mpesaPhone)
+                const paymentData = response.data?.data || response.data
+
+                if (!paymentData.paymentId) {
+                    throw new Error('Failed to initiate payment')
+                }
+
+                // Poll for payment status
+                const pollPayment = async () => {
+                    let attempts = 0
+                    const maxAttempts = 60 // Poll for up to 2 minutes (60 * 2 seconds)
+
+                    const poll = setInterval(async () => {
+                        attempts++
+
+                        try {
+                            const statusResponse = await ButicalAPI.payments.getPaymentStatus(paymentData.paymentId)
+                            const status = statusResponse.data?.data || statusResponse.data
+
+                            if (status.status === 'SUCCESS') {
+                                clearInterval(poll)
+                                setPaymentStatus('success')
+                                setIsProcessing(false)
+
+                                setTimeout(() => {
+                                    setShowPaymentModal(false)
+                                    // Refresh page to show updated subscription
+                                    window.location.reload()
+                                }, 2000)
+                            } else if (status.status === 'FAILED' || status.status === 'CANCELLED') {
+                                clearInterval(poll)
+                                setPaymentStatus('failed')
+                                setIsProcessing(false)
+                            } else if (attempts >= maxAttempts) {
+                                clearInterval(poll)
+                                setPaymentStatus('failed')
+                                setIsProcessing(false)
+                            }
+                        } catch (err) {
+                            if (attempts >= maxAttempts) {
+                                clearInterval(poll)
+                                setPaymentStatus('failed')
+                                setIsProcessing(false)
+                            }
+                        }
+                    }, 2000) // Check every 2 seconds
+                }
+
+                pollPayment()
+            } else if (paymentMethod === 'wallet') {
+                // TODO: Implement wallet payment
+                throw new Error('Wallet payment not yet implemented')
+            } else {
+                // TODO: Implement card payment
+                throw new Error('Card payment not yet implemented')
+            }
+        } catch (error: any) {
+            console.error('Payment error:', error)
             setPaymentStatus('failed')
-        } finally {
             setIsProcessing(false)
         }
     }
