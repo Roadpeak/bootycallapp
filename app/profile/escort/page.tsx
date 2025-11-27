@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 import type { User, Escort, Subscription, WalletSummary, ReferralCode } from '@/services/butical-api-service'
+import { getImageUrl } from '@/lib/utils/image'
 
 // Subscription plan details
 const SUBSCRIPTION_PLANS = {
@@ -722,7 +723,7 @@ export default function EscortPage() {
                                     profile.photos.map((photo, index) => (
                                         <div key={index} className="relative aspect-square rounded-lg overflow-hidden">
                                             <img
-                                                src={photo}
+                                                src={getImageUrl(photo)}
                                                 alt={`Photo ${index + 1}`}
                                                 className="w-full h-full object-cover"
                                             />
@@ -746,7 +747,7 @@ export default function EscortPage() {
                                     {editedProfile.photos?.map((photo, index) => (
                                         <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
                                             <img
-                                                src={photo}
+                                                src={getImageUrl(photo)}
                                                 alt={`Photo ${index + 1}`}
                                                 className="w-full h-full object-cover"
                                             />
