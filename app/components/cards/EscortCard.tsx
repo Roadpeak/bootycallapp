@@ -159,9 +159,14 @@ export const EscortCard: React.FC<EscortCardProps> = ({
     className = '',
 }) => {
     const {
-        id, name, age, location, city, ethnicity, category, photos, photoCount, videoCount,
-        isVerified, isVip, isNew, price, isUnlocked, hasDirectCall
+        id, name, age, location, city, ethnicity, category, photos, photoCount,
+        isVerified, isVip, isNew, price, isUnlocked, hasDirectCall, services, bio
     } = profile
+
+    // Helper to get service name from service (can be string or object)
+    const getServiceName = (service: string | { name: string }): string => {
+        return typeof service === 'string' ? service : service.name
+    }
 
     const handleUnlock = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -175,9 +180,8 @@ export const EscortCard: React.FC<EscortCardProps> = ({
         if (onCall) onCall(id)
     }
 
-    // Calculate actual photo and video counts
+    // Calculate actual photo count
     const actualPhotoCount = photoCount !== undefined ? photoCount : (photos?.length || 0)
-    const actualVideoCount = videoCount !== undefined ? videoCount : 0
 
     return (
         <div className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden ${className}`}>
@@ -227,7 +231,7 @@ export const EscortCard: React.FC<EscortCardProps> = ({
                         </div>
                     )}
 
-                    {/* Age, Photos, Videos */}
+                    {/* Age and Photos */}
                     <div className="flex items-center gap-3 text-sm text-gray-600">
                         <div className="flex items-center gap-1">
                             <span className="text-pink-500">👤</span>
@@ -236,10 +240,6 @@ export const EscortCard: React.FC<EscortCardProps> = ({
                         <div className="flex items-center gap-1">
                             <ImageIcon className="w-4 h-4 text-pink-500" />
                             <span>{actualPhotoCount}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <Video className="w-4 h-4 text-pink-500" />
-                            <span>{actualVideoCount}</span>
                         </div>
                     </div>
 
@@ -258,8 +258,48 @@ export const EscortCard: React.FC<EscortCardProps> = ({
                             </div>
                         )}
                     </div>
+
+                    {/* Services */}
+                    {services && services.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                            {services.slice(0, 3).map((service, index) => (
+                                <span
+                                    key={index}
+                                    className="bg-rose-500/20 text-rose-600 text-xs font-medium px-2 py-0.5 rounded-full border border-rose-500/30"
+                                >
+                                    {getServiceName(service)}
+                                </span>
+                            ))}
+                            {services.length > 3 && (
+                                <span className="text-gray-400 text-xs font-medium">
+                                    +{services.length - 3}
+                                </span>
+                            )}
+                        </div>
+                    )}
                 </div>
             </Link>
+
+            {/* Action Button */}
+            <div className="px-3 pb-3">
+                {hasDirectCall || isVip || isUnlocked ? (
+                    <button
+                        onClick={handleCall}
+                        className="w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white"
+                    >
+                        <Phone className="w-4 h-4" />
+                        Call Now
+                    </button>
+                ) : (
+                    <button
+                        onClick={handleUnlock}
+                        className="w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 bg-pink-500 hover:bg-pink-600 text-white"
+                    >
+                        <Lock className="w-4 h-4" />
+                        Unlock Contact - KSh {price}
+                    </button>
+                )}
+            </div>
         </div>
     )
 }
