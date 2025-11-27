@@ -8,9 +8,9 @@ export default function MainWrapper({ children }: { children: React.ReactNode })
     // Don't add top padding for auth pages since navbar is hidden there
     const isAuthPage = pathname?.startsWith('/auth/')
 
-    // Top bar (~28px) + Main navbar (~56-72px) = ~100px mobile / ~128px desktop
+    // Top bar (~28px) + Main navbar (~56-72px) = ~100px on both mobile and desktop
     return (
-        <main className={`min-h-screen ${isAuthPage ? '' : 'pt-[100px] md:pt-[128px]'}`}>
+        <main className={`min-h-screen ${isAuthPage ? '' : 'pt-[100px]'}`}>
             {children}
         </main>
     )
