@@ -23,6 +23,7 @@ export interface ProfileData {
     isUnlocked?: boolean
     isVip?: boolean
     hasDirectCall?: boolean
+    services?: (string | { name: string })[]
 }
 
 interface DatingCardProps {
@@ -149,7 +150,12 @@ export const EscortCard: React.FC<EscortCardProps> = ({
     onCall,
     className = '',
 }) => {
-    const { id, name, age, distance, bio, photos, price, isUnlocked, isVip, hasDirectCall } = profile
+    const { id, name, age, distance, bio, photos, price, isUnlocked, isVip, hasDirectCall, services } = profile
+
+    // Helper to get service name from service (can be string or object)
+    const getServiceName = (service: string | { name: string }): string => {
+        return typeof service === 'string' ? service : service.name
+    }
 
     const handleUnlock = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -207,9 +213,28 @@ export const EscortCard: React.FC<EscortCardProps> = ({
 
                     {/* Bio */}
                     {bio && (
-                        <p className="text-sm text-gray-300 mb-3 line-clamp-2 leading-relaxed">
+                        <p className="text-sm text-gray-300 mb-2 line-clamp-2 leading-relaxed">
                             {bio}
                         </p>
+                    )}
+
+                    {/* Services */}
+                    {services && services.length > 0 && (
+                        <div className="mb-3 flex flex-wrap gap-1.5">
+                            {services.slice(0, 3).map((service, index) => (
+                                <span
+                                    key={index}
+                                    className="bg-rose-500/20 text-rose-300 text-xs font-medium px-2 py-0.5 rounded-full border border-rose-500/30"
+                                >
+                                    {getServiceName(service)}
+                                </span>
+                            ))}
+                            {services.length > 3 && (
+                                <span className="text-gray-400 text-xs font-medium">
+                                    +{services.length - 3}
+                                </span>
+                            )}
+                        </div>
                     )}
 
                     {/* Action Button */}
@@ -217,7 +242,7 @@ export const EscortCard: React.FC<EscortCardProps> = ({
                         {hasDirectCall ? (
                             <button
                                 onClick={handleCall}
-                                className="w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                                className="w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white"
                             >
                                 <Phone className="w-4 h-4" />
                                 Call Now
@@ -225,10 +250,10 @@ export const EscortCard: React.FC<EscortCardProps> = ({
                         ) : isVip || isUnlocked ? (
                             <button
                                 onClick={handleCall}
-                                className="w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 bg-gray-700 border border-gray-600 text-gray-200 hover:bg-gray-600"
+                                className="w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white"
                             >
-                                <Unlock className="w-4 h-4" />
-                                View Contact
+                                <Phone className="w-4 h-4" />
+                                Call Now
                             </button>
                         ) : (
                             <button

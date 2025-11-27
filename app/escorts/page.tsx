@@ -86,6 +86,7 @@ export default function HookupPage() {
         isUnlocked: !escort.contactHidden,
         isVip: escort.vipStatus || escort.isVIP || false,
         hasDirectCall: !escort.contactHidden,
+        services: escort.services || [],
     }))
 
     // Handle unlock action
