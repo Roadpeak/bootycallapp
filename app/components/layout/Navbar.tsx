@@ -269,13 +269,13 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
                     {/* Desktop View */}
                     <div className="hidden md:flex justify-between items-center">
                         <div className="flex items-center space-x-6">
-                            <a href="tel:+254712345678" className="flex items-center hover:text-pink-300 transition-colors">
+                            <a href="tel:+254742449676" className="flex items-center hover:text-pink-300 transition-colors">
                                 <Phone className="w-3.5 h-3.5 mr-1.5" />
-                                <span>+254 712 345 678</span>
+                                <span>+254 742 449 676</span>
                             </a>
 
                             <a
-                                href="https://wa.me/254712345678"
+                                href="https://wa.me/254742449676"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center hover:text-pink-300 transition-colors"
@@ -315,7 +315,7 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
                     {/* Mobile View - WhatsApp and Socials */}
                     <div className="md:hidden flex justify-between items-center">
                         <a
-                            href="https://wa.me/254712345678"
+                            href="https://wa.me/254742449676"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center hover:text-pink-300 transition-colors"
