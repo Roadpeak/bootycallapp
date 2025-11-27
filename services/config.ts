@@ -2,7 +2,7 @@
 
 export const config = {
     api: {
-        baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://165.227.22.118/api/v1',
+        baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.lovebiteglobal.com/api/v1',
     },
     app: {
         name: process.env.NEXT_PUBLIC_APP_NAME || 'Butical',
