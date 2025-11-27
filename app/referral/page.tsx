@@ -8,20 +8,29 @@ import {
     Check, Gift, Facebook, Twitter, Mail, MessageCircle,
     ChevronRight, ExternalLink, Wallet, ArrowUpRight, Loader2
 } from 'lucide-react'
-import { useReferrals, useWallet } from '@/lib/hooks/butical-api-hooks'
+import { useReferrals, useWallet, useAuth } from '@/lib/hooks/butical-api-hooks'
 
 export default function ReferralPage() {
     const [copied, setCopied] = useState(false)
     const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview')
 
-    // Fetch referral and wallet data from API
+    // Fetch referral, wallet, and user data from API
     const { referralCode, myReferrals, totalEarnings, loading: referralsLoading } = useReferrals()
     const { wallet, loading: walletLoading } = useWallet()
+    const { user, loading: userLoading } = useAuth()
 
-    const isLoading = referralsLoading || walletLoading
+    const isLoading = referralsLoading || walletLoading || userLoading
+
+    // Determine signup route based on user role
+    const getSignupRoute = () => {
+        if (!user) return '/auth/signup/dating' // Default to dating if no user
+        if (user.role === 'ESCORT') return '/auth/signup/escort'
+        // DATING_USER and HOOKUP_USER both use dating signup
+        return '/auth/signup/dating'
+    }
 
     // Compute values from API data
-    const referralLink = referralCode ? `https://lovebiteglobal.com/signup?ref=${referralCode}` : ''
+    const referralLink = referralCode ? `https://lovebiteglobal.com${getSignupRoute()}?ref=${referralCode}` : ''
     const availableBalance = wallet?.currentBalance || wallet?.balance || 0
     const pendingEarnings = wallet?.pendingWithdrawals || 0
     const totalReferralsCount = myReferrals.length
