@@ -1,8 +1,8 @@
 // app/dating/page.tsx
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Search, Filter, MapPin, Gift, MessageCircle, AlertCircle, Lock } from 'lucide-react'
 import { DatingCard } from '../components/cards/DatingCard'
@@ -18,7 +18,7 @@ const CompactReferralBanner = () => (
     <div className="bg-gradient-to-r from-pink-600 to-purple-600 text-white p-3 rounded-lg flex justify-between items-center mb-4">
         <div className="flex items-center">
             <Gift className="w-4 h-4 mr-2" />
-            <span className="text-sm font-medium">Earn KSh 250 for each friend you refer!</span>
+            <span className="text-sm font-medium">Earn money for each friend you refer and also from every person your referee refers!</span>
         </div>
         <Link
             href="/referral"
@@ -29,8 +29,9 @@ const CompactReferralBanner = () => (
     </div>
 )
 
-export default function DatingPage() {
+function DatingPageContent() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const [isFilterOpen, setIsFilterOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [activeView, setActiveView] = useState<'all' | 'matches'>('all')
@@ -54,6 +55,14 @@ export default function DatingPage() {
             return
         }
     }, [router])
+
+    // Check URL query parameter for view mode
+    useEffect(() => {
+        const view = searchParams.get('view')
+        if (view === 'matches') {
+            setActiveView('matches')
+        }
+    }, [searchParams])
 
     // Check subscription and user info
     const { user } = useAuth()
@@ -472,5 +481,20 @@ export default function DatingPage() {
                 messageCount={0}
             />
         </div>
+    )
+}
+
+export default function DatingPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        }>
+            <DatingPageContent />
+        </Suspense>
     )
 }
