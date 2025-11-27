@@ -180,7 +180,7 @@ export default function ReferralPage() {
                             Transfer to your M-Pesa account
                         </p>
                         <p className="text-xs text-green-200">
-                            Minimum: KSh 1,000
+                            Minimum: KSh 100
                         </p>
                     </Link>
                 </div>
@@ -310,7 +310,7 @@ export default function ReferralPage() {
                             <div>
                                 <h4 className="font-semibold text-gray-900 mb-1">Withdraw Anytime</h4>
                                 <p className="text-gray-600 text-sm">
-                                    Request withdrawals to your M-Pesa account once you reach the minimum balance of KSh 1,000.
+                                    Request withdrawals to your M-Pesa account once you reach the minimum balance of KSh 100.
                                 </p>
                             </div>
                         </div>
