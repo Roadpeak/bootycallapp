@@ -300,19 +300,23 @@ export default function EscortViewPage() {
                             <div className="space-y-3">
                                 {isContactUnlocked ? (
                                     <>
-                                        <button
-                                            className="w-full px-4 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-semibold transition-colors flex items-center justify-center gap-2"
+                                        <a
+                                            href={`tel:${escort.contactPhone}`}
+                                            className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold transition-colors flex items-center justify-center gap-2"
                                         >
                                             <Phone className="w-5 h-5" />
                                             <span>Call Now</span>
-                                        </button>
+                                        </a>
 
-                                        <button
-                                            className="w-full px-4 py-3 border-2 border-pink-500 text-pink-400 rounded-lg hover:bg-pink-500/10 font-semibold transition-colors flex items-center justify-center gap-2"
+                                        <a
+                                            href={`https://wa.me/${escort.contactPhone?.replace(/[^0-9]/g, '')}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full px-4 py-3 border-2 border-green-500 text-green-400 rounded-lg hover:bg-green-500/10 font-semibold transition-colors flex items-center justify-center gap-2"
                                         >
                                             <MessageCircle className="w-5 h-5" />
-                                            <span>Send Message</span>
-                                        </button>
+                                            <span>WhatsApp Message</span>
+                                        </a>
                                     </>
                                 ) : (
                                     <button
