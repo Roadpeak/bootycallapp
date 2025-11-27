@@ -397,7 +397,7 @@ export default function DatingSubscriptionPage() {
                         <div className="flex-1">
                             <h3 className="font-bold text-gray-900 mb-1">Invite Friends & Earn</h3>
                             <p className="text-sm text-gray-600">
-                                Share your referral code and earn 30% commission on every subscription!
+                                Share your referral code and earn 50% commission on every subscription!
                             </p>
                         </div>
                         <Link

@@ -332,7 +332,7 @@ export default function EscortSubscriptionPage() {
                         <div className="flex-1">
                             <h3 className="font-bold text-gray-900 mb-1">Refer & Earn</h3>
                             <p className="text-sm text-gray-600">
-                                Earn 30% commission when you refer other escorts. Share your referral code and earn passive income!
+                                Earn 50% commission when you refer other escorts. Share your referral code and earn passive income!
                             </p>
                         </div>
                         <Link

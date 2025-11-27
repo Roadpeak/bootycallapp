@@ -263,16 +263,16 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
 
     return (
         <>
-            {/* Top Info Bar - Desktop Only */}
-            <div className="bg-gray-900/95 fixed top-0 left-0 right-0 z-50 text-white text-xs border-b border-gray-800 py-1.5 hidden md:block">
+            {/* Top Info Bar - Mobile & Desktop */}
+            <div className="bg-gray-900/95 fixed top-0 left-0 right-0 z-50 text-white text-xs border-b border-gray-800 py-1.5">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center">
+                    {/* Desktop View */}
+                    <div className="hidden md:flex justify-between items-center">
                         <div className="flex items-center space-x-6">
                             <a href="tel:+254712345678" className="flex items-center hover:text-pink-300 transition-colors">
                                 <Phone className="w-3.5 h-3.5 mr-1.5" />
                                 <span>+254 712 345 678</span>
                             </a>
-
 
                             <a
                                 href="https://wa.me/254712345678"
@@ -284,13 +284,46 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
                                 <span>WhatsApp Support</span>
                             </a>
 
-                        <div className="flex items-center text-gray-400">
-                            <Clock className="w-3.5 h-3.5 mr-1.5" />
-                            <span>24/7 Customer Support</span>
+                            <div className="flex items-center text-gray-400">
+                                <Clock className="w-3.5 h-3.5 mr-1.5" />
+                                <span>24/7 Customer Support</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center space-x-6">
+                            <div className="flex items-center space-x-3">
+                                <a href="#" className="hover:text-pink-300 transition-colors">
+                                    <Instagram className="w-3.5 h-3.5" />
+                                </a>
+                                <a href="#" className="hover:text-pink-300 transition-colors">
+                                    <Facebook className="w-3.5 h-3.5" />
+                                </a>
+                                <a href="#" className="hover:text-pink-300 transition-colors">
+                                    <Twitter className="w-3.5 h-3.5" />
+                                </a>
+                            </div>
+
+                            <div className="border-l border-gray-700 pl-4 flex items-center">
+                                <span className="text-gray-400 mr-2">Need help?</span>
+                                <a href="#" className="text-pink-400 hover:text-pink-300 transition-colors font-medium">
+                                    Contact us
+                                </a>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center space-x-6">
+                    {/* Mobile View - WhatsApp and Socials */}
+                    <div className="md:hidden flex justify-between items-center">
+                        <a
+                            href="https://wa.me/254712345678"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center hover:text-pink-300 transition-colors"
+                        >
+                            <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+                            <span>WhatsApp Support</span>
+                        </a>
+
                         <div className="flex items-center space-x-3">
                             <a href="#" className="hover:text-pink-300 transition-colors">
                                 <Instagram className="w-3.5 h-3.5" />
@@ -302,20 +335,12 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
                                 <Twitter className="w-3.5 h-3.5" />
                             </a>
                         </div>
-
-                        <div className="border-l border-gray-700 pl-4 flex items-center">
-                            <span className="text-gray-400 mr-2">Need help?</span>
-                            <a href="#" className="text-pink-400 hover:text-pink-300 transition-colors font-medium">
-                                Contact us
-                            </a>
-                        </div>
                     </div>
                 </div>
             </div>
-            </div>
 
             {/* Main Navigation */}
-            <nav className={`fixed top-0 md:top-[28px] left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'py-2 bg-white shadow-md' : 'py-4 bg-white/95 backdrop-blur-sm'}`}>
+            <nav className={`fixed top-[28px] left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'py-2 bg-white shadow-md' : 'py-4 bg-white/95 backdrop-blur-sm'}`}>
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
             <div className="flex items-center space-x-8">
@@ -518,28 +543,12 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
                                         <span>View Profile</span>
                                     </Link>
                                     <Link
-                                        href="/settings"
-                                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-pink-50"
-                                        onClick={() => setProfileMenuOpen(false)}
-                                    >
-                                        <Settings className="mr-3 w-4 h-4 text-gray-500" />
-                                        <span>Settings</span>
-                                    </Link>
-                                    <Link
                                         href="/referral"
                                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-pink-50"
                                         onClick={() => setProfileMenuOpen(false)}
                                     >
                                         <Gift className="mr-3 w-4 h-4 text-pink-500" />
                                         <span>My Referrals</span>
-                                    </Link>
-                                    <Link
-                                        href="/help"
-                                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-pink-50"
-                                        onClick={() => setProfileMenuOpen(false)}
-                                    >
-                                        <HelpCircle className="mr-3 w-4 h-4 text-gray-500" />
-                                        <span>Help & Support</span>
                                     </Link>
 
                                     <div className="border-t border-pink-100 mt-1 pt-1">
@@ -645,13 +654,6 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
                             </Link>
                         </div>
 
-                        <Link
-                            href="/settings"
-                            className="block px-4 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-pink-50"
-                            onClick={() => setMobileMenuOpen(false)}
-                        >
-                            Settings
-                        </Link>
                         <div className="pt-4 mt-4 border-t border-pink-100">
                             <button
                                 className="flex w-full items-center px-4 py-2 rounded-lg text-base font-medium text-red-600 hover:bg-red-50"

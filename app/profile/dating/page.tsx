@@ -981,7 +981,7 @@ export default function DatingProfilePage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <h3 className="font-semibold text-gray-900 mb-1">Referral Program</h3>
-                                <p className="text-sm text-gray-600">Earn 30% commission</p>
+                                <p className="text-sm text-gray-600">Earn 50% commission</p>
                                 {wallet && (wallet.currentBalance || wallet.balance || 0) > 0 && (
                                     <p className="text-sm text-green-600 font-semibold mt-1">
                                         KSh {(wallet.currentBalance || wallet.balance || 0).toLocaleString()} earned

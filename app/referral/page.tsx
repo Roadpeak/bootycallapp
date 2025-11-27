@@ -105,12 +105,12 @@ export default function ReferralPage() {
                         <div className="flex items-center gap-2 mb-4">
                             <Gift className="w-8 h-8" />
                             <span className="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full">
-                                Earn 30% Commission
+                                Earn 50% Commission
                             </span>
                         </div>
                         <h2 className="text-3xl font-bold mb-3">Invite Friends & Earn Money!</h2>
                         <p className="text-pink-100 text-lg mb-6 max-w-2xl">
-                            Share your referral code and earn 30% commission on all qualifying payments from your referrals.
+                            Share your referral code and earn 50% commission on all qualifying payments from your referrals.
                         </p>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -290,7 +290,7 @@ export default function ReferralPage() {
                             <div>
                                 <h4 className="font-semibold text-gray-900 mb-1">Earn Commission</h4>
                                 <p className="text-gray-600 text-sm">
-                                    You earn 30% on every payment they make (subscriptions, unlocks, VIP upgrades).
+                                    You earn 50% on every payment they make (subscriptions, unlocks, VIP upgrades).
                                 </p>
                             </div>
                         </div>
@@ -479,7 +479,7 @@ export default function ReferralPage() {
                         Terms & Conditions
                     </h4>
                     <ul className="space-y-1 text-xs text-gray-600">
-                        <li>30% commission applies to all qualifying payments (subscriptions, unlocks, VIP)</li>
+                        <li>50% commission applies to all qualifying payments (subscriptions, unlocks, VIP)</li>
                         <li>Earnings are verified within 24-48 hours after payment</li>
                         <li>Minimum withdrawal amount is KSh 1,000</li>
                         <li>Fraudulent referrals will result in account suspension</li>

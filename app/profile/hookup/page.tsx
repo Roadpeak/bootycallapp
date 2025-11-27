@@ -564,7 +564,7 @@ export default function HookupProfilePage() {
                                 <div>
                                     <h3 className="font-bold text-gray-900 mb-1">Start Earning with Referrals</h3>
                                     <p className="text-sm text-gray-600">
-                                        Earn KSh 250 for each friend you refer • 30% commission on all payments
+                                        Earn KSh 250 for each friend you refer • 50% commission on all payments
                                     </p>
                                 </div>
                             </div>

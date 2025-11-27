@@ -1,7 +1,8 @@
 // app/dating/page.tsx
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, Filter, MapPin, Gift, MessageCircle, AlertCircle, Lock } from 'lucide-react'
 import { DatingCard } from '../components/cards/DatingCard'
@@ -11,6 +12,7 @@ import type { ProfileData } from '../components/cards/EscortCard'
 import type { MatchNotification } from '../components/types/chat'
 import { useDatingProfiles, useSubscription, useAuth } from '@/lib/hooks/butical-api-hooks'
 import type { DatingProfile } from '@/services/butical-api-service'
+import { TokenService } from '@/services/butical-api-service'
 
 const CompactReferralBanner = () => (
     <div className="bg-gradient-to-r from-pink-600 to-purple-600 text-white p-3 rounded-lg flex justify-between items-center mb-4">
@@ -28,6 +30,7 @@ const CompactReferralBanner = () => (
 )
 
 export default function DatingPage() {
+    const router = useRouter()
     const [isFilterOpen, setIsFilterOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [activeView, setActiveView] = useState<'all' | 'matches'>('all')
@@ -42,6 +45,15 @@ export default function DatingPage() {
         maxDistance: 50,
         gender: undefined as string | undefined,
     })
+
+    // Check authentication - redirect if not logged in
+    useEffect(() => {
+        const token = TokenService.getAccessToken()
+        if (!token) {
+            router.push('/auth/login')
+            return
+        }
+    }, [router])
 
     // Check subscription and user info
     const { user } = useAuth()
