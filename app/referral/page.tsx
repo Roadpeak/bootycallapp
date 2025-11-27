@@ -490,7 +490,7 @@ export default function ReferralPage() {
                     <ul className="space-y-1 text-xs text-gray-600">
                         <li>50% commission applies to all qualifying payments (subscriptions, unlocks, VIP)</li>
                         <li>Earnings are verified within 24-48 hours after payment</li>
-                        <li>Minimum withdrawal amount is KSh 1,000</li>
+                        <li>Minimum withdrawal amount is KSh 100</li>
                         <li>Fraudulent referrals will result in account suspension</li>
                         <li>Commission rates may change with prior notice</li>
                     </ul>
