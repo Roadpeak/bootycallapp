@@ -16,7 +16,7 @@ const Footer = () => {
                             <img
                                 src="/images/lovebitelogo.png"
                                 alt="LoveBite Logo"
-                                className="w-32 h-auto"
+                                className="w-20 md:w-32 h-auto"
                             />
                         </Link>
                         <p className="text-sm text-gray-400">
