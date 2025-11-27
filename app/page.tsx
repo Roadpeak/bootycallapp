@@ -29,7 +29,7 @@ export default function LandingPage() {
                 <div className="w-16 h-16 md:w-20 md:h-20 rounded-full mb-4 md:mb-6 shadow-lg group-hover:scale-110 transition-transform overflow-hidden bg-gradient-to-br from-rose-500 to-pink-600">
                   {/* Replace src with your actual image path */}
                   <Image
-                    src="/images/escort.jpg"
+                    src="/images/icon1.png"
                     alt="Hookups"
                     width={80}
                     height={80}
@@ -81,7 +81,7 @@ export default function LandingPage() {
                 <div className="w-16 h-16 md:w-20 md:h-20 rounded-full mb-4 md:mb-6 shadow-lg group-hover:scale-110 transition-transform overflow-hidden bg-gradient-to-br from-purple-500 to-pink-600">
                   {/* Replace src with your actual image path */}
                   <Image
-                    src="/images/escort-icon.jpg"
+                    src="/images/icon2.png"
                     alt="Become an Escort"
                     width={80}
                     height={80}
