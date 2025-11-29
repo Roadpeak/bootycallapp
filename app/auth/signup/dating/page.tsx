@@ -8,52 +8,21 @@ import { Heart, Upload, X, Eye, EyeOff, Check, Crown, Star, Shield, Zap, Gift, A
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 import type { DatingUserRegistration } from '@/services/butical-api-service'
 
-// Subscription plans
-const SUBSCRIPTION_PLANS = [
-    {
-        id: 'basic',
-        name: 'Basic',
-        price: 0,
-        duration: 'Free',
-        features: [
-            '50 Likes per day',
-            'See who likes you',
-            'Basic matching',
-            'Standard support'
-        ],
-        popular: false
-    },
-    {
-        id: 'premium',
-        name: 'Premium',
-        price: 300,
-        duration: '1 Year',
-        features: [
-            'Unlimited Likes',
-            'See who likes you',
-            'Advanced matching',
-            'Priority support',
-            'Boost profile weekly',
-            'Free escort unlocks (5/month)'
-        ],
-        popular: true
-    },
-    {
-        id: 'vip',
-        name: 'VIP',
-        price: 3000,
-        duration: '1 Year',
-        features: [
-            'Everything in Premium',
-            'Unlimited escort unlocks',
-            'Profile verification badge',
-            'VIP support',
-            'Daily profile boosts',
-            'Exclusive events access'
-        ],
-        popular: false
-    }
-]
+// Subscription plan - Dating Premium (KSh 300/year)
+const SUBSCRIPTION_PLAN = {
+    id: 'premium',
+    name: 'Dating Premium',
+    price: 300,
+    duration: '1 Year',
+    features: [
+        'Unlimited Likes',
+        'See who likes you',
+        'Advanced matching',
+        'Priority support',
+        'Boost profile weekly',
+        'Free escort unlocks (5/month)'
+    ]
+}
 
 function DatingSignupPageContent() {
     const searchParams = useSearchParams()
@@ -93,8 +62,6 @@ function DatingSignupPageContent() {
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [currentStep, setCurrentStep] = useState(1)
-    const [selectedPlan, setSelectedPlan] = useState<string | null>('basic')
-    const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'card'>('mpesa')
     const [mpesaPhone, setMpesaPhone] = useState('')
     const [isProcessing, setIsProcessing] = useState(false)
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'pending' | 'success' | 'failed'>('idle')
@@ -230,14 +197,8 @@ function DatingSignupPageContent() {
                     TokenService.setRefreshToken(refreshToken)
                 }
 
-                // If subscription selected (not basic), process payment
-                if (selectedPlan && selectedPlan !== 'basic') {
-                    await handlePayment()
-                } else {
-                    // Redirect to dating page for basic plan
-                    console.log('Redirecting to /dating')
-                    window.location.href = '/dating'
-                }
+                // Process payment for Premium subscription
+                await handlePayment()
             } else {
                 // Registration successful but no token - still redirect
                 console.log('No token in response, redirecting anyway')
@@ -251,14 +212,9 @@ function DatingSignupPageContent() {
     }
 
     const handlePayment = async () => {
-        if (!selectedPlan || selectedPlan === 'basic') return
-
         setPaymentStatus('pending')
 
         try {
-            const plan = SUBSCRIPTION_PLANS.find(p => p.id === selectedPlan)
-            if (!plan) throw new Error('Invalid plan selected')
-
             const phoneNumber = (mpesaPhone || formData.phone).replace(/\s+/g, '')
 
             // Validate phone format (254XXXXXXXXX)
@@ -266,26 +222,79 @@ function DatingSignupPageContent() {
                 throw new Error('Invalid phone format. Use 254XXXXXXXXX')
             }
 
-            // Call appropriate payment endpoint
-            let paymentResponse
-            if (selectedPlan === 'premium') {
-                paymentResponse = await ButicalAPI.payments.subscribeDating(phoneNumber)
-            } else if (selectedPlan === 'vip') {
-                paymentResponse = await ButicalAPI.payments.subscribeVIP(phoneNumber)
-            }
+            console.log('Initiating M-Pesa payment for phone:', phoneNumber)
+
+            // Initiate payment - this sends the STK push
+            const paymentResponse = await ButicalAPI.payments.subscribeDating(phoneNumber)
+            console.log('Payment initiation response:', paymentResponse)
 
             if (paymentResponse?.data) {
-                setPaymentStatus('success')
+                // Extract payment ID from response
+                const paymentData = paymentResponse.data?.data || paymentResponse.data
+                const paymentId = paymentData?.paymentId
 
-                // Redirect after success
-                setTimeout(() => {
-                    window.location.href = '/dating'
-                }, 2000)
+                if (paymentId) {
+                    // Poll for payment status every 2 seconds for up to 60 seconds
+                    let attempts = 0
+                    const maxAttempts = 30
+                    const pollInterval = 2000
+
+                    const checkPaymentStatus = async (): Promise<boolean> => {
+                        try {
+                            const statusResponse = await ButicalAPI.payments.getPaymentStatus(paymentId)
+                            const status = statusResponse.data?.data?.status || statusResponse.data?.status
+
+                            console.log(`Payment status check (${attempts + 1}/${maxAttempts}):`, status)
+
+                            if (status === 'SUCCESS') {
+                                setPaymentStatus('success')
+                                setTimeout(() => {
+                                    window.location.href = '/dating'
+                                }, 1500)
+                                return true
+                            } else if (status === 'FAILED' || status === 'CANCELLED') {
+                                throw new Error('Payment was cancelled or failed')
+                            }
+
+                            // Still pending, continue polling
+                            return false
+                        } catch (err) {
+                            console.error('Error checking payment status:', err)
+                            return false
+                        }
+                    }
+
+                    // Start polling
+                    const pollForCompletion = async () => {
+                        while (attempts < maxAttempts) {
+                            attempts++
+                            const completed = await checkPaymentStatus()
+
+                            if (completed) {
+                                return
+                            }
+
+                            // Wait before next poll
+                            await new Promise(resolve => setTimeout(resolve, pollInterval))
+                        }
+
+                        // Timeout - payment took too long
+                        throw new Error('Payment verification timed out. Please check your M-Pesa messages and contact support if payment was deducted.')
+                    }
+
+                    await pollForCompletion()
+                } else {
+                    // STK push sent successfully, redirect even without polling
+                    setPaymentStatus('success')
+                    setTimeout(() => {
+                        window.location.href = '/dating'
+                    }, 2000)
+                }
             }
         } catch (error: any) {
             console.error('Payment error:', error)
             setPaymentStatus('failed')
-            setError(error.response?.data?.message || 'Payment failed. You can upgrade later from your profile.')
+            setError(error.response?.data?.message || error.message || 'Payment failed. You can upgrade later from your profile.')
 
             // Still allow user to proceed after payment failure
             setTimeout(() => {
@@ -337,10 +346,6 @@ function DatingSignupPageContent() {
     const prevStep = () => {
         setError(null)
         setCurrentStep(prev => Math.max(prev - 1, 1))
-    }
-
-    const getSelectedPlanDetails = () => {
-        return SUBSCRIPTION_PLANS.find(plan => plan.id === selectedPlan)
     }
 
     return (
@@ -817,206 +822,136 @@ function DatingSignupPageContent() {
                         </div>
                     )}
 
-                    {/* Step 4: Subscription */}
+                    {/* Step 4: Payment */}
                     {currentStep === 4 && (
                         <div className="space-y-6">
                             <div className="text-center mb-6">
-                                <h2 className="text-xl font-bold text-gray-900 mb-2">Choose Your Plan</h2>
+                                <h2 className="text-xl font-bold text-gray-900 mb-2">Complete Your Registration</h2>
                                 <p className="text-gray-600">
-                                    Select a subscription to complete your registration and start matching!
+                                    Subscribe to Dating Premium and start matching!
                                 </p>
                             </div>
 
-                            {/* Subscription Plans */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {SUBSCRIPTION_PLANS.map((plan) => (
-                                    <div
-                                        key={plan.id}
-                                        onClick={() => setSelectedPlan(plan.id)}
-                                        className={`relative rounded-xl p-6 cursor-pointer transition-all ${selectedPlan === plan.id
-                                                ? 'border-2 border-pink-500 bg-pink-50 shadow-lg'
-                                                : 'border-2 border-gray-200 hover:border-pink-300'
-                                            }`}
-                                    >
-                                        {plan.popular && (
-                                            <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                                                <span className="bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
-                                                    Most Popular
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        <div className="text-center mb-4">
-                                            <div className={`w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center ${plan.id === 'basic' ? 'bg-gray-100' :
-                                                    plan.id === 'premium' ? 'bg-pink-100' : 'bg-purple-100'
-                                                }`}>
-                                                {plan.id === 'basic' && <Star className="w-6 h-6 text-gray-600" />}
-                                                {plan.id === 'premium' && <Zap className="w-6 h-6 text-pink-600" />}
-                                                {plan.id === 'vip' && <Crown className="w-6 h-6 text-purple-600" />}
-                                            </div>
-                                            <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
-                                            <p className="text-sm text-gray-500">{plan.duration}</p>
-                                        </div>
-
-                                        <div className="text-center mb-4">
-                                            <span className="text-3xl font-bold text-gray-900">
-                                                {plan.price === 0 ? 'Free' : `KSh ${plan.price.toLocaleString()}`}
-                                            </span>
-                                        </div>
-
-                                        <ul className="space-y-2">
-                                            {plan.features.map((feature, index) => (
-                                                <li key={index} className="flex items-start gap-2 text-sm">
-                                                    <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                                                    <span className="text-gray-700">{feature}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-
-                                        {selectedPlan === plan.id && (
-                                            <div className="absolute top-3 right-3">
-                                                <div className="w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center">
-                                                    <Check className="w-4 h-4 text-white" />
-                                                </div>
-                                            </div>
-                                        )}
+                            {/* Subscription Plan Display */}
+                            <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl p-6 border-2 border-pink-300">
+                                <div className="text-center mb-4">
+                                    <div className="w-16 h-16 mx-auto mb-3 bg-pink-500 rounded-full flex items-center justify-center">
+                                        <Zap className="w-8 h-8 text-white" />
                                     </div>
-                                ))}
+                                    <h3 className="text-2xl font-bold text-gray-900">{SUBSCRIPTION_PLAN.name}</h3>
+                                    <p className="text-sm text-gray-600">{SUBSCRIPTION_PLAN.duration}</p>
+                                </div>
+
+                                <div className="text-center mb-6">
+                                    <span className="text-4xl font-bold text-pink-600">
+                                        KSh {SUBSCRIPTION_PLAN.price.toLocaleString()}
+                                    </span>
+                                    <span className="text-gray-500 text-sm ml-2">/year</span>
+                                </div>
+
+                                <ul className="space-y-3 mb-6">
+                                    {SUBSCRIPTION_PLAN.features.map((feature, index) => (
+                                        <li key={index} className="flex items-start gap-3">
+                                            <div className="w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                <Check className="w-3 h-3 text-white" />
+                                            </div>
+                                            <span className="text-gray-700">{feature}</span>
+                                        </li>
+                                    ))}
+                                </ul>
                             </div>
 
                             {/* Payment Section */}
-                            {selectedPlan && selectedPlan !== 'basic' && (
-                                <div className="mt-8 p-6 bg-gray-50 rounded-xl">
-                                    <h3 className="text-lg font-bold text-gray-900 mb-4">Payment Method</h3>
+                            <div className="p-6 bg-gray-50 rounded-xl">
+                                <h3 className="text-lg font-bold text-gray-900 mb-4">Payment Details</h3>
 
-                                    {/* Payment Method Selection */}
-                                    <div className="grid grid-cols-2 gap-4 mb-6">
-                                        <button
-                                            type="button"
-                                            onClick={() => setPaymentMethod('mpesa')}
-                                            className={`p-4 rounded-lg border-2 transition-colors ${paymentMethod === 'mpesa'
-                                                    ? 'border-green-500 bg-green-50'
-                                                    : 'border-gray-200 hover:border-green-300'
-                                                }`}
-                                        >
-                                            <div className="flex items-center justify-center gap-2">
-                                                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
-                                                    M
-                                                </div>
-                                                <span className="font-semibold">M-Pesa</span>
-                                            </div>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPaymentMethod('card')}
-                                            className={`p-4 rounded-lg border-2 transition-colors ${paymentMethod === 'card'
-                                                    ? 'border-blue-500 bg-blue-50'
-                                                    : 'border-gray-200 hover:border-blue-300'
-                                                }`}
-                                        >
-                                            <div className="flex items-center justify-center gap-2">
-                                                <Shield className="w-6 h-6 text-blue-600" />
-                                                <span className="font-semibold">Card</span>
-                                            </div>
-                                        </button>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            M-Pesa Phone Number
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            value={mpesaPhone || formData.phone}
+                                            onChange={(e) => setMpesaPhone(e.target.value)}
+                                            placeholder="254712345678"
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            You will receive an M-Pesa STK push on this number
+                                        </p>
                                     </div>
+                                </div>
 
-                                    {paymentMethod === 'mpesa' && (
-                                        <div className="space-y-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    M-Pesa Phone Number
-                                                </label>
-                                                <input
-                                                    type="tel"
-                                                    value={mpesaPhone || formData.phone}
-                                                    onChange={(e) => setMpesaPhone(e.target.value)}
-                                                    placeholder="254712345678"
-                                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                                />
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    You will receive an M-Pesa STK push on this number
-                                                </p>
-                                            </div>
+                                {/* Order Summary */}
+                                <div className="mt-6 p-4 bg-white rounded-lg border">
+                                    <h4 className="font-semibold text-gray-900 mb-3">Order Summary</h4>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-gray-600">{SUBSCRIPTION_PLAN.name}</span>
+                                        <span className="font-medium">
+                                            KSh {SUBSCRIPTION_PLAN.price.toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center mb-2 text-sm text-gray-500">
+                                        <span>Duration</span>
+                                        <span>{SUBSCRIPTION_PLAN.duration}</span>
+                                    </div>
+                                    {formData.referralCode && (
+                                        <div className="flex justify-between items-center text-sm text-green-600">
+                                            <span className="flex items-center gap-1">
+                                                <Gift className="w-4 h-4" />
+                                                Referral Applied
+                                            </span>
+                                            <span>{formData.referralCode}</span>
                                         </div>
                                     )}
-
-                                    {paymentMethod === 'card' && (
-                                        <div className="text-center py-6 text-gray-500">
-                                            Card payment coming soon. Please use M-Pesa for now.
-                                        </div>
-                                    )}
-
-                                    {/* Order Summary */}
-                                    <div className="mt-6 p-4 bg-white rounded-lg border">
-                                        <h4 className="font-semibold text-gray-900 mb-3">Order Summary</h4>
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="text-gray-600">{getSelectedPlanDetails()?.name} Plan</span>
-                                            <span className="font-medium">
-                                                KSh {getSelectedPlanDetails()?.price.toLocaleString()}
+                                    <div className="border-t mt-3 pt-3">
+                                        <div className="flex justify-between items-center font-bold text-lg">
+                                            <span>Total</span>
+                                            <span className="text-pink-600">
+                                                KSh {SUBSCRIPTION_PLAN.price.toLocaleString()}
                                             </span>
                                         </div>
-                                        <div className="flex justify-between items-center mb-2 text-sm text-gray-500">
-                                            <span>Duration</span>
-                                            <span>{getSelectedPlanDetails()?.duration}</span>
-                                        </div>
-                                        {formData.referralCode && (
-                                            <div className="flex justify-between items-center text-sm text-green-600">
-                                                <span className="flex items-center gap-1">
-                                                    <Gift className="w-4 h-4" />
-                                                    Referral Applied
-                                                </span>
-                                                <span>{formData.referralCode}</span>
-                                            </div>
-                                        )}
-                                        <div className="border-t mt-3 pt-3">
-                                            <div className="flex justify-between items-center font-bold text-lg">
-                                                <span>Total</span>
-                                                <span className="text-pink-600">
-                                                    KSh {getSelectedPlanDetails()?.price.toLocaleString()}
-                                                </span>
-                                            </div>
-                                        </div>
                                     </div>
-
-                                    {/* Payment Status */}
-                                    {paymentStatus === 'pending' && (
-                                        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
-                                            <div className="animate-spin w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-                                            <p className="text-yellow-800 font-medium">
-                                                Waiting for M-Pesa confirmation...
-                                            </p>
-                                            <p className="text-yellow-600 text-sm">
-                                                Please check your phone and enter your M-Pesa PIN
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {paymentStatus === 'success' && (
-                                        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-                                            <Check className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                                            <p className="text-green-800 font-medium">
-                                                Payment successful!
-                                            </p>
-                                            <p className="text-green-600 text-sm">
-                                                Redirecting to your dashboard...
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {paymentStatus === 'failed' && (
-                                        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-center">
-                                            <X className="w-8 h-8 text-red-500 mx-auto mb-2" />
-                                            <p className="text-red-800 font-medium">
-                                                Payment failed
-                                            </p>
-                                            <p className="text-red-600 text-sm">
-                                                Please try again or use a different payment method
-                                            </p>
-                                        </div>
-                                    )}
                                 </div>
-                            )}
+
+                                {/* Payment Status */}
+                                {paymentStatus === 'pending' && (
+                                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
+                                        <div className="animate-spin w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+                                        <p className="text-yellow-800 font-medium">
+                                            Waiting for M-Pesa confirmation...
+                                        </p>
+                                        <p className="text-yellow-600 text-sm">
+                                            Please check your phone and enter your M-Pesa PIN
+                                        </p>
+                                    </div>
+                                )}
+
+                                {paymentStatus === 'success' && (
+                                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+                                        <Check className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                                        <p className="text-green-800 font-medium">
+                                            Payment successful!
+                                        </p>
+                                        <p className="text-green-600 text-sm">
+                                            Redirecting to your dashboard...
+                                        </p>
+                                    </div>
+                                )}
+
+                                {paymentStatus === 'failed' && (
+                                    <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-center">
+                                        <X className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                                        <p className="text-red-800 font-medium">
+                                            Payment failed
+                                        </p>
+                                        <p className="text-red-600 text-sm">
+                                            Please try again or contact support
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 
@@ -1063,10 +998,8 @@ function DatingSignupPageContent() {
                                         <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
                                         Processing...
                                     </>
-                                ) : selectedPlan !== 'basic' ? (
-                                    `Complete & Pay KSh ${getSelectedPlanDetails()?.price.toLocaleString() || '0'}`
                                 ) : (
-                                    'Complete Registration'
+                                    `Complete & Pay KSh ${SUBSCRIPTION_PLAN.price.toLocaleString()}`
                                 )}
                             </button>
                         )}

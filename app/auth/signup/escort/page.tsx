@@ -46,7 +46,6 @@ function EscortSignupPageContent() {
     const [currentStep, setCurrentStep] = useState(1)
     const [isProcessing, setIsProcessing] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [wantsVIP, setWantsVIP] = useState(false)
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'pending' | 'success' | 'failed'>('idle')
 
     // Services state
@@ -169,7 +168,7 @@ function EscortSignupPageContent() {
         return Promise.all(promises)
     }
 
-    const handleRegistration = async (skipVIP: boolean = false) => {
+    const handleRegistration = async () => {
         setError(null)
         setIsProcessing(true)
 
@@ -247,14 +246,8 @@ function EscortSignupPageContent() {
                     TokenService.setRefreshToken(refreshToken)
                 }
 
-                // If VIP selected and not skipped, process payment
-                if (wantsVIP && !skipVIP) {
-                    await handlePayment()
-                } else {
-                    // Redirect to profile
-                    console.log('Redirecting to /profile/escort')
-                    window.location.href = '/profile/escort'
-                }
+                // Process payment for VIP subscription
+                await handlePayment()
             } else {
                 // Registration successful but no token - still redirect
                 console.log('No token in response, redirecting anyway')
@@ -278,21 +271,79 @@ function EscortSignupPageContent() {
                 throw new Error('Invalid phone format. Use 254XXXXXXXXX')
             }
 
-            // Call VIP subscription endpoint
+            console.log('Initiating M-Pesa VIP payment for phone:', phoneNumber)
+
+            // Initiate payment - this sends the STK push
             const paymentResponse = await ButicalAPI.payments.subscribeVIP(phoneNumber)
+            console.log('Payment initiation response:', paymentResponse)
 
             if (paymentResponse?.data) {
-                setPaymentStatus('success')
+                // Extract payment ID from response
+                const paymentData = paymentResponse.data?.data || paymentResponse.data
+                const paymentId = paymentData?.paymentId
 
-                // Redirect after success
-                setTimeout(() => {
-                    window.location.href = '/profile/escort'
-                }, 2000)
+                if (paymentId) {
+                    // Poll for payment status every 2 seconds for up to 60 seconds
+                    let attempts = 0
+                    const maxAttempts = 30
+                    const pollInterval = 2000
+
+                    const checkPaymentStatus = async (): Promise<boolean> => {
+                        try {
+                            const statusResponse = await ButicalAPI.payments.getPaymentStatus(paymentId)
+                            const status = statusResponse.data?.data?.status || statusResponse.data?.status
+
+                            console.log(`Payment status check (${attempts + 1}/${maxAttempts}):`, status)
+
+                            if (status === 'SUCCESS') {
+                                setPaymentStatus('success')
+                                setTimeout(() => {
+                                    window.location.href = '/profile/escort'
+                                }, 1500)
+                                return true
+                            } else if (status === 'FAILED' || status === 'CANCELLED') {
+                                throw new Error('Payment was cancelled or failed')
+                            }
+
+                            // Still pending, continue polling
+                            return false
+                        } catch (err) {
+                            console.error('Error checking payment status:', err)
+                            return false
+                        }
+                    }
+
+                    // Start polling
+                    const pollForCompletion = async () => {
+                        while (attempts < maxAttempts) {
+                            attempts++
+                            const completed = await checkPaymentStatus()
+
+                            if (completed) {
+                                return
+                            }
+
+                            // Wait before next poll
+                            await new Promise(resolve => setTimeout(resolve, pollInterval))
+                        }
+
+                        // Timeout - payment took too long
+                        throw new Error('Payment verification timed out. Please check your M-Pesa messages and contact support if payment was deducted.')
+                    }
+
+                    await pollForCompletion()
+                } else {
+                    // STK push sent successfully, redirect even without polling
+                    setPaymentStatus('success')
+                    setTimeout(() => {
+                        window.location.href = '/profile/escort'
+                    }, 2000)
+                }
             }
         } catch (error: any) {
             console.error('Payment error:', error)
             setPaymentStatus('failed')
-            setError(error.response?.data?.message || 'Payment failed. You can upgrade to VIP later from your dashboard.')
+            setError(error.response?.data?.message || error.message || 'Payment failed. You can upgrade to VIP later from your dashboard.')
 
             // Still allow user to proceed after payment failure
             setTimeout(() => {
@@ -782,29 +833,32 @@ function EscortSignupPageContent() {
                         </div>
                     )}
 
-                    {/* Step 4: VIP Subscription (Optional) */}
+                    {/* Step 4: Subscription & Payment */}
                     {currentStep === 4 && (
                         <div className="space-y-6">
-                            <h2 className="text-xl font-bold text-gray-900 mb-4">VIP Subscription (Optional)</h2>
+                            <div className="text-center mb-6">
+                                <h2 className="text-xl font-bold text-gray-900 mb-2">Complete Your Registration</h2>
+                                <p className="text-gray-600">
+                                    Subscribe to Escort VIP and start earning!
+                                </p>
+                            </div>
 
-                            {/* VIP Benefits */}
-                            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-gray-900 mb-1">
-                                            Upgrade to VIP
-                                        </h3>
-                                        <p className="text-sm text-gray-600">
-                                            Get more visibility and premium features
-                                        </p>
+                            {/* VIP Subscription Display */}
+                            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-300">
+                                <div className="text-center mb-4">
+                                    <div className="w-16 h-16 mx-auto mb-3 bg-purple-500 rounded-full flex items-center justify-center">
+                                        <TrendingUp className="w-8 h-8 text-white" />
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-3xl font-bold text-purple-600">KSh 3,000</p>
-                                        <p className="text-xs text-gray-500">per year</p>
-                                    </div>
+                                    <h3 className="text-2xl font-bold text-gray-900">Escort VIP</h3>
+                                    <p className="text-sm text-gray-600">1 Year Subscription</p>
                                 </div>
 
-                                <div className="space-y-2">
+                                <div className="text-center mb-6">
+                                    <span className="text-4xl font-bold text-purple-600">KSh 3,000</span>
+                                    <span className="text-gray-500 text-sm ml-2">/year</span>
+                                </div>
+
+                                <ul className="space-y-3 mb-6">
                                     {[
                                         'Featured placement on homepage',
                                         'VIP badge on your profile',
@@ -812,92 +866,103 @@ function EscortSignupPageContent() {
                                         'Free contact visibility (no unlock fees)',
                                         'Priority customer support'
                                     ].map((benefit, index) => (
-                                        <div key={index} className="flex items-center text-sm text-gray-700">
-                                            <div className="w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center mr-3 flex-shrink-0">
+                                        <li key={index} className="flex items-start gap-3">
+                                            <div className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                                                 <Check className="w-3 h-3 text-white" />
                                             </div>
-                                            <span>{benefit}</span>
-                                        </div>
+                                            <span className="text-gray-700">{benefit}</span>
+                                        </li>
                                     ))}
-                                </div>
-
-                                <div className="mt-4 pt-4 border-t border-purple-200">
-                                    <label className="flex items-center">
-                                        <input
-                                            type="checkbox"
-                                            checked={wantsVIP}
-                                            onChange={(e) => setWantsVIP(e.target.checked)}
-                                            className="w-4 h-4 text-purple-500 border-gray-300 rounded focus:ring-purple-500 mr-3"
-                                        />
-                                        <span className="text-sm font-medium text-gray-900">
-                                            Yes, I want to upgrade to VIP
-                                        </span>
-                                    </label>
-                                </div>
+                                </ul>
                             </div>
 
                             {/* Payment Section */}
-                            {wantsVIP && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        M-Pesa Phone Number
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        name="mpesaPhone"
-                                        value={formData.mpesaPhone || formData.phone}
-                                        onChange={handleInputChange}
-                                        placeholder="254712345678"
-                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                    />
-                                    <p className="text-xs text-gray-500 mt-2">
-                                        You'll receive an M-Pesa prompt on this number to complete payment
-                                    </p>
-                                </div>
-                            )}
+                            <div className="p-6 bg-gray-50 rounded-xl">
+                                <h3 className="text-lg font-bold text-gray-900 mb-4">Payment Details</h3>
 
-                            {/* Payment Status */}
-                            {paymentStatus === 'pending' && (
-                                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
-                                    <div className="animate-spin w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-                                    <p className="text-yellow-800 font-medium">
-                                        Waiting for M-Pesa confirmation...
-                                    </p>
-                                    <p className="text-yellow-600 text-sm">
-                                        Please check your phone and enter your M-Pesa PIN
-                                    </p>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            M-Pesa Phone Number
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            name="mpesaPhone"
+                                            value={formData.mpesaPhone || formData.phone}
+                                            onChange={handleInputChange}
+                                            placeholder="254712345678"
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            You will receive an M-Pesa STK push on this number
+                                        </p>
+                                    </div>
                                 </div>
-                            )}
 
-                            {paymentStatus === 'success' && (
-                                <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-                                    <Check className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                                    <p className="text-green-800 font-medium">
-                                        Payment successful!
-                                    </p>
-                                    <p className="text-green-600 text-sm">
-                                        Redirecting to your dashboard...
-                                    </p>
+                                {/* Order Summary */}
+                                <div className="mt-6 p-4 bg-white rounded-lg border">
+                                    <h4 className="font-semibold text-gray-900 mb-3">Order Summary</h4>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-gray-600">Escort VIP Subscription</span>
+                                        <span className="font-medium">KSh 3,000</span>
+                                    </div>
+                                    <div className="flex justify-between items-center mb-2 text-sm text-gray-500">
+                                        <span>Duration</span>
+                                        <span>1 Year</span>
+                                    </div>
+                                    {formData.referralCode && (
+                                        <div className="flex justify-between items-center text-sm text-green-600">
+                                            <span className="flex items-center gap-1">
+                                                <Check className="w-4 h-4" />
+                                                Referral Applied
+                                            </span>
+                                            <span>{formData.referralCode}</span>
+                                        </div>
+                                    )}
+                                    <div className="border-t mt-3 pt-3">
+                                        <div className="flex justify-between items-center font-bold text-lg">
+                                            <span>Total</span>
+                                            <span className="text-purple-600">KSh 3,000</span>
+                                        </div>
+                                    </div>
                                 </div>
-                            )}
 
-                            {paymentStatus === 'failed' && (
-                                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center">
-                                    <X className="w-8 h-8 text-red-500 mx-auto mb-2" />
-                                    <p className="text-red-800 font-medium">
-                                        Payment failed
-                                    </p>
-                                    <p className="text-red-600 text-sm">
-                                        You can upgrade to VIP later from your dashboard
-                                    </p>
-                                </div>
-                            )}
+                                {/* Payment Status */}
+                                {paymentStatus === 'pending' && (
+                                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
+                                        <div className="animate-spin w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+                                        <p className="text-yellow-800 font-medium">
+                                            Waiting for M-Pesa confirmation...
+                                        </p>
+                                        <p className="text-yellow-600 text-sm">
+                                            Please check your phone and enter your M-Pesa PIN
+                                        </p>
+                                    </div>
+                                )}
 
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                                <p className="text-sm text-yellow-800">
-                                    <strong>Optional:</strong> You can skip VIP subscription for now and upgrade later from your dashboard.
-                                    Regular profiles are also visible to clients but with unlock fees.
-                                </p>
+                                {paymentStatus === 'success' && (
+                                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+                                        <Check className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                                        <p className="text-green-800 font-medium">
+                                            Payment successful!
+                                        </p>
+                                        <p className="text-green-600 text-sm">
+                                            Redirecting to your dashboard...
+                                        </p>
+                                    </div>
+                                )}
+
+                                {paymentStatus === 'failed' && (
+                                    <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-center">
+                                        <X className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                                        <p className="text-red-800 font-medium">
+                                            Payment failed
+                                        </p>
+                                        <p className="text-red-600 text-sm">
+                                            Please try again or contact support
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Terms & Conditions */}
@@ -977,43 +1042,21 @@ function EscortSignupPageContent() {
                                 Next
                             </button>
                         ) : (
-                            <div className="flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => handleRegistration(true)}
-                                    disabled={isProcessing || paymentStatus === 'success'}
-                                    className="px-6 py-2 border border-purple-500 text-purple-600 rounded-lg hover:bg-purple-50 font-medium transition-colors disabled:opacity-50"
-                                >
-                                    {isProcessing ? 'Processing...' : 'Skip & Complete'}
-                                </button>
-                                {wantsVIP && (
-                                    <button
-                                        type="button"
-                                        onClick={() => handleRegistration(false)}
-                                        disabled={isProcessing || paymentStatus === 'success'}
-                                        className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
-                                    >
-                                        {isProcessing ? (
-                                            <>
-                                                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
-                                                Processing...
-                                            </>
-                                        ) : (
-                                            'Pay KSh 3,000 & Complete'
-                                        )}
-                                    </button>
+                            <button
+                                type="button"
+                                onClick={handleRegistration}
+                                disabled={isProcessing || paymentStatus === 'success'}
+                                className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                {isProcessing ? (
+                                    <>
+                                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                                        Processing...
+                                    </>
+                                ) : (
+                                    'Complete & Pay KSh 3,000'
                                 )}
-                                {!wantsVIP && (
-                                    <button
-                                        type="button"
-                                        onClick={() => handleRegistration(true)}
-                                        disabled={isProcessing || paymentStatus === 'success'}
-                                        className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-medium transition-colors disabled:opacity-50"
-                                    >
-                                        {isProcessing ? 'Processing...' : 'Complete Registration'}
-                                    </button>
-                                )}
-                            </div>
+                            </button>
                         )}
                     </div>
 
