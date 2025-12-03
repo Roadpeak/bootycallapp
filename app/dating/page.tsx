@@ -4,7 +4,7 @@
 import React, { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Search, Filter, MapPin, Gift, MessageCircle, AlertCircle, Lock, Sparkles } from 'lucide-react'
+import { Search, Filter, MapPin, Heart, MessageCircle, AlertCircle, Lock, Sparkles } from 'lucide-react'
 import { DatingCard } from '../components/cards/DatingCard'
 import { MatchNotificationModal } from '../components/common/MatchNotificationModal'
 import MobileBottomNav from '../components/layout/MobileBottomNav'
@@ -29,14 +29,14 @@ const kenyanCounties = [
 ]
 
 const CompactReferralBanner = () => (
-    <div className="bg-gradient-to-r from-pink-600 to-purple-600 text-white p-3 rounded-lg flex justify-between items-center mb-4">
-        <div className="flex items-center">
-            <Gift className="w-4 h-4 mr-2" />
+    <div className="bg-gradient-to-r from-pink-600 to-purple-600 text-white p-3 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+        <div className="flex items-start sm:items-center gap-2">
+            <Sparkles className="w-4 h-4 mt-0.5 sm:mt-0 flex-shrink-0" />
             <span className="text-sm font-medium">Earn money for each friend you refer and also from every person your referee refers!</span>
         </div>
         <Link
             href="/referral"
-            className="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded transition-colors"
+            className="text-xs bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded transition-colors whitespace-nowrap"
         >
             Learn More
         </Link>
@@ -312,27 +312,30 @@ function DatingPageContent() {
             {/* Header */}
             <header className="sticky top-0 z-10 bg-white border-b border-gray-200 p-4">
                 <div className="max-w-7xl mx-auto">
-                    <div className="flex justify-between items-center mb-3">
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dating</h1>
+                    <div className="flex flex-col gap-3">
+                        <div className="flex justify-between items-center">
+                            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dating</h1>
+                        </div>
 
-                        <div className="flex gap-2 flex-wrap">
+                        {/* Action Buttons - Properly spaced for mobile */}
+                        <div className="flex gap-2 overflow-x-auto pb-1">
                             <Link
                                 href="/dating/suggested"
-                                className="px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 font-medium transition-colors flex items-center gap-2"
+                                className="flex-shrink-0 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 font-medium transition-colors flex items-center gap-2"
                             >
                                 <Sparkles className="w-4 h-4" />
-                                <span className="hidden md:inline">AI Picks</span>
-                                <span className="md:hidden">AI</span>
+                                <span className="hidden sm:inline">AI Picks</span>
+                                <span className="sm:hidden">AI</span>
                             </Link>
 
                             <Link
                                 href="/dating/activity"
-                                className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2 relative"
+                                className="flex-shrink-0 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2 relative"
                             >
-                                <Gift className="w-4 h-4" />
-                                <span className="hidden md:inline">Activity</span>
+                                <Heart className="w-4 h-4" />
+                                <span className="hidden sm:inline">Activity</span>
                                 {matchCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                    <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
                                         {matchCount}
                                     </span>
                                 )}
@@ -340,27 +343,27 @@ function DatingPageContent() {
 
                             <Link
                                 href="/chat"
-                                className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2"
+                                className="flex-shrink-0 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2"
                             >
                                 <MessageCircle className="w-4 h-4" />
-                                <span className="hidden md:inline">Messages</span>
+                                <span className="hidden sm:inline">Messages</span>
                             </Link>
 
                             <button
                                 onClick={() => setIsFilterOpen(!isFilterOpen)}
-                                className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2"
+                                className="flex-shrink-0 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2"
                             >
                                 <Filter className="w-4 h-4" />
-                                <span className="hidden md:inline">Filter</span>
+                                <span className="hidden sm:inline">Filter</span>
                             </button>
 
-                            <div className="relative">
+                            <div className="relative flex-shrink-0">
                                 <button
                                     onClick={() => setIsLocationOpen(!isLocationOpen)}
                                     className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2"
                                 >
                                     <MapPin className="w-4 h-4" />
-                                    <span className="hidden md:inline">{selectedLocation}</span>
+                                    <span className="hidden sm:inline">{selectedLocation}</span>
                                 </button>
 
                                 {isLocationOpen && (
