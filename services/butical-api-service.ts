@@ -676,13 +676,13 @@ const ButicalAPI = {
         getById: (id: string) => apiClient.get<ApiResponseWrapper<DatingProfile>>(`/dating-profiles/${id}`),
         view: (id: string) => apiClient.post(`/dating-profiles/${id}/view`),
         getStats: (id: string) => apiClient.get(`/dating-profiles/${id}/stats`),
-        // Like/Match endpoints
-        like: (profileId: string) => apiClient.post<ApiResponseWrapper<{ matched: boolean }>>(`/dating-profiles/${profileId}/like`),
-        unlike: (profileId: string) => apiClient.delete(`/dating-profiles/${profileId}/like`),
-        getLikeStatus: (profileId: string) => apiClient.get<ApiResponseWrapper<{ liked: boolean; matched: boolean }>>(`/dating-profiles/${profileId}/like-status`),
-        getMatches: () => apiClient.get<ApiResponseWrapper<DatingProfile[]>>('/dating-profiles/matches'),
-        getLikes: () => apiClient.get<ApiResponseWrapper<DatingProfile[]>>('/dating-profiles/likes'),
-        getLikedBy: () => apiClient.get<ApiResponseWrapper<DatingProfile[]>>('/dating-profiles/liked-by'),
+        // Like/Match endpoints - using correct /dating-likes/ paths from API docs
+        like: (profileId: string) => apiClient.post<ApiResponseWrapper<{ matched: boolean }>>(`/dating-likes/${profileId}/like`),
+        unlike: (profileId: string) => apiClient.delete(`/dating-likes/${profileId}/unlike`),
+        getLikeStatus: (profileId: string) => apiClient.get<ApiResponseWrapper<{ liked: boolean; matched: boolean }>>(`/dating-likes/${profileId}/status`),
+        getMatches: () => apiClient.get<ApiResponseWrapper<DatingProfile[]>>('/dating-likes/matches'),
+        getLikes: () => apiClient.get<ApiResponseWrapper<DatingProfile[]>>('/dating-likes/liked-by-me'),
+        getLikedBy: () => apiClient.get<ApiResponseWrapper<DatingProfile[]>>('/dating-likes/who-liked-me'),
         getSuggested: (params?: { limit?: number }) => apiClient.get<ApiResponseWrapper<DatingProfile[]>>('/dating-likes/suggested', { params }),
     },
 
