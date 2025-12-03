@@ -440,7 +440,13 @@ export const useDatingMatches = (): UseDatingMatchesReturn => {
         try {
             setLoading(true);
             const response = await ButicalAPI.datingProfiles.getMatches();
-            const matchesData = (response.data as any)?.data || response.data;
+            // Handle both { data: [...] } and { data: { profiles: [...] } } and { profiles: [...] }
+            const matchesData = (response.data as any)?.data?.profiles ||
+                               (response.data as any)?.profiles ||
+                               (response.data as any)?.data ||
+                               response.data;
+            console.log('Matches response:', response);
+            console.log('Matches data:', matchesData);
             setMatches(Array.isArray(matchesData) ? matchesData : []);
             setError(null);
         } catch (err: any) {
@@ -479,7 +485,13 @@ export const useDatingLikes = (): UseDatingLikesReturn => {
         try {
             setLoading(true);
             const response = await ButicalAPI.datingProfiles.getLikes();
-            const likesData = (response.data as any)?.data || response.data;
+            // Handle both { data: [...] } and { data: { profiles: [...] } } and { profiles: [...] }
+            const likesData = (response.data as any)?.data?.profiles ||
+                             (response.data as any)?.profiles ||
+                             (response.data as any)?.data ||
+                             response.data;
+            console.log('Likes response:', response);
+            console.log('Likes data:', likesData);
             setLikes(Array.isArray(likesData) ? likesData : []);
             setError(null);
         } catch (err: any) {
@@ -518,7 +530,13 @@ export const useDatingLikedBy = (): UseDatingLikedByReturn => {
         try {
             setLoading(true);
             const response = await ButicalAPI.datingProfiles.getLikedBy();
-            const likedByData = (response.data as any)?.data || response.data;
+            // Handle both { data: [...] } and { data: { profiles: [...] } } and { profiles: [...] }
+            const likedByData = (response.data as any)?.data?.profiles ||
+                               (response.data as any)?.profiles ||
+                               (response.data as any)?.data ||
+                               response.data;
+            console.log('Liked By response:', response);
+            console.log('Liked By data:', likedByData);
             setLikedBy(Array.isArray(likedByData) ? likedByData : []);
             setError(null);
         } catch (err: any) {

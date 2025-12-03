@@ -292,6 +292,14 @@ function EscortSignupPageContent() {
                 const paymentData = paymentResponse.data?.data || paymentResponse.data
                 const paymentId = paymentData?.paymentId
 
+                console.log('Extracted payment data:', paymentData)
+                console.log('Payment ID for status polling:', paymentId)
+
+                if (!paymentId) {
+                    console.error('No payment ID received from payment initiation')
+                    throw new Error('Payment initiation failed - no payment ID received')
+                }
+
                 if (paymentId) {
                     // Poll for payment status every 2 seconds for up to 60 seconds
                     let attempts = 0
