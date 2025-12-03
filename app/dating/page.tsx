@@ -10,9 +10,9 @@ import { MatchNotificationModal } from '../components/common/MatchNotificationMo
 import MobileBottomNav from '../components/layout/MobileBottomNav'
 import type { ProfileData } from '../components/cards/EscortCard'
 import type { MatchNotification } from '../components/types/chat'
-import { useDatingProfiles, useDatingMatches, useSubscription, useAuth } from '@/lib/hooks/butical-api-hooks'
+import { useDatingProfiles, useDatingMatches, useDatingLikes, useSubscription, useAuth } from '@/lib/hooks/butical-api-hooks'
 import type { DatingProfile } from '@/services/butical-api-service'
-import { TokenService } from '@/services/butical-api-service'
+import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 
 // All 47 counties in Kenya
 const kenyanCounties = [
@@ -94,9 +94,19 @@ function DatingPageContent() {
     // Fetch matches from API
     const { matches: apiMatches, loading: matchesLoading } = useDatingMatches()
 
+    // Fetch likes from API to track liked profiles
+    const { likes: apiLikes, refetch: refetchLikes } = useDatingLikes()
+
     // Safe profiles array
     const safeDatingProfiles = Array.isArray(apiProfiles) ? apiProfiles : []
     const safeMatches = Array.isArray(apiMatches) ? apiMatches : []
+    const safeLikes = Array.isArray(apiLikes) ? apiLikes : []
+
+    // Update liked profiles state when API likes change
+    useEffect(() => {
+        const likedIds = new Set(safeLikes.map(profile => profile.id))
+        setLikedProfiles(likedIds)
+    }, [safeLikes])
 
     // Helper to get display name from dating profile
     const getDisplayName = (profile: DatingProfile): string => {
@@ -123,8 +133,17 @@ function DatingPageContent() {
     // Create a set of matched profile IDs for quick lookup
     const matchedProfileIds = new Set(safeMatches.map(m => m.id))
 
+    // Filter out the current user's own profile
+    const filteredDatingProfiles = safeDatingProfiles.filter(profile => {
+        // Filter out current user's profile by comparing user IDs
+        if (user && profile.userId === user.id) {
+            return false
+        }
+        return true
+    })
+
     // Transform API data to ProfileData format
-    const profiles: ProfileData[] = safeDatingProfiles.map((profile: DatingProfile) => ({
+    const profiles: ProfileData[] = filteredDatingProfiles.map((profile: DatingProfile) => ({
         id: profile.id,
         name: getDisplayName(profile),
         age: profile.age || calculateAge(profile.dateOfBirth),
@@ -153,35 +172,63 @@ function DatingPageContent() {
         tags: profile.interests || [],
     }))
 
-    const handleLike = (profileId: string) => {
-        setLikedProfiles(prev => {
-            const newSet = new Set(prev)
-            if (newSet.has(profileId)) {
-                newSet.delete(profileId)
-            } else {
-                newSet.add(profileId)
+    const handleLike = async (profileId: string) => {
+        try {
+            const isCurrentlyLiked = likedProfiles.has(profileId)
 
-                // Simulate match notification (30% chance)
-                const profile = profiles.find(p => p.id === profileId)
-                if (profile && Math.random() > 0.7) {
-                    const match: MatchNotification = {
-                        id: Date.now().toString(),
-                        matchedUser: {
-                            id: profile.id,
-                            name: profile.name,
-                            age: profile.age,
-                            avatar: profile.photos[0],
-                            bio: profile.bio || ''
-                        },
-                        matchedAt: new Date(),
-                        isNew: true
+            if (isCurrentlyLiked) {
+                // Unlike the profile
+                await ButicalAPI.datingProfiles.unlike(profileId)
+                // Optimistically update UI
+                setLikedProfiles(prev => {
+                    const newSet = new Set(prev)
+                    newSet.delete(profileId)
+                    return newSet
+                })
+                // Refetch likes from API to sync state
+                await refetchLikes()
+            } else {
+                // Like the profile
+                const response = await ButicalAPI.datingProfiles.like(profileId)
+                // Optimistically update UI
+                setLikedProfiles(prev => {
+                    const newSet = new Set(prev)
+                    newSet.add(profileId)
+                    return newSet
+                })
+
+                // Check if it's a match from the API response
+                const responseData = (response.data as any)?.data || response.data
+                const matched = responseData?.matched || false
+
+                if (matched) {
+                    // It's a match! Show match notification
+                    const profile = profiles.find(p => p.id === profileId)
+                    if (profile) {
+                        const match: MatchNotification = {
+                            id: Date.now().toString(),
+                            matchedUser: {
+                                id: profile.id,
+                                name: profile.name,
+                                age: profile.age,
+                                avatar: profile.photos[0],
+                                bio: profile.bio || ''
+                            },
+                            matchedAt: new Date(),
+                            isNew: true
+                        }
+                        setNewMatch(match)
+                        setShowMatchModal(true)
                     }
-                    setNewMatch(match)
-                    setShowMatchModal(true)
                 }
+
+                // Refetch likes from API to sync state
+                await refetchLikes()
             }
-            return newSet
-        })
+        } catch (error: any) {
+            console.error('Failed to like/unlike profile:', error)
+            // Optionally show error to user
+        }
     }
 
     const handleMessage = (profileId: string) => {

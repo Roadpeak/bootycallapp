@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TrendingUp, Upload, X, Eye, EyeOff, Check, AlertCircle } from 'lucide-react'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
@@ -10,6 +10,7 @@ import type { EscortRegistration } from '@/services/butical-api-service'
 
 function EscortSignupPageContent() {
     const searchParams = useSearchParams()
+    const router = useRouter()
 
     const [formData, setFormData] = useState({
         firstName: '',
@@ -260,7 +261,7 @@ function EscortSignupPageContent() {
             } else {
                 // Registration successful but no token - still redirect
                 console.log('No token in response, redirecting anyway')
-                window.location.href = '/profile/escort'
+                router.push('/profile/escort')
             }
         } catch (err: any) {
             console.error('Registration error:', err)
@@ -307,7 +308,7 @@ function EscortSignupPageContent() {
                             if (status === 'SUCCESS') {
                                 setPaymentStatus('success')
                                 setTimeout(() => {
-                                    window.location.href = '/profile/escort'
+                                    router.push('/profile/escort')
                                 }, 1500)
                                 return true
                             } else if (status === 'FAILED' || status === 'CANCELLED') {
@@ -345,7 +346,7 @@ function EscortSignupPageContent() {
                     // STK push sent successfully, redirect even without polling
                     setPaymentStatus('success')
                     setTimeout(() => {
-                        window.location.href = '/profile/escort'
+                        router.push('/profile/escort')
                     }, 2000)
                 }
             }
@@ -356,7 +357,7 @@ function EscortSignupPageContent() {
 
             // Still allow user to proceed after payment failure
             setTimeout(() => {
-                window.location.href = '/profile/escort'
+                router.push('/profile/escort')
             }, 3000)
         } finally {
             setIsProcessing(false)

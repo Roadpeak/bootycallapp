@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Heart, Upload, X, Eye, EyeOff, Check, Crown, Star, Shield, Zap, Gift, AlertCircle } from 'lucide-react'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
@@ -26,6 +26,7 @@ const SUBSCRIPTION_PLAN = {
 
 function DatingSignupPageContent() {
     const searchParams = useSearchParams()
+    const router = useRouter()
 
     const [formData, setFormData] = useState({
         firstName: '',
@@ -211,7 +212,7 @@ function DatingSignupPageContent() {
             } else {
                 // Registration successful but no token - still redirect
                 console.log('No token in response, redirecting anyway')
-                window.location.href = '/dating'
+                router.push('/dating')
             }
         } catch (err: any) {
             console.error('Registration error:', err)
@@ -258,7 +259,7 @@ function DatingSignupPageContent() {
                             if (status === 'SUCCESS') {
                                 setPaymentStatus('success')
                                 setTimeout(() => {
-                                    window.location.href = '/dating'
+                                    router.push('/dating')
                                 }, 1500)
                                 return true
                             } else if (status === 'FAILED' || status === 'CANCELLED') {
@@ -296,7 +297,7 @@ function DatingSignupPageContent() {
                     // STK push sent successfully, redirect even without polling
                     setPaymentStatus('success')
                     setTimeout(() => {
-                        window.location.href = '/dating'
+                        router.push('/dating')
                     }, 2000)
                 }
             }
@@ -307,7 +308,7 @@ function DatingSignupPageContent() {
 
             // Still allow user to proceed after payment failure
             setTimeout(() => {
-                window.location.href = '/dating'
+                router.push('/dating')
             }, 3000)
         } finally {
             setIsProcessing(false)
