@@ -154,6 +154,7 @@ function DatingPageContent() {
             : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
         isVerified: profile.isVerified || false,
         isLiked: likedProfiles.has(profile.id) || matchedProfileIds.has(profile.id),
+        isMatched: matchedProfileIds.has(profile.id),
         tags: profile.interests || [],
     }))
 
@@ -169,6 +170,7 @@ function DatingPageContent() {
             : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
         isVerified: profile.isVerified || false,
         isLiked: true, // All matches are liked
+        isMatched: true, // All matches are matched
         tags: profile.interests || [],
     }))
 

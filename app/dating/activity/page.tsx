@@ -54,7 +54,7 @@ export default function DatingActivityPage() {
     }
 
     // Transform dating profile to ProfileData
-    const transformProfile = (profile: DatingProfile, isLiked: boolean = true): ProfileData => ({
+    const transformProfile = (profile: DatingProfile, isLiked: boolean = true, isMatched: boolean = false): ProfileData => ({
         id: profile.id,
         name: getDisplayName(profile),
         age: profile.age || calculateAge(profile.dateOfBirth),
@@ -65,6 +65,7 @@ export default function DatingActivityPage() {
             : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
         isVerified: profile.isVerified || false,
         isLiked,
+        isMatched,
         tags: profile.interests || [],
     })
 
@@ -141,7 +142,11 @@ export default function DatingActivityPage() {
     }
 
     const { data, loading, error } = getCurrentData()
-    const profiles = (data || []).map(p => transformProfile(p, activeTab !== 'liked-by'))
+    const profiles = (data || []).map(p => transformProfile(
+        p,
+        activeTab !== 'liked-by', // isLiked
+        activeTab === 'matches' // isMatched - only true for matches tab
+    ))
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">

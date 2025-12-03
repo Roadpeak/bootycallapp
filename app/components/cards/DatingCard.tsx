@@ -16,6 +16,7 @@ export interface ProfileData {
     // Dating specific
     isVerified?: boolean
     isLiked?: boolean
+    isMatched?: boolean
     tags?: string[]
     // Hookup/Escort specific
     rating?: number
@@ -47,7 +48,7 @@ export const DatingCard: React.FC<DatingCardProps> = ({
     onMessage,
     className = '',
 }) => {
-    const { id, name, age, distance, bio, photos, isLiked, tags } = profile
+    const { id, name, age, distance, bio, photos, isLiked, isMatched, tags } = profile
 
     const handleLike = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -119,7 +120,7 @@ export const DatingCard: React.FC<DatingCardProps> = ({
                     <div className="flex gap-2">
                         <button
                             onClick={handleLike}
-                            className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1 ${isLiked
+                            className={`${isMatched ? 'flex-1' : 'w-full'} px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1 ${isLiked
                                 ? 'bg-pink-500 text-white'
                                 : 'border border-pink-300 text-pink-700 hover:bg-pink-50'
                                 }`}
@@ -128,13 +129,16 @@ export const DatingCard: React.FC<DatingCardProps> = ({
                             <span className="hidden lg:inline">{isLiked ? 'Liked' : 'Like'}</span>
                         </button>
 
-                        <button
-                            onClick={handleMessage}
-                            className="flex-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-                        >
-                            <MessageSquare className="w-4 h-4" />
-                            <span className="hidden lg:inline">Message</span>
-                        </button>
+                        {/* Only show message button if matched */}
+                        {isMatched && (
+                            <button
+                                onClick={handleMessage}
+                                className="flex-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                            >
+                                <MessageSquare className="w-4 h-4" />
+                                <span className="hidden lg:inline">Message</span>
+                            </button>
+                        )}
                     </div>
                 </div>
             </Link>
