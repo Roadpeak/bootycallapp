@@ -23,6 +23,19 @@ export default function DatingActivityPage() {
     const { likes, loading: likesLoading, error: likesError, refetch: refetchLikes } = useDatingLikes()
     const { likedBy, loading: likedByLoading, error: likedByError, refetch: refetchLikedBy } = useDatingLikedBy()
 
+    // Create sets for quick lookup
+    const likedProfileIds = new Set(likes.map(p => p.id))
+    const likedByProfileIds = new Set(likedBy.map(p => p.id))
+
+    // Find mutual likes that should be matches (profiles that are in both likes and likedBy)
+    const mutualLikes = likes.filter(profile => likedByProfileIds.has(profile.id))
+
+    // Combine backend matches with mutual likes detected on frontend
+    const allMatches = [
+        ...matches,
+        ...mutualLikes.filter(ml => !matches.find(m => m.id === ml.id))
+    ]
+
     useEffect(() => {
         const token = TokenService.getAccessToken()
         if (!token) {
@@ -54,20 +67,26 @@ export default function DatingActivityPage() {
     }
 
     // Transform dating profile to ProfileData
-    const transformProfile = (profile: DatingProfile, isLiked: boolean = true, isMatched: boolean = false): ProfileData => ({
-        id: profile.id,
-        name: getDisplayName(profile),
-        age: profile.age || calculateAge(profile.dateOfBirth),
-        distance: 0,
-        bio: profile.bio || '',
-        photos: profile.photos && profile.photos.length > 0
-            ? profile.photos
-            : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
-        isVerified: profile.isVerified || false,
-        isLiked,
-        isMatched,
-        tags: profile.interests || [],
-    })
+    const transformProfile = (profile: DatingProfile, isLiked: boolean = true, isMatched: boolean = false): ProfileData => {
+        // Extract location from profile
+        const location = profile.location as { city?: string; area?: string; country?: string } | undefined
+        const cityDisplay = location?.city || location?.area || 'Location not set'
+
+        return {
+            id: profile.id,
+            name: getDisplayName(profile),
+            age: profile.age || calculateAge(profile.dateOfBirth),
+            distance: cityDisplay,
+            bio: profile.bio || '',
+            photos: profile.photos && profile.photos.length > 0
+                ? profile.photos
+                : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
+            isVerified: profile.isVerified || false,
+            isLiked,
+            isMatched,
+            tags: profile.interests || [],
+        }
+    }
 
     const handleLike = async (profileId: string) => {
         try {
@@ -117,27 +136,41 @@ export default function DatingActivityPage() {
     }
 
     const handleMessage = (profileId: string) => {
-        router.push(`/chat/${profileId}`)
+        // Find the profile to get the user ID
+        const profile = data?.find((p: DatingProfile) => p.id === profileId)
+        if (profile && profile.userId) {
+            // Use user ID for chat, not profile ID
+            router.push(`/chat/${profile.userId}`)
+        } else {
+            console.error('Could not find user ID for profile:', profileId)
+        }
     }
 
     const handleViewProfile = (profileId: string) => {
         router.push(`/dating/profile/${profileId}`)
     }
 
+    // Create a set of matched profile IDs to filter them out from likes/liked-by
+    const matchedIds = new Set(allMatches.map(m => m.id))
+
+    // Filter out matched profiles from likes and liked-by
+    const filteredLikes = likes.filter(profile => !matchedIds.has(profile.id))
+    const filteredLikedBy = likedBy.filter(profile => !matchedIds.has(profile.id))
+
     const tabs = [
-        { id: 'matches' as ActivityTab, label: 'Matches', icon: Heart, count: matches.length },
-        { id: 'likes' as ActivityTab, label: 'Liked by Me', icon: Users, count: likes.length },
-        { id: 'liked-by' as ActivityTab, label: 'Who Liked Me', icon: Eye, count: likedBy.length },
+        { id: 'matches' as ActivityTab, label: 'Matches', icon: Heart, count: allMatches.length },
+        { id: 'likes' as ActivityTab, label: 'Liked by Me', icon: Users, count: filteredLikes.length },
+        { id: 'liked-by' as ActivityTab, label: 'Who Liked Me', icon: Eye, count: filteredLikedBy.length },
     ]
 
     const getCurrentData = () => {
         switch (activeTab) {
             case 'matches':
-                return { data: matches, loading: matchesLoading, error: matchesError }
+                return { data: allMatches, loading: matchesLoading, error: matchesError }
             case 'likes':
-                return { data: likes, loading: likesLoading, error: likesError }
+                return { data: filteredLikes, loading: likesLoading, error: likesError }
             case 'liked-by':
-                return { data: likedBy, loading: likedByLoading, error: likedByError }
+                return { data: filteredLikedBy, loading: likedByLoading, error: likedByError }
         }
     }
 

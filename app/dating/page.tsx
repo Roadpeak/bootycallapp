@@ -10,7 +10,7 @@ import { MatchNotificationModal } from '../components/common/MatchNotificationMo
 import MobileBottomNav from '../components/layout/MobileBottomNav'
 import type { ProfileData } from '../components/cards/EscortCard'
 import type { MatchNotification } from '../components/types/chat'
-import { useDatingProfiles, useDatingMatches, useDatingLikes, useSubscription, useAuth } from '@/lib/hooks/butical-api-hooks'
+import { useDatingProfiles, useDatingMatches, useDatingLikes, useDatingLikedBy, useSubscription, useAuth } from '@/lib/hooks/butical-api-hooks'
 import type { DatingProfile } from '@/services/butical-api-service'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 
@@ -97,10 +97,14 @@ function DatingPageContent() {
     // Fetch likes from API to track liked profiles
     const { likes: apiLikes, refetch: refetchLikes } = useDatingLikes()
 
+    // Fetch who liked me to detect mutual likes
+    const { likedBy: apiLikedBy } = useDatingLikedBy()
+
     // Safe profiles array
     const safeDatingProfiles = Array.isArray(apiProfiles) ? apiProfiles : []
     const safeMatches = Array.isArray(apiMatches) ? apiMatches : []
     const safeLikes = Array.isArray(apiLikes) ? apiLikes : []
+    const safeLikedBy = Array.isArray(apiLikedBy) ? apiLikedBy : []
 
     // Update liked profiles state when API likes change
     useEffect(() => {
@@ -130,8 +134,18 @@ function DatingPageContent() {
         return age
     }
 
-    // Create a set of matched profile IDs for quick lookup
-    const matchedProfileIds = new Set(safeMatches.map(m => m.id))
+    // Detect mutual likes that should be matches
+    const likedByProfileIds = new Set(safeLikedBy.map(p => p.id))
+    const mutualLikes = safeLikes.filter(profile => likedByProfileIds.has(profile.id))
+
+    // Combine backend matches with mutual likes detected on frontend
+    const allMatches = [
+        ...safeMatches,
+        ...mutualLikes.filter(ml => !safeMatches.find(m => m.id === ml.id))
+    ]
+
+    // Create a set of matched profile IDs for quick lookup (including mutual likes)
+    const matchedProfileIds = new Set(allMatches.map(m => m.id))
 
     // Filter out the current user's own profile
     const filteredDatingProfiles = safeDatingProfiles.filter(profile => {
@@ -143,36 +157,48 @@ function DatingPageContent() {
     })
 
     // Transform API data to ProfileData format
-    const profiles: ProfileData[] = filteredDatingProfiles.map((profile: DatingProfile) => ({
-        id: profile.id,
-        name: getDisplayName(profile),
-        age: profile.age || calculateAge(profile.dateOfBirth),
-        distance: 0, // You might want to calculate this on the backend
-        bio: profile.bio || '',
-        photos: profile.photos && profile.photos.length > 0
-            ? profile.photos
-            : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
-        isVerified: profile.isVerified || false,
-        isLiked: likedProfiles.has(profile.id) || matchedProfileIds.has(profile.id),
-        isMatched: matchedProfileIds.has(profile.id),
-        tags: profile.interests || [],
-    }))
+    const profiles: ProfileData[] = filteredDatingProfiles.map((profile: DatingProfile) => {
+        // Extract location from profile
+        const location = profile.location as { city?: string; area?: string; country?: string } | undefined
+        const cityDisplay = location?.city || location?.area || 'Location not set'
 
-    // Transform matches to ProfileData format
-    const matchProfiles: ProfileData[] = safeMatches.map((profile: DatingProfile) => ({
-        id: profile.id,
-        name: getDisplayName(profile),
-        age: profile.age || calculateAge(profile.dateOfBirth),
-        distance: 0,
-        bio: profile.bio || '',
-        photos: profile.photos && profile.photos.length > 0
-            ? profile.photos
-            : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
-        isVerified: profile.isVerified || false,
-        isLiked: true, // All matches are liked
-        isMatched: true, // All matches are matched
-        tags: profile.interests || [],
-    }))
+        return {
+            id: profile.id,
+            name: getDisplayName(profile),
+            age: profile.age || calculateAge(profile.dateOfBirth),
+            distance: cityDisplay,
+            bio: profile.bio || '',
+            photos: profile.photos && profile.photos.length > 0
+                ? profile.photos
+                : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
+            isVerified: profile.isVerified || false,
+            isLiked: likedProfiles.has(profile.id) || matchedProfileIds.has(profile.id),
+            isMatched: matchedProfileIds.has(profile.id),
+            tags: profile.interests || [],
+        }
+    })
+
+    // Transform matches to ProfileData format (using allMatches which includes mutual likes)
+    const matchProfiles: ProfileData[] = allMatches.map((profile: DatingProfile) => {
+        // Extract location from profile
+        const location = profile.location as { city?: string; area?: string; country?: string } | undefined
+        const cityDisplay = location?.city || location?.area || 'Location not set'
+
+        return {
+            id: profile.id,
+            name: getDisplayName(profile),
+            age: profile.age || calculateAge(profile.dateOfBirth),
+            distance: cityDisplay,
+            bio: profile.bio || '',
+            photos: profile.photos && profile.photos.length > 0
+                ? profile.photos
+                : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
+            isVerified: profile.isVerified || false,
+            isLiked: true, // All matches are liked
+            isMatched: true, // All matches are matched
+            tags: profile.interests || [],
+        }
+    })
 
     const handleLike = async (profileId: string) => {
         try {
@@ -236,7 +262,16 @@ function DatingPageContent() {
     }
 
     const handleMessage = (profileId: string) => {
-        window.location.href = `/chat/${profileId}`
+        // Find the profile from all available profiles to get the user ID
+        const profile = allMatches.find((p: DatingProfile) => p.id === profileId) ||
+            filteredDatingProfiles.find((p: DatingProfile) => p.id === profileId)
+
+        if (profile && profile.userId) {
+            // Use user ID for chat, not profile ID
+            window.location.href = `/chat/${profile.userId}`
+        } else {
+            console.error('Could not find user ID for profile:', profileId)
+        }
     }
 
     const handleViewProfile = (profileId: string) => {
@@ -267,7 +302,7 @@ function DatingPageContent() {
         return matchesSearch
     })
 
-    const matchCount = safeMatches.length
+    const matchCount = allMatches.length
 
     // Show subscription banner for users without access (but don't block the page)
     const SubscriptionBanner = () => {

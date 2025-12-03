@@ -64,8 +64,9 @@ const DateSeparator = ({ timestamp }: { timestamp: string }) => {
 export default function ChatDetailPage() {
     const params = useParams()
     const router = useRouter()
-    const conversationId = params.id as string
+    const recipientId = params.id as string // This is the user ID, not conversation ID
 
+    const [conversationId, setConversationId] = useState<string | null>(null)
     const [conversation, setConversation] = useState<ConversationDetail | null>(null)
     const [messages, setMessages] = useState<Message[]>([])
     const [newMessage, setNewMessage] = useState('')
@@ -74,6 +75,7 @@ export default function ChatDetailPage() {
     const [error, setError] = useState<string | null>(null)
     const [isTyping, setIsTyping] = useState(false)
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+    const [socketConnected, setSocketConnected] = useState(false)
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -82,6 +84,7 @@ export default function ChatDetailPage() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
 
+    // Load conversation data on mount
     useEffect(() => {
         // Check authentication
         const token = TokenService.getAccessToken()
@@ -91,9 +94,38 @@ export default function ChatDetailPage() {
         }
 
         loadConversationData()
+    }, [recipientId, router])
+
+    // Setup WebSocket listeners after conversation is loaded
+    useEffect(() => {
+        if (!conversationId) return
 
         // Connect to WebSocket
         const socket = ChatService.connect()
+
+        // Wait for connection
+        socket.on('connect', () => {
+            console.log('WebSocket connected successfully')
+            setSocketConnected(true)
+            setError(null)
+        })
+
+        socket.on('disconnect', (reason) => {
+            console.log('WebSocket disconnected:', reason)
+            setSocketConnected(false)
+        })
+
+        socket.on('connect_error', (error) => {
+            console.error('WebSocket connection error:', error)
+            setSocketConnected(false)
+            setError('Unable to connect to chat server. Please check your connection.')
+        })
+
+        // Check if socket is already connected
+        if (socket.connected) {
+            console.log('Socket already connected on mount')
+            setSocketConnected(true)
+        }
 
         // Listen for new messages
         const handleNewMessage = (event: any) => {
@@ -149,7 +181,7 @@ export default function ChatDetailPage() {
             ChatService.removeListener('messages_read', handleMessagesRead)
             ChatService.removeListener('user_typing', handleUserTyping)
         }
-    }, [conversationId, router, conversation, currentUserId])
+    }, [conversationId, conversation, currentUserId])
 
     useEffect(() => {
         scrollToBottom()
@@ -159,27 +191,30 @@ export default function ChatDetailPage() {
         try {
             setError(null)
 
-            // Get user ID from token or API
-            // For now, we'll get it from the conversation data
+            // Step 1: Start or get the conversation with the recipient
+            console.log('Starting conversation with user:', recipientId)
+            const conversationData = await ChatService.startConversation(recipientId)
+            console.log('Conversation data:', conversationData)
 
-            // Load messages
-            const messageData = await ChatService.getMessages(conversationId)
+            setConversation(conversationData)
+            setConversationId(conversationData.id)
+
+            // Step 2: Get current user ID from conversation participants
+            // The current user is the one who is NOT the recipient
+            const currentUser = conversationData.participant1.id === recipientId
+                ? conversationData.participant2
+                : conversationData.participant1
+            setCurrentUserId(currentUser.id)
+
+            // Step 3: Load messages using the conversation ID
+            console.log('Loading messages for conversation:', conversationData.id)
+            const messageData = await ChatService.getMessages(conversationData.id)
             setMessages(messageData.data)
-
-            // Extract current user ID from messages
-            if (messageData.data.length > 0) {
-                // Find a message we sent to determine our user ID
-                const sentMessage = messageData.data.find(msg => msg.sender)
-                if (sentMessage) {
-                    // This is a simplification - in reality you'd get this from auth context
-                    setCurrentUserId(sentMessage.senderId)
-                }
-            }
 
             scrollToBottom()
         } catch (err: any) {
             console.error('Failed to load conversation:', err)
-            setError(err.response?.data?.message || 'Failed to load conversation')
+            setError(err.response?.data?.message || err.message || 'Failed to load conversation')
         } finally {
             setLoading(false)
         }
@@ -351,17 +386,23 @@ export default function ChatDetailPage() {
                             type="text"
                             value={newMessage}
                             onChange={(e) => handleTyping(e.target.value)}
-                            placeholder="Type a message..."
+                            placeholder={socketConnected ? "Type a message..." : "Connecting to chat..."}
                             className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                            disabled={sending}
+                            disabled={sending || !socketConnected}
                             maxLength={5000}
                         />
+                        {!socketConnected && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                            </div>
+                        )}
                     </div>
 
                     <button
                         type="submit"
-                        disabled={!newMessage.trim() || sending}
+                        disabled={!newMessage.trim() || sending || !socketConnected}
                         className="p-3 bg-pink-500 text-white rounded-full hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title={!socketConnected ? 'Connecting to chat...' : ''}
                     >
                         {sending ? (
                             <Loader2 className="w-5 h-5 animate-spin" />

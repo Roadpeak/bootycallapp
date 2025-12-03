@@ -85,9 +85,17 @@ export const DatingCard: React.FC<DatingCardProps> = ({
                 {/* Profile Info */}
                 <div className="p-3">
                     <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-bold text-base text-gray-900">
-                            {name}, {age}
-                        </h3>
+                        <div className="flex-1">
+                            <h3 className="font-bold text-base text-gray-900">
+                                {name}, {age}
+                            </h3>
+                            {distance && (
+                                <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                                    <MapPin className="w-3 h-3" />
+                                    {typeof distance === 'number' ? `${distance} km away` : distance}
+                                </p>
+                            )}
+                        </div>
                     </div>
 
                     {/* Tags */}

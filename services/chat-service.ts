@@ -186,8 +186,8 @@ class ChatService {
             throw new Error('No authentication token available')
         }
 
-        console.log('Connecting to chat server...')
-        this.socket = io(config.api.baseUrl, {
+        console.log('Connecting to chat server:', config.api.wsUrl)
+        this.socket = io(config.api.wsUrl, {
             auth: { token },
             transports: ['websocket', 'polling'],
             reconnection: true,

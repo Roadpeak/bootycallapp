@@ -65,7 +65,13 @@ export default function DatingProfileViewPage() {
                 }
             } catch (err: any) {
                 console.error('Failed to fetch dating profile:', err)
-                setError(err.response?.data?.message || err.message || 'Failed to load profile')
+
+                // Check if it's a 404 or route not found error
+                if (err.response?.status === 404 || err.response?.data?.message === 'Route not found') {
+                    setError('This feature is not available yet. The profile viewing endpoint is still being implemented on the server.')
+                } else {
+                    setError(err.response?.data?.message || err.message || 'Failed to load profile')
+                }
             } finally {
                 setIsLoading(false)
             }
