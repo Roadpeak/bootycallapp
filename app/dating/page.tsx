@@ -4,13 +4,13 @@
 import React, { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Search, Filter, MapPin, Gift, MessageCircle, AlertCircle, Lock } from 'lucide-react'
+import { Search, Filter, MapPin, Gift, MessageCircle, AlertCircle, Lock, Sparkles } from 'lucide-react'
 import { DatingCard } from '../components/cards/DatingCard'
 import { MatchNotificationModal } from '../components/common/MatchNotificationModal'
 import MobileBottomNav from '../components/layout/MobileBottomNav'
 import type { ProfileData } from '../components/cards/EscortCard'
 import type { MatchNotification } from '../components/types/chat'
-import { useDatingProfiles, useSubscription, useAuth } from '@/lib/hooks/butical-api-hooks'
+import { useDatingProfiles, useDatingMatches, useSubscription, useAuth } from '@/lib/hooks/butical-api-hooks'
 import type { DatingProfile } from '@/services/butical-api-service'
 import { TokenService } from '@/services/butical-api-service'
 
@@ -91,8 +91,12 @@ function DatingPageContent() {
         gender: filters.gender,
     })
 
+    // Fetch matches from API
+    const { matches: apiMatches, loading: matchesLoading } = useDatingMatches()
+
     // Safe profiles array
     const safeDatingProfiles = Array.isArray(apiProfiles) ? apiProfiles : []
+    const safeMatches = Array.isArray(apiMatches) ? apiMatches : []
 
     // Helper to get display name from dating profile
     const getDisplayName = (profile: DatingProfile): string => {
@@ -116,6 +120,9 @@ function DatingPageContent() {
         return age
     }
 
+    // Create a set of matched profile IDs for quick lookup
+    const matchedProfileIds = new Set(safeMatches.map(m => m.id))
+
     // Transform API data to ProfileData format
     const profiles: ProfileData[] = safeDatingProfiles.map((profile: DatingProfile) => ({
         id: profile.id,
@@ -127,7 +134,22 @@ function DatingPageContent() {
             ? profile.photos
             : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
         isVerified: profile.isVerified || false,
-        isLiked: likedProfiles.has(profile.id),
+        isLiked: likedProfiles.has(profile.id) || matchedProfileIds.has(profile.id),
+        tags: profile.interests || [],
+    }))
+
+    // Transform matches to ProfileData format
+    const matchProfiles: ProfileData[] = safeMatches.map((profile: DatingProfile) => ({
+        id: profile.id,
+        name: getDisplayName(profile),
+        age: profile.age || calculateAge(profile.dateOfBirth),
+        distance: 0,
+        bio: profile.bio || '',
+        photos: profile.photos && profile.photos.length > 0
+            ? profile.photos
+            : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
+        isVerified: profile.isVerified || false,
+        isLiked: true, // All matches are liked
         tags: profile.interests || [],
     }))
 
@@ -182,18 +204,19 @@ function DatingPageContent() {
         setIsFilterOpen(false)
     }
 
-    const filteredProfiles = profiles.filter(profile => {
+    // Use matchProfiles when in matches view, otherwise use all profiles
+    const profilesToShow = activeView === 'matches' ? matchProfiles : profiles
+
+    const filteredProfiles = profilesToShow.filter(profile => {
         const matchesSearch =
             profile.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             profile.tags?.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
             profile.bio?.toLowerCase().includes(searchQuery.toLowerCase())
 
-        const matchesView = activeView === 'all' || (activeView === 'matches' && profile.isLiked)
-
-        return matchesSearch && matchesView
+        return matchesSearch
     })
 
-    const matchCount = likedProfiles.size
+    const matchCount = safeMatches.length
 
     // Show subscription banner for users without access (but don't block the page)
     const SubscriptionBanner = () => {
@@ -245,18 +268,35 @@ function DatingPageContent() {
                     <div className="flex justify-between items-center mb-3">
                         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dating</h1>
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                             <Link
-                                href="/chat"
+                                href="/dating/suggested"
+                                className="px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 font-medium transition-colors flex items-center gap-2"
+                            >
+                                <Sparkles className="w-4 h-4" />
+                                <span className="hidden md:inline">AI Picks</span>
+                                <span className="md:hidden">AI</span>
+                            </Link>
+
+                            <Link
+                                href="/dating/activity"
                                 className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2 relative"
                             >
-                                <MessageCircle className="w-4 h-4" />
-                                <span className="hidden md:inline">Messages</span>
+                                <Gift className="w-4 h-4" />
+                                <span className="hidden md:inline">Activity</span>
                                 {matchCount > 0 && (
                                     <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                                         {matchCount}
                                     </span>
                                 )}
+                            </Link>
+
+                            <Link
+                                href="/chat"
+                                className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2"
+                            >
+                                <MessageCircle className="w-4 h-4" />
+                                <span className="hidden md:inline">Messages</span>
                             </Link>
 
                             <button
@@ -457,7 +497,7 @@ function DatingPageContent() {
             <main className="p-4 max-w-7xl mx-auto">
                 <CompactReferralBanner />
 
-                {isLoading ? (
+                {(isLoading || (activeView === 'matches' && matchesLoading)) ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {[...Array(6)].map((_, index) => (
                             <div key={index} className="w-full">

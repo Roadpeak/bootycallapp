@@ -424,6 +424,146 @@ export const useMyDatingProfile = (): UseMyDatingProfileReturn => {
     return { profile, loading, error, updateProfile, refetch: fetchProfile };
 };
 
+interface UseDatingMatchesReturn {
+    matches: DatingProfile[];
+    loading: boolean;
+    error: string | null;
+    refetch: () => Promise<void>;
+}
+
+export const useDatingMatches = (): UseDatingMatchesReturn => {
+    const [matches, setMatches] = useState<DatingProfile[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchMatches = async () => {
+        try {
+            setLoading(true);
+            const response = await ButicalAPI.datingProfiles.getMatches();
+            const matchesData = (response.data as any)?.data || response.data;
+            setMatches(Array.isArray(matchesData) ? matchesData : []);
+            setError(null);
+        } catch (err: any) {
+            console.error('Failed to fetch matches:', err);
+            setError(err.response?.data?.message || err.message || 'Failed to fetch matches');
+            setMatches([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchMatches();
+    }, []);
+
+    return { matches, loading, error, refetch: fetchMatches };
+};
+
+interface UseDatingLikesReturn {
+    likes: DatingProfile[];
+    loading: boolean;
+    error: string | null;
+    refetch: () => Promise<void>;
+}
+
+export const useDatingLikes = (): UseDatingLikesReturn => {
+    const [likes, setLikes] = useState<DatingProfile[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchLikes = async () => {
+        try {
+            setLoading(true);
+            const response = await ButicalAPI.datingProfiles.getLikes();
+            const likesData = (response.data as any)?.data || response.data;
+            setLikes(Array.isArray(likesData) ? likesData : []);
+            setError(null);
+        } catch (err: any) {
+            console.error('Failed to fetch likes:', err);
+            setError(err.response?.data?.message || err.message || 'Failed to fetch likes');
+            setLikes([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchLikes();
+    }, []);
+
+    return { likes, loading, error, refetch: fetchLikes };
+};
+
+interface UseDatingLikedByReturn {
+    likedBy: DatingProfile[];
+    loading: boolean;
+    error: string | null;
+    refetch: () => Promise<void>;
+}
+
+export const useDatingLikedBy = (): UseDatingLikedByReturn => {
+    const [likedBy, setLikedBy] = useState<DatingProfile[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchLikedBy = async () => {
+        try {
+            setLoading(true);
+            const response = await ButicalAPI.datingProfiles.getLikedBy();
+            const likedByData = (response.data as any)?.data || response.data;
+            setLikedBy(Array.isArray(likedByData) ? likedByData : []);
+            setError(null);
+        } catch (err: any) {
+            console.error('Failed to fetch liked by:', err);
+            setError(err.response?.data?.message || err.message || 'Failed to fetch liked by');
+            setLikedBy([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchLikedBy();
+    }, []);
+
+    return { likedBy, loading, error, refetch: fetchLikedBy };
+};
+
+interface UseDatingSuggestedReturn {
+    suggested: DatingProfile[];
+    loading: boolean;
+    error: string | null;
+    refetch: () => Promise<void>;
+}
+
+export const useDatingSuggested = (limit: number = 20): UseDatingSuggestedReturn => {
+    const [suggested, setSuggested] = useState<DatingProfile[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchSuggested = async () => {
+        try {
+            setLoading(true);
+            const response = await ButicalAPI.datingProfiles.getSuggested({ limit });
+            const suggestedData = (response.data as any)?.data || response.data;
+            setSuggested(Array.isArray(suggestedData) ? suggestedData : []);
+            setError(null);
+        } catch (err: any) {
+            console.error('Failed to fetch suggested profiles:', err);
+            setError(err.response?.data?.message || err.message || 'Failed to fetch suggestions');
+            setSuggested([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchSuggested();
+    }, [limit]);
+
+    return { suggested, loading, error, refetch: fetchSuggested };
+};
+
 // ==================== PAYMENTS HOOKS ====================
 
 interface UsePaymentReturn {

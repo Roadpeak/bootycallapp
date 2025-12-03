@@ -682,6 +682,8 @@ const ButicalAPI = {
         getLikeStatus: (profileId: string) => apiClient.get<ApiResponseWrapper<{ liked: boolean; matched: boolean }>>(`/dating-profiles/${profileId}/like-status`),
         getMatches: () => apiClient.get<ApiResponseWrapper<DatingProfile[]>>('/dating-profiles/matches'),
         getLikes: () => apiClient.get<ApiResponseWrapper<DatingProfile[]>>('/dating-profiles/likes'),
+        getLikedBy: () => apiClient.get<ApiResponseWrapper<DatingProfile[]>>('/dating-profiles/liked-by'),
+        getSuggested: (params?: { limit?: number }) => apiClient.get<ApiResponseWrapper<DatingProfile[]>>('/dating-likes/suggested', { params }),
     },
 
     // HOOKUP PROFILES
