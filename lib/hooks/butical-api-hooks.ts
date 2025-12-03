@@ -445,7 +445,11 @@ export const useDatingMatches = (): UseDatingMatchesReturn => {
             setError(null);
         } catch (err: any) {
             console.error('Failed to fetch matches:', err);
-            setError(err.response?.data?.message || err.message || 'Failed to fetch matches');
+            // Don't set error for 503 or 404 - these mean endpoint not implemented yet
+            const status = err.response?.status;
+            if (status !== 503 && status !== 404) {
+                setError(err.response?.data?.message || err.message || 'Failed to fetch matches');
+            }
             setMatches([]);
         } finally {
             setLoading(false);
@@ -480,7 +484,11 @@ export const useDatingLikes = (): UseDatingLikesReturn => {
             setError(null);
         } catch (err: any) {
             console.error('Failed to fetch likes:', err);
-            setError(err.response?.data?.message || err.message || 'Failed to fetch likes');
+            // Don't set error for 503 or 404 - these mean endpoint not implemented yet
+            const status = err.response?.status;
+            if (status !== 503 && status !== 404) {
+                setError(err.response?.data?.message || err.message || 'Failed to fetch likes');
+            }
             setLikes([]);
         } finally {
             setLoading(false);
@@ -515,7 +523,11 @@ export const useDatingLikedBy = (): UseDatingLikedByReturn => {
             setError(null);
         } catch (err: any) {
             console.error('Failed to fetch liked by:', err);
-            setError(err.response?.data?.message || err.message || 'Failed to fetch liked by');
+            // Don't set error for 503 or 404 - these mean endpoint not implemented yet
+            const status = err.response?.status;
+            if (status !== 503 && status !== 404) {
+                setError(err.response?.data?.message || err.message || 'Failed to fetch liked by');
+            }
             setLikedBy([]);
         } finally {
             setLoading(false);
@@ -550,7 +562,11 @@ export const useDatingSuggested = (limit: number = 20): UseDatingSuggestedReturn
             setError(null);
         } catch (err: any) {
             console.error('Failed to fetch suggested profiles:', err);
-            setError(err.response?.data?.message || err.message || 'Failed to fetch suggestions');
+            // Don't set error for 503 or 404 - these mean endpoint not implemented yet
+            const status = err.response?.status;
+            if (status !== 503 && status !== 404) {
+                setError(err.response?.data?.message || err.message || 'Failed to fetch suggestions');
+            }
             setSuggested([]);
         } finally {
             setLoading(false);

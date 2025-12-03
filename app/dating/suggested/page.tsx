@@ -135,24 +135,66 @@ export default function SuggestedProfilesPage() {
 
             {/* Content */}
             <main className="p-4 max-w-7xl mx-auto">
-                {/* Info Banner */}
-                <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg">
-                    <div className="flex items-start gap-3">
-                        <Sparkles className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <h3 className="font-semibold text-purple-900 mb-1">How AI Suggestions Work</h3>
-                            <p className="text-purple-800 text-sm">
-                                Our AI analyzes your profile and preferences to suggest highly compatible matches based on:
-                            </p>
-                            <ul className="mt-2 text-purple-700 text-sm space-y-1 ml-4">
-                                <li>• Gender & orientation compatibility (40 points)</li>
-                                <li>• Age range preferences (30 points)</li>
-                                <li>• Sexual orientation match (20 points)</li>
-                                <li>• Shared interests & hobbies (10 points)</li>
-                            </ul>
+                {/* Coming Soon Banner - Show when no data and no loading */}
+                {!loading && profiles.length === 0 && !error && (
+                    <div className="mb-6 p-6 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg">
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                <Sparkles className="w-6 h-6 text-yellow-600" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-lg font-bold text-yellow-900 mb-2">
+                                    AI Suggestions Coming Soon!
+                                </h3>
+                                <p className="text-yellow-700 text-sm mb-3">
+                                    The backend API for AI-powered profile suggestions is being implemented.
+                                    Once ready, you'll get personalized matches based on:
+                                </p>
+                                <ul className="text-yellow-600 text-sm space-y-1 ml-4">
+                                    <li>• Gender & orientation compatibility (40 points)</li>
+                                    <li>• Age range preferences (30 points)</li>
+                                    <li>• Sexual orientation match (20 points)</li>
+                                    <li>• Shared interests & hobbies (10 points)</li>
+                                </ul>
+                                <div className="mt-4 flex gap-3">
+                                    <Link
+                                        href="/dating"
+                                        className="inline-block px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 font-medium transition-colors text-sm"
+                                    >
+                                        Browse All Profiles
+                                    </Link>
+                                    <Link
+                                        href="/profile/dating"
+                                        className="inline-block px-4 py-2 border border-yellow-600 text-yellow-700 rounded-lg hover:bg-yellow-50 font-medium transition-colors text-sm"
+                                    >
+                                        Update Profile
+                                    </Link>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
+
+                {/* Info Banner */}
+                {profiles.length > 0 && (
+                    <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg">
+                        <div className="flex items-start gap-3">
+                            <Sparkles className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <h3 className="font-semibold text-purple-900 mb-1">How AI Suggestions Work</h3>
+                                <p className="text-purple-800 text-sm">
+                                    Our AI analyzes your profile and preferences to suggest highly compatible matches based on:
+                                </p>
+                                <ul className="mt-2 text-purple-700 text-sm space-y-1 ml-4">
+                                    <li>• Gender & orientation compatibility (40 points)</li>
+                                    <li>• Age range preferences (30 points)</li>
+                                    <li>• Sexual orientation match (20 points)</li>
+                                    <li>• Shared interests & hobbies (10 points)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Error Message */}
                 {error && (

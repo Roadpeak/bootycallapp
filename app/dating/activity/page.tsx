@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Heart, Users, Eye, Loader2, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Heart, Users, Eye, Loader2, AlertCircle, Sparkles } from 'lucide-react'
 import { DatingCard } from '@/app/components/cards/DatingCard'
 import type { ProfileData } from '@/app/components/cards/EscortCard'
 import type { DatingProfile } from '@/services/butical-api-service'
@@ -180,14 +180,49 @@ export default function DatingActivityPage() {
 
             {/* Content */}
             <main className="p-4 max-w-7xl mx-auto">
+                {/* Coming Soon Banner - Show when no data and no loading */}
+                {!loading && profiles.length === 0 && !error && (
+                    <div className="mb-6 p-6 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg">
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                <Sparkles className="w-6 h-6 text-purple-600" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-lg font-bold text-purple-900 mb-2">
+                                    Feature Coming Soon!
+                                </h3>
+                                <p className="text-purple-700 text-sm mb-3">
+                                    The backend API endpoints for dating activity (matches, likes, and liked-by) are being implemented.
+                                    In the meantime, you can:
+                                </p>
+                                <ul className="text-purple-600 text-sm space-y-1 ml-4">
+                                    <li>• Browse and like profiles on the main dating page</li>
+                                    <li>• Chat with other users</li>
+                                    <li>• Complete your dating profile</li>
+                                </ul>
+                                <div className="mt-4">
+                                    <Link
+                                        href="/dating"
+                                        className="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors text-sm"
+                                    >
+                                        Browse Profiles
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Info Banner */}
-                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-blue-800 text-sm">
-                        {activeTab === 'matches' && '💕 These are profiles where you both liked each other!'}
-                        {activeTab === 'likes' && '❤️ Profiles you have liked. If they like you back, you\'ll get a match!'}
-                        {activeTab === 'liked-by' && '👀 These profiles liked you! Like them back to create a match.'}
-                    </p>
-                </div>
+                {profiles.length > 0 && (
+                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-blue-800 text-sm">
+                            {activeTab === 'matches' && '💕 These are profiles where you both liked each other!'}
+                            {activeTab === 'likes' && '❤️ Profiles you have liked. If they like you back, you\'ll get a match!'}
+                            {activeTab === 'liked-by' && '👀 These profiles liked you! Like them back to create a match.'}
+                        </p>
+                    </div>
+                )}
 
                 {/* Error Message */}
                 {error && (
