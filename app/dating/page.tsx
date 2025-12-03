@@ -92,7 +92,7 @@ function DatingPageContent() {
     })
 
     // Fetch matches from API
-    const { matches: apiMatches, loading: matchesLoading } = useDatingMatches()
+    const { matches: apiMatches, loading: matchesLoading, refetch: refetchMatches } = useDatingMatches()
 
     // Fetch likes from API to track liked profiles
     const { likes: apiLikes, refetch: refetchLikes } = useDatingLikes()
@@ -220,6 +220,8 @@ function DatingPageContent() {
                         setNewMatch(match)
                         setShowMatchModal(true)
                     }
+                    // Refetch matches when a new match is created
+                    await refetchMatches()
                 }
 
                 // Refetch likes from API to sync state

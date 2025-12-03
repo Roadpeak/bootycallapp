@@ -73,7 +73,15 @@ export default function DatingActivityPage() {
             // For "liked-by" tab, we want to like them back (creating a match)
             // For other tabs, toggle the like status
             if (activeTab === 'liked-by') {
-                await ButicalAPI.datingProfiles.like(profileId)
+                const response = await ButicalAPI.datingProfiles.like(profileId)
+                // Check if it created a match
+                const responseData = (response.data as any)?.data || response.data
+                const matched = responseData?.matched || false
+                console.log('Like back response:', { profileId, matched, responseData })
+
+                // Always refetch matches when liking back (might create a match)
+                await refetchMatches()
+                await refetchLikedBy()
             } else {
                 // Check current profile data to see if liked
                 const currentProfile = data?.find((p: DatingProfile) => p.id === profileId)
@@ -81,7 +89,16 @@ export default function DatingActivityPage() {
                     // Toggle like status
                     await ButicalAPI.datingProfiles.unlike(profileId)
                 } else {
-                    await ButicalAPI.datingProfiles.like(profileId)
+                    const response = await ButicalAPI.datingProfiles.like(profileId)
+                    // Check if it created a match
+                    const responseData = (response.data as any)?.data || response.data
+                    const matched = responseData?.matched || false
+                    console.log('Like response:', { profileId, matched, responseData })
+
+                    if (matched) {
+                        // Refetch matches when a new match is created
+                        await refetchMatches()
+                    }
                 }
             }
 
@@ -91,7 +108,7 @@ export default function DatingActivityPage() {
             } else if (activeTab === 'likes') {
                 await refetchLikes()
             } else if (activeTab === 'liked-by') {
-                await refetchLikedBy()
+                // Already refetched above
             }
         } catch (error: any) {
             console.error('Failed to like/unlike profile:', error)
