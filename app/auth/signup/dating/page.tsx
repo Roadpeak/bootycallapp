@@ -104,6 +104,15 @@ function DatingSignupPageContent() {
         setPhotos(prev => prev.filter((_, i) => i !== index))
     }
 
+    // Convert phone number from 07... to 254...
+    const convertPhoneTo254 = (phone: string): string => {
+        const cleanedPhone = phone.replace(/\s+/g, '')
+        if (cleanedPhone.startsWith('0')) {
+            return '254' + cleanedPhone.substring(1)
+        }
+        return cleanedPhone
+    }
+
     // Convert files to base64
     const convertFilesToBase64 = async (files: File[]): Promise<string[]> => {
         const promises = files.map(file => {
@@ -157,7 +166,7 @@ function DatingSignupPageContent() {
             // Prepare registration data
             const registrationData: DatingUserRegistration = {
                 email: formData.email.trim(),
-                phone: formData.phone.replace(/\s+/g, ''), // Remove spaces
+                phone: convertPhoneTo254(formData.phone),
                 password: formData.password,
                 firstName: formData.firstName.trim(),
                 lastName: formData.lastName.trim(),
@@ -215,11 +224,11 @@ function DatingSignupPageContent() {
         setPaymentStatus('pending')
 
         try {
-            const phoneNumber = (mpesaPhone || formData.phone).replace(/\s+/g, '')
+            const phoneNumber = convertPhoneTo254(mpesaPhone || formData.phone)
 
             // Validate phone format (254XXXXXXXXX)
             if (!/^254\d{9}$/.test(phoneNumber)) {
-                throw new Error('Invalid phone format. Use 254XXXXXXXXX')
+                throw new Error('Invalid phone format. Use 07XXXXXXXX or 254XXXXXXXXX')
             }
 
             console.log('Initiating M-Pesa payment for phone:', phoneNumber)
@@ -483,10 +492,10 @@ function DatingSignupPageContent() {
                                     value={formData.phone}
                                     onChange={handleInputChange}
                                     required
-                                    placeholder="254712345678"
+                                    placeholder="0712345678"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">Format: 254XXXXXXXXX</p>
+                                <p className="text-xs text-gray-500 mt-1">Format: 07XXXXXXXX</p>
                             </div>
 
                             <div>
@@ -639,7 +648,7 @@ function DatingSignupPageContent() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        City *
+                                        City / Location *
                                     </label>
                                     <input
                                         type="text"
@@ -874,11 +883,11 @@ function DatingSignupPageContent() {
                                             type="tel"
                                             value={mpesaPhone || formData.phone}
                                             onChange={(e) => setMpesaPhone(e.target.value)}
-                                            placeholder="254712345678"
+                                            placeholder="0712345678"
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                         />
                                         <p className="text-xs text-gray-500 mt-1">
-                                            You will receive an M-Pesa STK push on this number
+                                            You will receive an M-Pesa STK push on this number (Format: 07XXXXXXXX)
                                         </p>
                                     </div>
                                 </div>

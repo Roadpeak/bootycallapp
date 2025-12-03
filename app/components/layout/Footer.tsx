@@ -24,25 +24,31 @@ const Footer = () => {
                         </p>
                         <div className="flex space-x-4">
                             <a
-                                href="#"
+                                href="https://www.instagram.com/otter.3458179?igsh=MWNibmoyeXEwbzBjbw=="
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="w-9 h-9 rounded-full bg-gray-800 hover:bg-pink-500 flex items-center justify-center transition-colors"
                             >
                                 <Instagram className="w-4 h-4" />
                             </a>
                             <a
-                                href="#"
+                                href="https://www.facebook.com/profile.php?id=61584251378179"
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="w-9 h-9 rounded-full bg-gray-800 hover:bg-pink-500 flex items-center justify-center transition-colors"
                             >
                                 <Facebook className="w-4 h-4" />
                             </a>
                             <a
-                                href="#"
+                                href="https://x.com/LoveBiteGlobal?t=N-M-GhiFoWCkrUkZ_e7NXA&s=09"
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="w-9 h-9 rounded-full bg-gray-800 hover:bg-pink-500 flex items-center justify-center transition-colors"
                             >
                                 <Twitter className="w-4 h-4" />
                             </a>
                             <a
-                                href="https://t.me/lovebiteglobal"
+                                href="https://t.me/+hxnqx5tj6FNmY2U0"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="w-9 h-9 rounded-full bg-gray-800 hover:bg-pink-500 flex items-center justify-center transition-colors"
@@ -50,7 +56,7 @@ const Footer = () => {
                                 <Send className="w-4 h-4" />
                             </a>
                             <a
-                                href="https://www.tiktok.com/@lovebiteglobal"
+                                href="https://www.tiktok.com/@lovebiteglobal?_r=1&_t=ZM-91n1AOVYMJv"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="w-9 h-9 rounded-full bg-gray-800 hover:bg-pink-500 flex items-center justify-center transition-colors"

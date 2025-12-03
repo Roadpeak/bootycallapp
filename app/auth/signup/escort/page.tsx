@@ -151,6 +151,15 @@ function EscortSignupPageContent() {
         setPhotos(prev => prev.filter((_, i) => i !== index))
     }
 
+    // Convert phone number from 07... to 254...
+    const convertPhoneTo254 = (phone: string): string => {
+        const cleanedPhone = phone.replace(/\s+/g, '')
+        if (cleanedPhone.startsWith('0')) {
+            return '254' + cleanedPhone.substring(1)
+        }
+        return cleanedPhone
+    }
+
     // Convert files to base64
     const convertFilesToBase64 = async (files: File[]): Promise<string[]> => {
         const promises = files.map(file => {
@@ -207,12 +216,12 @@ function EscortSignupPageContent() {
             // Prepare registration data
             const registrationData: EscortRegistration = {
                 email: formData.email.trim(),
-                phone: formData.phone.replace(/\s+/g, ''),
+                phone: convertPhoneTo254(formData.phone),
                 password: formData.password,
                 firstName: formData.firstName.trim(),
                 lastName: formData.lastName.trim(),
                 role: 'ESCORT',
-                contactPhone: formData.contactPhone.replace(/\s+/g, ''),
+                contactPhone: convertPhoneTo254(formData.contactPhone),
                 about: formData.description.trim(),
                 languages: formData.languages,
                 termsAccepted: formData.termsAccepted,
@@ -264,11 +273,11 @@ function EscortSignupPageContent() {
         setPaymentStatus('pending')
 
         try {
-            const phoneNumber = (formData.mpesaPhone || formData.phone).replace(/\s+/g, '')
+            const phoneNumber = convertPhoneTo254(formData.mpesaPhone || formData.phone)
 
             // Validate phone format (254XXXXXXXXX)
             if (!/^254\d{9}$/.test(phoneNumber)) {
-                throw new Error('Invalid phone format. Use 254XXXXXXXXX')
+                throw new Error('Invalid phone format. Use 07XXXXXXXX or 254XXXXXXXXX')
             }
 
             console.log('Initiating M-Pesa VIP payment for phone:', phoneNumber)
@@ -529,10 +538,10 @@ function EscortSignupPageContent() {
                                     value={formData.phone}
                                     onChange={handleInputChange}
                                     required
-                                    placeholder="254712345678"
+                                    placeholder="0712345678"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">For account verification</p>
+                                <p className="text-xs text-gray-500 mt-1">For account verification (Format: 07XXXXXXXX)</p>
                             </div>
 
                             <div>
@@ -545,10 +554,10 @@ function EscortSignupPageContent() {
                                     value={formData.contactPhone}
                                     onChange={handleInputChange}
                                     required
-                                    placeholder="254712345678"
+                                    placeholder="0712345678"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">Clients will see this number after unlock</p>
+                                <p className="text-xs text-gray-500 mt-1">Clients will see this number after unlock (Format: 07XXXXXXXX)</p>
                             </div>
 
                             <div>
@@ -890,11 +899,11 @@ function EscortSignupPageContent() {
                                             name="mpesaPhone"
                                             value={formData.mpesaPhone || formData.phone}
                                             onChange={handleInputChange}
-                                            placeholder="254712345678"
+                                            placeholder="0712345678"
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                         />
                                         <p className="text-xs text-gray-500 mt-1">
-                                            You will receive an M-Pesa STK push on this number
+                                            You will receive an M-Pesa STK push on this number (Format: 07XXXXXXXX)
                                         </p>
                                     </div>
                                 </div>
