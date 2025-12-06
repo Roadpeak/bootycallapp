@@ -133,7 +133,7 @@ export default function EscortViewPage() {
     // - VIP/verified escorts are always unlocked
     // - Dating users get free access to all escort contacts
     // - Other users must pay the unlock fee (KSh 150)
-    const isContactUnlocked = isUnlocked || isEscortVerified || !escort.contactHidden || hasDatingAccess
+    const isContactUnlocked = isUnlocked || isEscortVerified || hasDatingAccess
 
     // Get display values
     const displayName = getDisplayName(escort)
