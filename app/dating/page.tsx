@@ -13,6 +13,7 @@ import type { MatchNotification } from '../components/types/chat'
 import { useDatingProfiles, useDatingMatches, useDatingLikes, useDatingLikedBy, useSubscription, useAuth } from '@/lib/hooks/butical-api-hooks'
 import type { DatingProfile } from '@/services/butical-api-service'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
+import ChatService from '@/services/chat-service'
 
 // All 47 counties in Kenya
 const kenyanCounties = [
@@ -53,6 +54,7 @@ function DatingPageContent() {
     const [showMatchModal, setShowMatchModal] = useState(false)
     const [newMatch, setNewMatch] = useState<MatchNotification | null>(null)
     const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set())
+    const [unreadMessageCount, setUnreadMessageCount] = useState(0)
     const [selectedLocation, setSelectedLocation] = useState('Nairobi')
     const [filters, setFilters] = useState({
         location: 'Nairobi',
@@ -111,6 +113,24 @@ function DatingPageContent() {
         const likedIds = new Set(safeLikes.map(profile => profile.id))
         setLikedProfiles(likedIds)
     }, [safeLikes])
+
+    // Fetch unread message count
+    useEffect(() => {
+        const fetchUnreadCount = async () => {
+            try {
+                const conversations = await ChatService.getConversations()
+                const totalUnread = conversations.reduce((sum, conv) => sum + conv.unreadCount, 0)
+                setUnreadMessageCount(totalUnread)
+            } catch (err) {
+                console.error('Failed to fetch unread message count:', err)
+            }
+        }
+
+        fetchUnreadCount()
+        // Refresh every 30 seconds
+        const interval = setInterval(fetchUnreadCount, 30000)
+        return () => clearInterval(interval)
+    }, [])
 
     // Helper to get display name from dating profile
     const getDisplayName = (profile: DatingProfile): string => {
@@ -351,22 +371,11 @@ function DatingPageContent() {
             {/* Header */}
             <header className="sticky top-0 z-10 bg-white border-b border-gray-200 p-4">
                 <div className="max-w-7xl mx-auto">
-                    <div className="flex flex-col gap-3">
-                        <div className="flex justify-between items-center">
-                            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dating</h1>
-                        </div>
+                    <div className="flex justify-between items-center">
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dating</h1>
 
-                        {/* Action Buttons - Properly spaced for mobile */}
-                        <div className="flex gap-2 overflow-x-auto pb-1">
-                            <Link
-                                href="/dating/suggested"
-                                className="flex-shrink-0 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 font-medium transition-colors flex items-center gap-2"
-                            >
-                                <Sparkles className="w-4 h-4" />
-                                <span className="hidden sm:inline">AI Picks</span>
-                                <span className="sm:hidden">AI</span>
-                            </Link>
-
+                        {/* Action Buttons - Aligned with title */}
+                        <div className="flex gap-2">
                             <Link
                                 href="/dating/activity"
                                 className="flex-shrink-0 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2 relative"
@@ -632,10 +641,14 @@ function DatingPageContent() {
                 )}
             </main>
 
-            {showMatchModal && newMatch && (
+            {newMatch && (
                 <MatchNotificationModal
+                    show={showMatchModal}
                     match={newMatch}
-                    onClose={() => setShowMatchModal(false)}
+                    onClose={() => {
+                        setShowMatchModal(false)
+                        setNewMatch(null)
+                    }}
                     onSendMessage={() => {
                         setShowMatchModal(false)
                         window.location.href = `/chat/${newMatch.matchedUser.id}`
@@ -646,7 +659,7 @@ function DatingPageContent() {
             {/* Mobile Bottom Navigation */}
             <MobileBottomNav
                 matchCount={matchCount}
-                messageCount={0}
+                messageCount={unreadMessageCount}
             />
         </div>
     )

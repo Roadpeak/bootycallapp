@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Heart, Users, Eye, Loader2, AlertCircle, Sparkles } from 'lucide-react'
 import { DatingCard } from '@/app/components/cards/DatingCard'
+import { MatchNotificationModal } from '@/app/components/common/MatchNotificationModal'
 import type { ProfileData } from '@/app/components/cards/EscortCard'
+import type { MatchNotification } from '@/app/components/types/chat'
 import type { DatingProfile } from '@/services/butical-api-service'
 import { useDatingMatches, useDatingLikes, useDatingLikedBy, useAuth, useSubscription } from '@/lib/hooks/butical-api-hooks'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
@@ -17,6 +19,8 @@ export default function DatingActivityPage() {
     const [activeTab, setActiveTab] = useState<ActivityTab>('matches')
     const { user } = useAuth()
     const { hasDatingAccess } = useSubscription()
+    const [showMatchModal, setShowMatchModal] = useState(false)
+    const [newMatch, setNewMatch] = useState<MatchNotification | null>(null)
 
     // Fetch activity data
     const { matches, loading: matchesLoading, error: matchesError, refetch: refetchMatches } = useDatingMatches()
@@ -98,6 +102,26 @@ export default function DatingActivityPage() {
                 const responseData = (response.data as any)?.data || response.data
                 const matched = responseData?.matched || false
                 console.log('Like back response:', { profileId, matched, responseData })
+
+                // Show match notification if it's a match
+                if (matched) {
+                    const matchedProfile = likedBy.find(p => p.id === profileId)
+                    if (matchedProfile) {
+                        setNewMatch({
+                            id: profileId,
+                            matchedUser: {
+                                id: matchedProfile.userId || '',
+                                name: getDisplayName(matchedProfile),
+                                age: matchedProfile.age || calculateAge(matchedProfile.dateOfBirth),
+                                avatar: matchedProfile.photos?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80',
+                                bio: matchedProfile.bio || ''
+                            },
+                            matchedAt: new Date(),
+                            isNew: true
+                        })
+                        setShowMatchModal(true)
+                    }
+                }
 
                 // Always refetch matches when liking back (might create a match)
                 await refetchMatches()
@@ -183,6 +207,24 @@ export default function DatingActivityPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
+            {/* Match Notification Modal */}
+            {newMatch && (
+                <MatchNotificationModal
+                    show={showMatchModal}
+                    match={newMatch}
+                    onClose={() => {
+                        setShowMatchModal(false)
+                        setNewMatch(null)
+                    }}
+                    onSendMessage={() => {
+                        setShowMatchModal(false)
+                        if (newMatch.matchedUser.id) {
+                            router.push(`/chat/${newMatch.matchedUser.id}`)
+                        }
+                    }}
+                />
+            )}
+
             {/* Header */}
             <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
                 <div className="max-w-7xl mx-auto px-4 py-4">

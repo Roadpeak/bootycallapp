@@ -7,15 +7,19 @@ import type { MatchNotification } from '../types/chat'
 
 interface MatchNotificationModalProps {
     match: MatchNotification
+    show: boolean
     onClose: () => void
     onSendMessage: () => void
 }
 
 export const MatchNotificationModal = ({
     match,
+    show,
     onClose,
     onSendMessage
 }: MatchNotificationModalProps) => {
+    if (!show) return null
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="bg-white rounded-2xl max-w-md w-full p-6 relative animate-in fade-in zoom-in duration-300">
