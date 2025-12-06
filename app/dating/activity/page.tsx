@@ -97,30 +97,32 @@ export default function DatingActivityPage() {
             // For "liked-by" tab, we want to like them back (creating a match)
             // For other tabs, toggle the like status
             if (activeTab === 'liked-by') {
+                // Get profile info before API call
+                const matchedProfile = likedBy.find(p => p.id === profileId)
+
                 const response = await ButicalAPI.datingProfiles.like(profileId)
                 // Check if it created a match
                 const responseData = (response.data as any)?.data || response.data
                 const matched = responseData?.matched || false
                 console.log('Like back response:', { profileId, matched, responseData })
 
-                // Show match notification if it's a match
-                if (matched) {
-                    const matchedProfile = likedBy.find(p => p.id === profileId)
-                    if (matchedProfile) {
-                        setNewMatch({
-                            id: profileId,
-                            matchedUser: {
-                                id: matchedProfile.userId || '',
-                                name: getDisplayName(matchedProfile),
-                                age: matchedProfile.age || calculateAge(matchedProfile.dateOfBirth),
-                                avatar: matchedProfile.photos?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80',
-                                bio: matchedProfile.bio || ''
-                            },
-                            matchedAt: new Date(),
-                            isNew: true
-                        })
-                        setShowMatchModal(true)
-                    }
+                // Show match notification - if they're in liked-by tab, it's always a match when we like back
+                // We show the modal regardless of backend response since we know it's a match
+                if (matchedProfile) {
+                    setNewMatch({
+                        id: profileId,
+                        matchedUser: {
+                            id: matchedProfile.userId || '',
+                            name: getDisplayName(matchedProfile),
+                            age: matchedProfile.age || calculateAge(matchedProfile.dateOfBirth),
+                            avatar: matchedProfile.photos?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80',
+                            bio: matchedProfile.bio || ''
+                        },
+                        matchedAt: new Date(),
+                        isNew: true
+                    })
+                    setShowMatchModal(true)
+                    console.log('Match modal triggered for profile:', profileId)
                 }
 
                 // Always refetch matches when liking back (might create a match)
