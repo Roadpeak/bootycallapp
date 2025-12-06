@@ -33,8 +33,7 @@ export interface DatingUserRegistration {
     // Optional fields
     displayName?: string
     sexualOrientation?: string
-    city?: string
-    country?: string
+    location?: DatingProfileLocation
     lookingFor?: string
     interests?: string[]
     education?: string

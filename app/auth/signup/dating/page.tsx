@@ -179,8 +179,10 @@ function DatingSignupPageContent() {
                 ageConfirmed: formData.ageConfirmed,
                 displayName: formData.displayName.trim() || undefined,
                 sexualOrientation: formData.sexualOrientation || undefined,
-                city: formData.city.trim() || undefined,
-                country: formData.country || undefined,
+                location: formData.city.trim() ? {
+                    city: formData.city.trim(),
+                    country: formData.country || 'Kenya'
+                } : undefined,
                 lookingFor: formData.lookingFor || undefined,
                 interests: formData.interests,
                 education: formData.education.trim() || undefined,

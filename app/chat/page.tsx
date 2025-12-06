@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { MessageCircle, Search, AlertCircle, Loader2 } from 'lucide-react'
 import ChatService, { Conversation } from '@/services/chat-service'
-import { TokenService } from '@/services/butical-api-service'
+import ButicalAPI, { TokenService } from '@/services/butical-api-service'
+import type { DatingProfile } from '@/services/butical-api-service'
+import { getImageUrl } from '@/lib/utils/image'
 
 const formatMessageTime = (timestamp: string) => {
     const date = new Date(timestamp)
@@ -79,6 +81,8 @@ export default function ChatPage() {
         try {
             setError(null)
             const data = await ChatService.getConversations()
+            console.log('Loaded conversations:', data)
+            console.log('First conversation participant:', data[0]?.otherParticipant)
             setConversations(data)
             setFilteredConversations(data)
         } catch (err: any) {
@@ -172,13 +176,30 @@ export default function ChatPage() {
                         {filteredConversations.map((conversation) => (
                             <Link
                                 key={conversation.id}
-                                href={`/chat/${conversation.id}`}
+                                href={`/chat/${conversation.otherParticipant.id}`}
                                 className="block bg-white hover:bg-gray-50 transition-colors"
                             >
                                 <div className="px-4 py-4 flex items-start gap-3">
                                     {/* Avatar */}
                                     <div className="flex-shrink-0">
-                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-semibold text-lg">
+                                        {conversation.otherParticipant.profilePhoto ? (
+                                            <img
+                                                src={getImageUrl(conversation.otherParticipant.profilePhoto)}
+                                                alt={conversation.otherParticipant.displayName || 'User'}
+                                                className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+                                                onError={(e) => {
+                                                    // If image fails to load, hide it and show fallback
+                                                    e.currentTarget.style.display = 'none'
+                                                    if (e.currentTarget.nextElementSibling) {
+                                                        (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex'
+                                                    }
+                                                }}
+                                            />
+                                        ) : null}
+                                        <div
+                                            className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-semibold text-lg"
+                                            style={{ display: conversation.otherParticipant.profilePhoto ? 'none' : 'flex' }}
+                                        >
                                             {conversation.otherParticipant.displayName?.charAt(0)?.toUpperCase() ||
                                                 conversation.otherParticipant.firstName?.charAt(0)?.toUpperCase() ||
                                                 '?'}

@@ -16,6 +16,7 @@ export interface ProfileData {
     // Dating specific
     isVerified?: boolean
     isLiked?: boolean
+    isMatched?: boolean
     tags?: string[]
     // Hookup/Escort specific
     rating?: number
