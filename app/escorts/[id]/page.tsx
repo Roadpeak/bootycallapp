@@ -7,7 +7,7 @@ import {
     ArrowLeft, MapPin, Star, Clock, Phone, MessageCircle,
     Crown, Check, X, Loader2, Share2, AlertCircle
 } from 'lucide-react'
-import { useEscort, usePayment } from '@/lib/hooks/butical-api-hooks'
+import { useEscort, usePayment, useAuth, useSubscription } from '@/lib/hooks/butical-api-hooks'
 import { getImageUrl, getImageUrls } from '@/lib/utils/image'
 
 export default function EscortViewPage() {
@@ -20,6 +20,10 @@ export default function EscortViewPage() {
 
     // Fetch escort data using the hook
     const { escort, loading: isLoading, error } = useEscort(params.id as string)
+
+    // Get user auth and subscription status
+    const { user } = useAuth()
+    const { hasDatingAccess } = useSubscription()
 
     // Payment hook
     const {
@@ -125,8 +129,11 @@ export default function EscortViewPage() {
     // Safe photo array with proper image URL handling
     const photos = getImageUrls(escort.photos)
 
-    // Check if contact should be unlocked (VIP profiles are always unlocked)
-    const isContactUnlocked = isUnlocked || isEscortVerified || !escort.contactHidden
+    // Check if contact should be unlocked
+    // - VIP/verified escorts are always unlocked
+    // - Dating users get free access to all escort contacts
+    // - Other users must pay the unlock fee (KSh 150)
+    const isContactUnlocked = isUnlocked || isEscortVerified || !escort.contactHidden || hasDatingAccess
 
     // Get display values
     const displayName = getDisplayName(escort)
