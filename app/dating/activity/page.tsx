@@ -215,6 +215,8 @@ export default function DatingActivityPage() {
                     onClose={() => {
                         setShowMatchModal(false)
                         setNewMatch(null)
+                        // Reload the page to show updated data
+                        window.location.reload()
                     }}
                     onSendMessage={() => {
                         setShowMatchModal(false)
