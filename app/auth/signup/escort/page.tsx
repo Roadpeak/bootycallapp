@@ -427,7 +427,7 @@ function EscortSignupPageContent() {
                             console.log(`Payment status check (${attempts + 1}/${maxAttempts}):`, status)
 
                             // API returns 'COMPLETED' not 'SUCCESS'
-                            if (status === 'COMPLETED' || status === 'SUCCESS') {
+                            if ((status as string) === 'COMPLETED' || status === 'SUCCESS') {
                                 setPaymentStatus('success')
                                 setTimeout(() => {
                                     router.push('/profile/escort')

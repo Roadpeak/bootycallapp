@@ -1,13 +1,13 @@
 // app/auth/login/page.tsx
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Heart, Eye, EyeOff, AlertCircle, X, CheckCircle } from 'lucide-react'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 
-export default function LoginPage() {
+function LoginContent() {
     const searchParams = useSearchParams()
     const [formData, setFormData] = useState({
         emailOrPhone: '',
@@ -329,5 +329,17 @@ export default function LoginPage() {
                 </div>
             </div>
         </div>
+    )
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 flex items-center justify-center">
+                <div className="animate-pulse">Loading...</div>
+            </div>
+        }>
+            <LoginContent />
+        </Suspense>
     )
 }

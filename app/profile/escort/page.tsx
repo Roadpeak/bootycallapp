@@ -327,7 +327,7 @@ export default function EscortPage() {
 
             // Add pricing if hourlyRate is set (check both locations)
             const hourlyRate = editedProfile.pricing?.hourlyRate || editedProfile.hourlyRate
-            if (hourlyRate !== undefined && hourlyRate !== '') {
+            if (hourlyRate !== undefined && hourlyRate !== null && hourlyRate !== 0) {
                 updateData.pricing = {
                     ...editedProfile.pricing,
                     hourlyRate: hourlyRate
@@ -391,9 +391,10 @@ export default function EscortPage() {
 
     const handleCancel = () => {
         setEditedProfile(profile || {})
+        const extUser = user as { gender?: string; dateOfBirth?: string } | null
         setEditedUser({
-            gender: user?.gender || '',
-            dateOfBirth: user?.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split('T')[0] : ''
+            gender: extUser?.gender || '',
+            dateOfBirth: extUser?.dateOfBirth ? new Date(extUser.dateOfBirth).toISOString().split('T')[0] : ''
         })
         setNewPhotos([])
         setPhotosToDelete([])
@@ -488,7 +489,8 @@ export default function EscortPage() {
     }
 
     // Get age from user's dateOfBirth, dob, or profile.age
-    const age = calculateAge(user?.dateOfBirth || user?.dob) || (profile as any)?.age || 0
+    const extUser = user as { dateOfBirth?: string; dob?: string } | null
+    const age = calculateAge(extUser?.dateOfBirth || extUser?.dob) || (profile as any)?.age || 0
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -733,16 +735,16 @@ export default function EscortPage() {
                                 <div>
                                     <p className="text-gray-500">Subscription Started</p>
                                     <p className="font-medium text-gray-900">
-                                        {(subscription.startDate || subscription.createdAt)
-                                            ? new Date(subscription.startDate || subscription.createdAt || '').toLocaleDateString()
+                                        {(subscription.startDate || (subscription as any).createdAt)
+                                            ? new Date(subscription.startDate || (subscription as any).createdAt || '').toLocaleDateString()
                                             : 'N/A'}
                                     </p>
                                 </div>
                                 <div>
                                     <p className="text-gray-500">Expires</p>
                                     <p className="font-medium text-gray-900">
-                                        {(subscription.expiresAt || subscription.endDate)
-                                            ? new Date(subscription.expiresAt || subscription.endDate || '').toLocaleDateString()
+                                        {(subscription.expiresAt || (subscription as any).endDate)
+                                            ? new Date(subscription.expiresAt || (subscription as any).endDate || '').toLocaleDateString()
                                             : 'N/A'}
                                     </p>
                                 </div>
@@ -906,12 +908,12 @@ export default function EscortPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                                     <div>
                                         <p className="text-sm text-gray-500 mb-1">Gender</p>
-                                        <p className="text-gray-900 font-medium capitalize">{user?.gender || 'Not set'}</p>
+                                        <p className="text-gray-900 font-medium capitalize">{(user as any)?.gender || 'Not set'}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500 mb-1">Date of Birth</p>
                                         <p className="text-gray-900 font-medium">
-                                            {user?.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString() : 'Not set'}
+                                            {(user as any)?.dateOfBirth ? new Date((user as any).dateOfBirth).toLocaleDateString() : 'Not set'}
                                             {age > 0 && ` (${age} years old)`}
                                         </p>
                                     </div>
@@ -998,7 +1000,7 @@ export default function EscortPage() {
                                                     ...prev,
                                                     pricing: {
                                                         ...prev.pricing,
-                                                        hourlyRate: e.target.value
+                                                        hourlyRate: e.target.value ? parseInt(e.target.value) : 0
                                                     }
                                                 }))
                                             }}

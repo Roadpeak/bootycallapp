@@ -96,7 +96,7 @@ export default function EscortSubscriptionPage() {
                             const status = statusResponse.data?.data || statusResponse.data
 
                             // API returns 'COMPLETED' not 'SUCCESS'
-                            if (status.status === 'COMPLETED' || status.status === 'SUCCESS') {
+                            if ((status.status as string) === 'COMPLETED' || status.status === 'SUCCESS') {
                                 clearInterval(poll)
                                 setPaymentStatus('success')
                                 setIsProcessing(false)

@@ -266,7 +266,7 @@ function DatingSignupPageContent() {
 
                             console.log(`Payment status check (${attempts + 1}/${maxAttempts}):`, status)
 
-                            if (status === 'SUCCESS' || status === 'COMPLETED') {
+                            if (status === 'SUCCESS' || (status as string) === 'COMPLETED') {
                                 setPaymentStatus('success')
                                 // Clear tokens and redirect to login for a clean login experience
                                 TokenService.clearTokens()

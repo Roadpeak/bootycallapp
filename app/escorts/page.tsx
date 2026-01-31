@@ -89,7 +89,13 @@ export default function HookupPage() {
 
     // Helper to get location string
     const getLocation = (escort: Escort): string => {
-        if (escort.location) return escort.location;
+        if (escort.location) {
+            if (typeof escort.location === 'string') return escort.location;
+            // location is an EscortLocation object
+            const loc = escort.location as { area?: string; city?: string; country?: string };
+            const parts = [loc.area, loc.city, loc.country].filter(Boolean);
+            return parts.join(', ') || 'Unknown location';
+        }
         if (escort.locations) {
             const parts = [escort.locations.area, escort.locations.city, escort.locations.country].filter(Boolean);
             return parts.join(', ') || 'Unknown location';
