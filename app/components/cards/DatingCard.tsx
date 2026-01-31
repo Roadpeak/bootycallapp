@@ -128,7 +128,7 @@ export const DatingCard: React.FC<DatingCardProps> = ({
                     <div className="flex gap-2">
                         <button
                             onClick={handleLike}
-                            className={`${isMatched ? 'flex-1' : 'w-full'} px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1 ${isLiked
+                            className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1 ${isLiked
                                 ? 'bg-pink-500 text-white'
                                 : 'border border-pink-300 text-pink-700 hover:bg-pink-50'
                                 }`}
@@ -137,16 +137,13 @@ export const DatingCard: React.FC<DatingCardProps> = ({
                             <span className="hidden lg:inline">{isLiked ? 'Liked' : 'Like'}</span>
                         </button>
 
-                        {/* Only show message button if matched */}
-                        {isMatched && (
-                            <button
-                                onClick={handleMessage}
-                                className="flex-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-                            >
-                                <MessageSquare className="w-4 h-4" />
-                                <span className="hidden lg:inline">Message</span>
-                            </button>
-                        )}
+                        <button
+                            onClick={handleMessage}
+                            className="flex-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                        >
+                            <MessageSquare className="w-4 h-4" />
+                            <span className="hidden lg:inline">Message</span>
+                        </button>
                     </div>
                 </div>
             </Link>

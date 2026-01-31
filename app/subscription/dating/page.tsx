@@ -109,7 +109,8 @@ export default function DatingSubscriptionPage() {
                             const statusResponse = await ButicalAPI.payments.getPaymentStatus(paymentData.paymentId)
                             const status = statusResponse.data?.data || statusResponse.data
 
-                            if (status.status === 'SUCCESS') {
+                            // API returns 'COMPLETED' not 'SUCCESS'
+                            if (status.status === 'COMPLETED' || status.status === 'SUCCESS') {
                                 clearInterval(poll)
                                 setPaymentStatus('success')
                                 setIsProcessing(false)

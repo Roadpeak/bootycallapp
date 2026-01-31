@@ -135,6 +135,10 @@ function DatingPageContent() {
     // Helper to get display name from dating profile
     const getDisplayName = (profile: DatingProfile): string => {
         if (profile.name) return profile.name
+        // Check for displayName/firstName at top level (from matches/likes endpoints)
+        if ((profile as any).displayName) return (profile as any).displayName
+        if ((profile as any).firstName) return (profile as any).firstName
+        // Check nested user object (from regular profiles)
         if (profile.user) {
             return profile.user.displayName || profile.user.firstName || 'Anonymous'
         }
@@ -200,23 +204,38 @@ function DatingPageContent() {
 
     // Transform matches to ProfileData format (using allMatches which includes mutual likes)
     const matchProfiles: ProfileData[] = allMatches.map((profile: DatingProfile) => {
-        // Extract location from profile
-        const location = profile.location as { city?: string; area?: string; country?: string } | undefined
+        // For matches/likes endpoints, data might be nested in datingProfile
+        const datingProfile = (profile as any).datingProfile || profile
+
+        // Extract location from profile or datingProfile
+        const location = (datingProfile.location || profile.location) as { city?: string; area?: string; country?: string } | undefined
         const cityDisplay = location?.city || location?.area || 'Location not set'
+
+        // Get photos from datingProfile or profile level
+        const photos = datingProfile.photos || profile.photos
+
+        // Get bio from datingProfile or profile level
+        const bio = datingProfile.bio || profile.bio || ''
+
+        // Get interests from datingProfile or profile level
+        const interests = datingProfile.interests || profile.interests || []
+
+        // Get dateOfBirth from datingProfile or profile level
+        const dateOfBirth = datingProfile.dateOfBirth || profile.dateOfBirth
 
         return {
             id: profile.id,
             name: getDisplayName(profile),
-            age: profile.age || calculateAge(profile.dateOfBirth),
+            age: profile.age || calculateAge(dateOfBirth),
             distance: cityDisplay,
-            bio: profile.bio || '',
-            photos: profile.photos && profile.photos.length > 0
-                ? profile.photos
+            bio: bio,
+            photos: photos && photos.length > 0
+                ? photos
                 : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
             isVerified: profile.isVerified || false,
             isLiked: true, // All matches are liked
             isMatched: true, // All matches are matched
-            tags: profile.interests || [],
+            tags: interests,
         }
     })
 

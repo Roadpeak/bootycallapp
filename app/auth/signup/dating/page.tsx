@@ -266,10 +266,12 @@ function DatingSignupPageContent() {
 
                             console.log(`Payment status check (${attempts + 1}/${maxAttempts}):`, status)
 
-                            if (status === 'SUCCESS') {
+                            if (status === 'SUCCESS' || status === 'COMPLETED') {
                                 setPaymentStatus('success')
+                                // Clear tokens and redirect to login for a clean login experience
+                                TokenService.clearTokens()
                                 setTimeout(() => {
-                                    router.push('/dating')
+                                    router.push('/auth/login?registered=true')
                                 }, 1500)
                                 return true
                             } else if (status === 'FAILED' || status === 'CANCELLED') {
@@ -314,15 +316,31 @@ function DatingSignupPageContent() {
         } catch (error: any) {
             console.error('Payment error:', error)
             setPaymentStatus('failed')
-            setError(error.response?.data?.message || error.message || 'Payment failed. You can upgrade later from your profile.')
 
-            // Still allow user to proceed after payment failure
-            setTimeout(() => {
-                router.push('/dating')
-            }, 3000)
+            // Extract detailed error message from API response
+            const errorMessage = error.response?.data?.message ||
+                               error.response?.data?.error ||
+                               error.message ||
+                               'Payment failed. Please try again.'
+
+            setError(`Payment failed: ${errorMessage}`)
+
+            // Don't clear tokens - user account exists and they can retry payment
+            // The account is inactive until payment succeeds, but tokens are still valid for retry
         } finally {
             setIsProcessing(false)
         }
+    }
+
+    // Retry payment function
+    const handleRetryPayment = async () => {
+        setError(null)
+        setPaymentStatus('idle')
+        setIsProcessing(true)
+
+        // User account already exists and tokens are still valid
+        // Just retry the payment without re-registering
+        await handlePayment()
     }
 
     const nextStep = () => {
@@ -966,9 +984,17 @@ function DatingSignupPageContent() {
                                         <p className="text-red-800 font-medium">
                                             Payment failed
                                         </p>
-                                        <p className="text-red-600 text-sm">
-                                            Please try again or contact support
+                                        <p className="text-red-600 text-sm mb-4">
+                                            {error || 'Please try again or contact support'}
                                         </p>
+                                        <button
+                                            type="button"
+                                            onClick={handleRetryPayment}
+                                            disabled={isProcessing}
+                                            className="px-6 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors disabled:opacity-50"
+                                        >
+                                            {isProcessing ? 'Processing...' : 'Try Again'}
+                                        </button>
                                     </div>
                                 )}
                             </div>

@@ -1,13 +1,14 @@
-// app/hookups/page.tsx
+// app/escorts/page.tsx
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Search, Filter, MapPin, X, Loader2, AlertCircle } from 'lucide-react'
 import { EscortCard } from '../components/cards/EscortCard'
 import type { ProfileData } from '../components/cards/EscortCard'
 import { useEscorts, usePayment } from '@/lib/hooks/butical-api-hooks'
 import type { Escort } from '@/services/butical-api-service'
+import ButicalAPI from '@/services/butical-api-service'
 
 // All 47 counties in Kenya
 const kenyanCounties = [
@@ -31,6 +32,7 @@ export default function HookupPage() {
     const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
     const [mpesaPhone, setMpesaPhone] = useState('')
     const [selectedLocation, setSelectedLocation] = useState('Nairobi')
+    const [popularLocations, setPopularLocations] = useState<{ city: string; count: number }[]>([])
     const [filters, setFilters] = useState({
         location: 'Nairobi',
         minRating: undefined as number | undefined,
@@ -38,6 +40,27 @@ export default function HookupPage() {
         minRate: undefined as number | undefined,
         maxRate: undefined as number | undefined,
     })
+
+    // Fetch popular locations on mount
+    useEffect(() => {
+        const fetchPopularLocations = async () => {
+            try {
+                const response = await ButicalAPI.escorts.getPopularLocations(10)
+                const locations = response.data?.data || []
+                if (Array.isArray(locations) && locations.length > 0) {
+                    setPopularLocations(locations)
+                    // Set initial location to the most popular one if available
+                    if (locations[0]?.city) {
+                        setSelectedLocation(locations[0].city)
+                        setFilters(prev => ({ ...prev, location: locations[0].city }))
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch popular locations:', error)
+            }
+        }
+        fetchPopularLocations()
+    }, [])
 
     // Fetch escorts using the hook
     const { escorts, loading: isLoading, error, refetch } = useEscorts({
@@ -49,6 +72,7 @@ export default function HookupPage() {
     // Payment hook
     const {
         unlockEscort,
+        checkPaymentStatus,
         loading: isProcessingPayment,
         error: paymentError
     } = usePayment()
@@ -87,12 +111,35 @@ export default function HookupPage() {
     };
 
     // Transform API data to ProfileData format
-    const profiles: ProfileData[] = safeEscorts.map((escort: Escort) => ({
+    const profiles: ProfileData[] = safeEscorts.map((escort: Escort) => {
+        // Handle location which can be string or object {city, area}
+        let locationArea = '';
+        let locationCity = 'Kenya';
+
+        if (escort.location && typeof escort.location === 'object') {
+            locationArea = escort.location.area || '';
+            locationCity = escort.location.city || 'Kenya';
+        } else if (typeof escort.location === 'string') {
+            locationArea = escort.location;
+        }
+
+        // Also check escort.locations for backward compatibility
+        if (!locationArea && escort.locations?.area) {
+            locationArea = escort.locations.area;
+        }
+        if (locationCity === 'Kenya' && escort.locations?.city) {
+            locationCity = escort.locations.city;
+        }
+        if (escort.city) {
+            locationCity = escort.city;
+        }
+
+        return {
         id: escort.id,
         name: getDisplayName(escort),
         age: calculateAge(escort.dateOfBirth),
-        location: escort.locations?.area || escort.location || '',
-        city: escort.locations?.city || escort.city || 'Kenya',
+        location: locationArea,
+        city: locationCity,
         ethnicity: escort.ethnicity,
         category: escort.category,
         bio: escort.about || '',
@@ -107,7 +154,8 @@ export default function HookupPage() {
         isUnlocked: !escort.contactHidden,
         hasDirectCall: !escort.contactHidden,
         services: escort.services || [],
-    }))
+    };
+    })
 
     // Handle unlock action
     const handleUnlock = (profileId: string) => {
@@ -139,15 +187,48 @@ export default function HookupPage() {
 
         const result = await unlockEscort(selectedProfileId, mpesaPhone)
 
-        if (result.success) {
-            alert('Payment request sent! Please check your phone for M-Pesa prompt.')
+        if (result.success && result.data?.paymentId) {
+            // STK push was sent, now poll for payment status
+            const paymentId = result.data.paymentId
+            let attempts = 0
+            const maxAttempts = 30 // Poll for up to 60 seconds (every 2 seconds)
 
-            setTimeout(() => {
-                setShowPaymentModal(false)
-                setSelectedProfileId(null)
-                setMpesaPhone('')
-                refetch()
-            }, 3000)
+            const pollPaymentStatus = async () => {
+                attempts++
+                try {
+                    const statusResult = await checkPaymentStatus(paymentId)
+                    const status = statusResult.data?.status
+
+                    if (status === 'COMPLETED') {
+                        setShowPaymentModal(false)
+                        setSelectedProfileId(null)
+                        setMpesaPhone('')
+                        alert('Payment successful! Contact unlocked.')
+                        refetch()
+                        return
+                    } else if (status === 'FAILED') {
+                        alert('Payment failed. Please try again.')
+                        return
+                    } else if (attempts < maxAttempts) {
+                        // Still pending, continue polling
+                        setTimeout(pollPaymentStatus, 2000)
+                    } else {
+                        // Timeout - payment still pending
+                        alert('Payment is still processing. Please refresh the page in a few moments to check if payment was successful.')
+                        setShowPaymentModal(false)
+                        setSelectedProfileId(null)
+                        setMpesaPhone('')
+                    }
+                } catch (err) {
+                    console.error('Error checking payment status:', err)
+                    if (attempts < maxAttempts) {
+                        setTimeout(pollPaymentStatus, 2000)
+                    }
+                }
+            }
+
+            // Start polling after a short delay to give user time to complete
+            setTimeout(pollPaymentStatus, 3000)
         } else {
             alert(result.error || 'Payment failed. Please try again.')
         }
@@ -235,7 +316,10 @@ export default function HookupPage() {
                     <div className="mt-4">
                         <h2 className="text-sm font-semibold text-gray-300 mb-3">Popular Counties</h2>
                         <div className="flex flex-wrap gap-2">
-                            {['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Kiambu', 'Eldoret'].map(county => (
+                            {(popularLocations.length > 0
+                                ? popularLocations.slice(0, 6).map(loc => loc.city)
+                                : ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Kiambu', 'Eldoret']
+                            ).map(county => (
                                 <button
                                     key={county}
                                     onClick={() => handleLocationChange(county)}

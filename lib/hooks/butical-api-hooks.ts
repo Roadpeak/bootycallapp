@@ -962,9 +962,9 @@ export const useSubscription = (): UseSubscriptionReturn => {
     const [subscription, setSubscription] = useState<Subscription | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const { user } = useAuth();
+    const [hasDatingAccess, setHasDatingAccess] = useState<boolean>(false);
 
-    const fetchSubscription = async () => {
+    const fetchSubscription = useCallback(async () => {
         try {
             setLoading(true);
             const response = await ButicalAPI.users.getSubscription();
@@ -972,23 +972,30 @@ export const useSubscription = (): UseSubscriptionReturn => {
             const subscriptionData = (response.data as any)?.data || response.data;
             setSubscription(subscriptionData);
             setError(null);
+
+            // Check if user has dating access based on subscription status
+            // The subscription endpoint returns isSubscribed and role
+            const isSubscribed = subscriptionData?.isSubscribed === true;
+            const role = subscriptionData?.role;
+            setHasDatingAccess(role === 'DATING_USER' || isSubscribed);
         } catch (err: any) {
             // If user doesn't have a subscription, that's not really an error
             setError(null);
             setSubscription(null);
+            setHasDatingAccess(false);
         } finally {
             setLoading(false);
         }
-    };
-
-    useEffect(() => {
-        fetchSubscription();
     }, []);
 
-    // Determine if user has access to dating features
-    const hasDatingAccess =
-        user?.role === 'DATING_USER' || // Dating users have access
-        (subscription?.status === 'ACTIVE' && subscription?.type === 'PREMIUM'); // Or users with active dating subscription
+    useEffect(() => {
+        // Only fetch if we have a token
+        if (TokenService.getAccessToken()) {
+            fetchSubscription();
+        } else {
+            setLoading(false);
+        }
+    }, [fetchSubscription]);
 
     return {
         subscription,

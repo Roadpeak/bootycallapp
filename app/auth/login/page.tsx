@@ -1,12 +1,14 @@
 // app/auth/login/page.tsx
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Heart, Eye, EyeOff, AlertCircle, X } from 'lucide-react'
+import { Heart, Eye, EyeOff, AlertCircle, X, CheckCircle } from 'lucide-react'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 
 export default function LoginPage() {
+    const searchParams = useSearchParams()
     const [formData, setFormData] = useState({
         emailOrPhone: '',
         password: '',
@@ -16,6 +18,14 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+    // Check for registration success message
+    useEffect(() => {
+        if (searchParams.get('registered') === 'true') {
+            setSuccessMessage('Registration successful! Please log in with your credentials.')
+        }
+    }, [searchParams])
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target
@@ -141,6 +151,22 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 flex items-center justify-center py-8 px-4">
             <div className="max-w-md w-full">
+                {/* Success Message Display */}
+                {successMessage && (
+                    <div className="mb-4">
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+                            <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-green-800 text-sm flex-1">{successMessage}</p>
+                            <button
+                                onClick={() => setSuccessMessage(null)}
+                                className="text-green-500 hover:text-green-700"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Error Display */}
                 {error && (
                     <div className="mb-4">

@@ -83,6 +83,12 @@ export default function EscortPage() {
     const [newPhotos, setNewPhotos] = useState<File[]>([])
     const [photosToDelete, setPhotosToDelete] = useState<string[]>([])
 
+    // User data editing (for gender and dateOfBirth)
+    const [editedUser, setEditedUser] = useState<{ gender?: string; dateOfBirth?: string }>({})
+
+    // Gender options
+    const genderOptions = ['Female', 'Male', 'Non-binary', 'Other']
+
     // Stats (TODO: Get from API when available)
     const [stats] = useState({
         views: 0,
@@ -127,6 +133,11 @@ export default function EscortPage() {
             const userData = unwrap<any>(userResponse.data)
             console.log('User data fetched:', userData)
             setUser(userData)
+            // Initialize edited user data
+            setEditedUser({
+                gender: userData?.gender || '',
+                dateOfBirth: userData?.dateOfBirth ? new Date(userData.dateOfBirth).toISOString().split('T')[0] : ''
+            })
 
             // The escort profile is nested inside user data as 'escort'
             const escortData = userData?.escort
@@ -147,8 +158,27 @@ export default function EscortPage() {
                 }
                 setProfile(enrichedEscort)
                 setEditedProfile(enrichedEscort)
+
+                // Derive subscription from escort's vipExpiresAt
+                if (escortData.vipStatus && escortData.vipExpiresAt) {
+                    const vipExpiry = new Date(escortData.vipExpiresAt)
+                    const isActive = vipExpiry > new Date()
+                    setSubscription({
+                        type: 'VIP',
+                        status: isActive ? 'ACTIVE' : 'EXPIRED',
+                        isSubscribed: isActive,
+                        startDate: escortData.createdAt,
+                        expiresAt: escortData.vipExpiresAt,
+                        endDate: escortData.vipExpiresAt,
+                        autoRenew: false
+                    } as Subscription)
+                } else {
+                    // No VIP subscription - try to get from subscription response
+                    setSubscription(subscriptionResponse ? unwrap(subscriptionResponse.data) : null)
+                }
+            } else {
+                setSubscription(subscriptionResponse ? unwrap(subscriptionResponse.data) : null)
             }
-            setSubscription(subscriptionResponse ? unwrap(subscriptionResponse.data) : null)
 
             // Fetch referral and wallet data
             try {
@@ -290,28 +320,37 @@ export default function EscortPage() {
                 languages: editedProfile.languages,
                 contactPhone: editedProfile.contactPhone,
                 availability: editedProfile.availability,
+                // User-level fields
+                gender: editedUser.gender,
+                dateOfBirth: editedUser.dateOfBirth,
             }
 
-            // Add pricing if hourlyRate is set
-            if (editedProfile.hourlyRate !== undefined) {
+            // Add pricing if hourlyRate is set (check both locations)
+            const hourlyRate = editedProfile.pricing?.hourlyRate || editedProfile.hourlyRate
+            if (hourlyRate !== undefined && hourlyRate !== '') {
                 updateData.pricing = {
                     ...editedProfile.pricing,
-                    hourlyRate: editedProfile.hourlyRate
+                    hourlyRate: hourlyRate
                 }
             }
 
-            // Add locations if location data exists
+            // Add location if location data exists
             if (editedProfile.location || editedProfile.locations) {
-                if (typeof editedProfile.location === 'string') {
-                    // If location is a string, parse it or use as city
-                    updateData.locations = {
-                        city: editedProfile.location,
-                        area: editedProfile.locations?.area,
-                        country: editedProfile.locations?.country
+                if (typeof editedProfile.location === 'object') {
+                    // Location is already an object with city and area
+                    updateData.location = {
+                        city: editedProfile.location?.city || '',
+                        area: editedProfile.location?.area || '',
                     }
-                } else {
-                    // If locations is already an object, use it
-                    updateData.locations = editedProfile.locations
+                } else if (typeof editedProfile.location === 'string') {
+                    // If location is a string, use it as city
+                    updateData.location = {
+                        city: editedProfile.location,
+                        area: editedProfile.locations?.area || '',
+                    }
+                } else if (editedProfile.locations) {
+                    // Fallback to locations object
+                    updateData.location = editedProfile.locations
                 }
             }
 
@@ -337,6 +376,9 @@ export default function EscortPage() {
             setPhotosToDelete([])
             setIsEditing(false)
 
+            // Refresh all data to get updated user info (gender, dateOfBirth)
+            await fetchAllData()
+
             // Show success message
             alert('Profile updated successfully!')
         } catch (err: any) {
@@ -349,6 +391,10 @@ export default function EscortPage() {
 
     const handleCancel = () => {
         setEditedProfile(profile || {})
+        setEditedUser({
+            gender: user?.gender || '',
+            dateOfBirth: user?.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split('T')[0] : ''
+        })
         setNewPhotos([])
         setPhotosToDelete([])
         setError(null)
@@ -427,8 +473,22 @@ export default function EscortPage() {
         )
     }
 
-    // Age not available in Escort type
-    const age = 0
+    // Calculate age from dateOfBirth
+    const calculateAge = (dob: string | Date | undefined | null): number => {
+        if (!dob) return 0
+        const birthDate = new Date(dob)
+        if (isNaN(birthDate.getTime())) return 0
+        const today = new Date()
+        let age = today.getFullYear() - birthDate.getFullYear()
+        const monthDiff = today.getMonth() - birthDate.getMonth()
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--
+        }
+        return age
+    }
+
+    // Get age from user's dateOfBirth, dob, or profile.age
+    const age = calculateAge(user?.dateOfBirth || user?.dob) || (profile as any)?.age || 0
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -673,13 +733,17 @@ export default function EscortPage() {
                                 <div>
                                     <p className="text-gray-500">Subscription Started</p>
                                     <p className="font-medium text-gray-900">
-                                        {subscription.startDate ? new Date(subscription.startDate).toLocaleDateString() : 'N/A'}
+                                        {(subscription.startDate || subscription.createdAt)
+                                            ? new Date(subscription.startDate || subscription.createdAt || '').toLocaleDateString()
+                                            : 'N/A'}
                                     </p>
                                 </div>
                                 <div>
                                     <p className="text-gray-500">Expires</p>
                                     <p className="font-medium text-gray-900">
-                                        {new Date(subscription.expiresAt || subscription.endDate || '').toLocaleDateString()}
+                                        {(subscription.expiresAt || subscription.endDate)
+                                            ? new Date(subscription.expiresAt || subscription.endDate || '').toLocaleDateString()
+                                            : 'N/A'}
                                     </p>
                                 </div>
                                 <div>
@@ -831,19 +895,38 @@ export default function EscortPage() {
                                     </h3>
                                     <div className="flex items-center text-gray-600 mt-1">
                                         <MapPin className="w-4 h-4 mr-1" />
-                                        <span>{profile.location}</span>
+                                        <span>
+                                            {typeof profile.location === 'object'
+                                                ? `${profile.location?.city || ''}${profile.location?.area ? `, ${profile.location.area}` : ''}`
+                                                : profile.location || profile.locations?.city || 'Not set'}
+                                        </span>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                                     <div>
-                                        <p className="text-sm text-gray-500 mb-1">Location</p>
-                                        <p className="text-gray-900 font-medium capitalize">{profile.location}</p>
+                                        <p className="text-sm text-gray-500 mb-1">Gender</p>
+                                        <p className="text-gray-900 font-medium capitalize">{user?.gender || 'Not set'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500 mb-1">Date of Birth</p>
+                                        <p className="text-gray-900 font-medium">
+                                            {user?.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString() : 'Not set'}
+                                            {age > 0 && ` (${age} years old)`}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500 mb-1">City</p>
+                                        <p className="text-gray-900 font-medium capitalize">{typeof profile.location === 'object' ? profile.location?.city : profile.location || profile.locations?.city || 'Not set'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500 mb-1">Area / Neighborhood</p>
+                                        <p className="text-gray-900 font-medium capitalize">{typeof profile.location === 'object' ? profile.location?.area : profile.locations?.area || 'Not set'}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500 mb-1">Hourly Rate</p>
                                         <p className="text-gray-900 font-medium">
-                                            KSh {profile.hourlyRate ? parseInt(profile.hourlyRate.toString()).toLocaleString() : 'N/A'}
+                                            KSh {(profile.pricing?.hourlyRate || profile.hourlyRate) ? parseInt(String(profile.pricing?.hourlyRate || profile.hourlyRate)).toLocaleString() : 'N/A'}
                                         </p>
                                     </div>
                                     <div>
@@ -874,29 +957,99 @@ export default function EscortPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Gender
+                                        </label>
+                                        <select
+                                            value={editedUser.gender || ''}
+                                            onChange={(e) => setEditedUser(prev => ({ ...prev, gender: e.target.value }))}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                        >
+                                            <option value="">Select gender</option>
+                                            {genderOptions.map((g) => (
+                                                <option key={g} value={g}>{g}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Date of Birth
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={editedUser.dateOfBirth || ''}
+                                            onChange={(e) => setEditedUser(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
                                             Hourly Rate (KSh)
                                         </label>
                                         <input
                                             type="number"
                                             name="hourlyRate"
-                                            value={editedProfile.hourlyRate || ''}
-                                            onChange={handleInputChange}
+                                            value={editedProfile.pricing?.hourlyRate || editedProfile.hourlyRate || ''}
+                                            onChange={(e) => {
+                                                setEditedProfile(prev => ({
+                                                    ...prev,
+                                                    pricing: {
+                                                        ...prev.pricing,
+                                                        hourlyRate: e.target.value
+                                                    }
+                                                }))
+                                            }}
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                         />
                                     </div>
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            City / Location
+                                            City
                                         </label>
                                         <input
                                             type="text"
                                             name="location"
-                                            value={editedProfile.location || ''}
-                                            onChange={handleInputChange}
+                                            value={typeof editedProfile.location === 'object' ? editedProfile.location?.city || '' : editedProfile.location || editedProfile.locations?.city || ''}
+                                            onChange={(e) => {
+                                                setEditedProfile(prev => ({
+                                                    ...prev,
+                                                    location: {
+                                                        ...(typeof prev.location === 'object' ? prev.location : {}),
+                                                        city: e.target.value
+                                                    }
+                                                }))
+                                            }}
+                                            placeholder="e.g. Nairobi"
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                         />
                                     </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Area / Neighborhood
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="area"
+                                        value={typeof editedProfile.location === 'object' ? editedProfile.location?.area || '' : editedProfile.locations?.area || ''}
+                                        onChange={(e) => {
+                                            setEditedProfile(prev => ({
+                                                ...prev,
+                                                location: {
+                                                    ...(typeof prev.location === 'object' ? prev.location : {}),
+                                                    area: e.target.value
+                                                }
+                                            }))
+                                        }}
+                                        placeholder="e.g. Westlands, Kilimani, CBD"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">The specific area where you are based</p>
                                 </div>
 
                                 <div>

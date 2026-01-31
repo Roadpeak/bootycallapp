@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 import type { User as UserType, WalletSummary, ReferralCode } from '@/services/butical-api-service'
+import { getImageUrl } from '@/lib/utils/image'
 
 interface NavbarProps {
     forceLoggedIn?: boolean // For testing purposes
@@ -187,6 +188,25 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
     // Get user email
     const getUserEmail = () => {
         return user?.email || 'user@example.com'
+    }
+
+    // Get user profile photo
+    const getUserProfilePhoto = (): string | null => {
+        if (!user) return null
+
+        // Check dating profile photos
+        const datingProfile = (user as any).datingProfile
+        if (datingProfile?.photos && Array.isArray(datingProfile.photos) && datingProfile.photos.length > 0) {
+            return datingProfile.photos[0]
+        }
+
+        // Check escort profile photos
+        const escort = (user as any).escort
+        if (escort?.photos && Array.isArray(escort.photos) && escort.photos.length > 0) {
+            return escort.photos[0]
+        }
+
+        return null
     }
 
     // Get profile link based on user role
@@ -512,7 +532,26 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
                                 }}
                             >
                                 <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-pink-200 hover:border-pink-400 transition-colors bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center">
-                                    <User className="w-5 h-5 text-white" />
+                                    {getUserProfilePhoto() ? (
+                                        <img
+                                            src={getImageUrl(getUserProfilePhoto()!)}
+                                            alt={getUserDisplayName()}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                // If image fails to load, hide it and show fallback
+                                                e.currentTarget.style.display = 'none'
+                                                if (e.currentTarget.nextElementSibling) {
+                                                    (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex'
+                                                }
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div
+                                        className="w-full h-full flex items-center justify-center"
+                                        style={{ display: getUserProfilePhoto() ? 'none' : 'flex' }}
+                                    >
+                                        <User className="w-5 h-5 text-white" />
+                                    </div>
                                 </div>
                             </button>
 

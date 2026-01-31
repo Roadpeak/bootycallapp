@@ -24,6 +24,7 @@ function EscortSignupPageContent() {
         gender: '',
         contactPhone: '',
         city: '',
+        area: '',
         description: '',
         languages: [] as string[],
         hourlyRate: '',
@@ -214,8 +215,22 @@ function EscortSignupPageContent() {
             // Convert photos to base64
             const photoBase64 = await convertFilesToBase64(photos)
 
-            // Prepare registration data
-            const registrationData: EscortRegistration = {
+            // Transform availability from day-by-day object to backend format { days: string[], hours: string }
+            const availableDays = Object.entries(availability)
+                .filter(([_, schedule]) => schedule.available)
+                .map(([day]) => day.charAt(0).toUpperCase() + day.slice(1)) // Capitalize: "monday" -> "Monday"
+
+            // Get hours from the first available day (or default)
+            const firstAvailableDay = Object.entries(availability).find(([_, schedule]) => schedule.available)
+            const hours = firstAvailableDay
+                ? `${firstAvailableDay[1].from || '09:00'} - ${firstAvailableDay[1].to || '21:00'}`
+                : '09:00 - 21:00'
+
+            // Transform services from string[] to { name: string }[]
+            const servicesFormatted = selectedServices.map(name => ({ name }))
+
+            // Prepare registration data with correct backend format
+            const registrationData: any = {
                 email: formData.email.trim(),
                 phone: convertPhoneTo254(formData.phone),
                 password: formData.password,
@@ -225,17 +240,20 @@ function EscortSignupPageContent() {
                 contactPhone: convertPhoneTo254(formData.contactPhone),
                 about: formData.description.trim(),
                 languages: formData.languages,
-                termsAccepted: formData.termsAccepted,
-                ageConfirmed: formData.ageConfirmed,
                 displayName: formData.displayName.trim() || undefined,
-                dateOfBirth: formData.dateOfBirth || undefined,
-                gender: formData.gender || undefined,
-                city: formData.city.trim() || undefined,
-                hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
                 referralCode: formData.referralCode.trim() || undefined,
                 photos: photoBase64,
-                services: selectedServices,
-                availability: availability,
+                // Backend expects location as object with city and area properties
+                location: formData.city.trim() ? {
+                    city: formData.city.trim(),
+                    area: formData.area.trim() || undefined
+                } : undefined,
+                // Backend expects services as array of objects with name property
+                services: servicesFormatted.length > 0 ? servicesFormatted : undefined,
+                // Backend expects pricing as object with hourlyRate
+                pricing: formData.hourlyRate ? { hourlyRate: parseFloat(formData.hourlyRate) } : undefined,
+                // Backend expects availability as { days: string[], hours: string }
+                availability: availableDays.length > 0 ? { days: availableDays, hours } : undefined,
             }
 
             // Register user
@@ -266,6 +284,101 @@ function EscortSignupPageContent() {
         } catch (err: any) {
             console.error('Registration error:', err)
             setError(err.response?.data?.message || err.message || 'Registration failed. Please try again.')
+            setIsProcessing(false)
+        }
+    }
+
+    const handleSkipPayment = async () => {
+        setError(null)
+        setIsProcessing(true)
+
+        try {
+            // Validate passwords match
+            if (formData.password !== formData.confirmPassword) {
+                throw new Error('Passwords do not match')
+            }
+
+            // Validate required fields
+            if (!formData.firstName || !formData.lastName || !formData.displayName ||
+                !formData.email || !formData.phone || !formData.password ||
+                !formData.contactPhone || !formData.description) {
+                throw new Error('Please fill in all required fields')
+            }
+
+            if (photos.length === 0) {
+                throw new Error('Please upload at least one photo')
+            }
+
+            if (formData.languages.length === 0) {
+                throw new Error('Please select at least one language')
+            }
+
+            if (selectedServices.length === 0) {
+                throw new Error('Please select at least one service')
+            }
+
+            if (!formData.ageConfirmed || !formData.termsAccepted) {
+                throw new Error('Please accept the terms and confirm your age')
+            }
+
+            // Convert photos to base64
+            const photoBase64 = await convertFilesToBase64(photos)
+
+            // Transform availability from day-by-day object to backend format { days: string[], hours: string }
+            const availableDays = Object.entries(availability)
+                .filter(([_, schedule]) => schedule.available)
+                .map(([day]) => day.charAt(0).toUpperCase() + day.slice(1))
+
+            const firstAvailableDay = Object.entries(availability).find(([_, schedule]) => schedule.available)
+            const hours = firstAvailableDay
+                ? `${firstAvailableDay[1].from || '09:00'} - ${firstAvailableDay[1].to || '21:00'}`
+                : '09:00 - 21:00'
+
+            const servicesFormatted = selectedServices.map(name => ({ name }))
+
+            const registrationData: any = {
+                email: formData.email.trim(),
+                phone: convertPhoneTo254(formData.phone),
+                password: formData.password,
+                firstName: formData.firstName.trim(),
+                lastName: formData.lastName.trim(),
+                role: 'ESCORT',
+                contactPhone: convertPhoneTo254(formData.contactPhone),
+                about: formData.description.trim(),
+                languages: formData.languages,
+                displayName: formData.displayName.trim() || undefined,
+                referralCode: formData.referralCode.trim() || undefined,
+                photos: photoBase64,
+                location: formData.city.trim() ? {
+                    city: formData.city.trim(),
+                    area: formData.area.trim() || undefined
+                } : undefined,
+                services: servicesFormatted.length > 0 ? servicesFormatted : undefined,
+                pricing: formData.hourlyRate ? { hourlyRate: parseFloat(formData.hourlyRate) } : undefined,
+                availability: availableDays.length > 0 ? { days: availableDays, hours } : undefined,
+            }
+
+            // Register user without VIP payment
+            const response = await ButicalAPI.auth.register(registrationData)
+            console.log('Registration response:', response)
+
+            const authData = response.data?.data
+            const accessToken = authData?.tokens?.accessToken || authData?.accessToken
+            const refreshToken = authData?.tokens?.refreshToken || authData?.refreshToken
+
+            if (accessToken) {
+                TokenService.setAccessToken(accessToken)
+                if (refreshToken) {
+                    TokenService.setRefreshToken(refreshToken)
+                }
+            }
+
+            // Redirect to profile without payment
+            router.push('/profile/escort')
+        } catch (err: any) {
+            console.error('Registration error:', err)
+            setError(err.response?.data?.message || err.message || 'Registration failed. Please try again.')
+        } finally {
             setIsProcessing(false)
         }
     }
@@ -313,7 +426,8 @@ function EscortSignupPageContent() {
 
                             console.log(`Payment status check (${attempts + 1}/${maxAttempts}):`, status)
 
-                            if (status === 'SUCCESS') {
+                            // API returns 'COMPLETED' not 'SUCCESS'
+                            if (status === 'COMPLETED' || status === 'SUCCESS') {
                                 setPaymentStatus('success')
                                 setTimeout(() => {
                                     router.push('/profile/escort')
@@ -392,8 +506,8 @@ function EscortSignupPageContent() {
                 return
             }
         } else if (currentStep === 2) {
-            if (!formData.city || !formData.description || formData.languages.length === 0 || photos.length === 0) {
-                setError('Please complete all required fields (at least 1 language and 1 photo)')
+            if (!formData.city || !formData.area || !formData.description || formData.languages.length === 0 || photos.length === 0) {
+                setError('Please complete all required fields (city, area, at least 1 language and 1 photo)')
                 return
             }
         } else if (currentStep === 3) {
@@ -675,7 +789,7 @@ function EscortSignupPageContent() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    City / Location *
+                                    City *
                                 </label>
                                 <input
                                     type="text"
@@ -683,9 +797,25 @@ function EscortSignupPageContent() {
                                     value={formData.city}
                                     onChange={handleInputChange}
                                     required
-                                    placeholder="Nairobi, Westlands"
+                                    placeholder="e.g. Nairobi"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Area / Neighborhood *
+                                </label>
+                                <input
+                                    type="text"
+                                    name="area"
+                                    value={formData.area}
+                                    onChange={handleInputChange}
+                                    required
+                                    placeholder="e.g. Westlands, Kilimani, CBD"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">The specific area where you are based</p>
                             </div>
 
                             <div>
@@ -981,6 +1111,24 @@ function EscortSignupPageContent() {
                                         </p>
                                     </div>
                                 )}
+                            </div>
+
+                            {/* Free Account Option */}
+                            <div className="p-4 bg-gray-100 rounded-xl border border-gray-200">
+                                <div className="text-center">
+                                    <h4 className="font-medium text-gray-700 mb-2">Not ready to go VIP?</h4>
+                                    <p className="text-sm text-gray-500 mb-3">
+                                        You can start with a free account. Clients will pay KSh 150 to unlock your contact info.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={handleSkipPayment}
+                                        disabled={isProcessing || paymentStatus === 'success' || !formData.ageConfirmed || !formData.termsAccepted}
+                                        className="px-6 py-2 border-2 border-gray-400 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isProcessing ? 'Processing...' : 'Skip & Continue with Free Account'}
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Terms & Conditions */}

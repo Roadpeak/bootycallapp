@@ -1,7 +1,7 @@
 // app/escorts/[id]/page.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import {
     ArrowLeft, MapPin, Star, Clock, Phone, MessageCircle,
@@ -10,6 +10,58 @@ import {
 import { useEscort, usePayment, useAuth, useSubscription } from '@/lib/hooks/butical-api-hooks'
 import { getImageUrl, getImageUrls } from '@/lib/utils/image'
 
+// Helper functions to manage unlock state in localStorage (24 hour expiration)
+const UNLOCK_STORAGE_KEY = 'escort_unlocks'
+const UNLOCK_EXPIRY_HOURS = 24
+
+interface UnlockRecord {
+    escortId: string
+    unlockedAt: number // timestamp
+    expiresAt: number // timestamp
+}
+
+const getStoredUnlocks = (): UnlockRecord[] => {
+    if (typeof window === 'undefined') return []
+    try {
+        const stored = localStorage.getItem(UNLOCK_STORAGE_KEY)
+        if (!stored) return []
+        const unlocks: UnlockRecord[] = JSON.parse(stored)
+        // Filter out expired unlocks
+        const now = Date.now()
+        return unlocks.filter(u => u.expiresAt > now)
+    } catch {
+        return []
+    }
+}
+
+const isEscortUnlockedInStorage = (escortId: string): boolean => {
+    const unlocks = getStoredUnlocks()
+    return unlocks.some(u => u.escortId === escortId)
+}
+
+const saveUnlockToStorage = (escortId: string): void => {
+    if (typeof window === 'undefined') return
+    try {
+        const unlocks = getStoredUnlocks()
+        const now = Date.now()
+        const expiresAt = now + (UNLOCK_EXPIRY_HOURS * 60 * 60 * 1000) // 24 hours in ms
+
+        // Remove any existing record for this escort
+        const filtered = unlocks.filter(u => u.escortId !== escortId)
+
+        // Add new unlock record
+        filtered.push({
+            escortId,
+            unlockedAt: now,
+            expiresAt
+        })
+
+        localStorage.setItem(UNLOCK_STORAGE_KEY, JSON.stringify(filtered))
+    } catch {
+        // Silently fail if localStorage is not available
+    }
+}
+
 export default function EscortViewPage() {
     const params = useParams()
     const router = useRouter()
@@ -17,6 +69,17 @@ export default function EscortViewPage() {
     const [showPaymentModal, setShowPaymentModal] = useState(false)
     const [mpesaPhone, setMpesaPhone] = useState('')
     const [isUnlocked, setIsUnlocked] = useState(false)
+    const [isWaitingForPayment, setIsWaitingForPayment] = useState(false)
+
+    // Check localStorage for existing unlock on mount
+    useEffect(() => {
+        if (params.id) {
+            const unlocked = isEscortUnlockedInStorage(params.id as string)
+            if (unlocked) {
+                setIsUnlocked(true)
+            }
+        }
+    }, [params.id])
 
     // Fetch escort data using the hook
     const { escort, loading: isLoading, error } = useEscort(params.id as string)
@@ -28,6 +91,7 @@ export default function EscortViewPage() {
     // Payment hook
     const {
         unlockEscort,
+        checkPaymentStatus,
         loading: isProcessingPayment,
         error: paymentError
     } = usePayment()
@@ -43,11 +107,25 @@ export default function EscortViewPage() {
     // Helper to get location string
     const getLocation = (e: typeof escort): string => {
         if (!e) return 'Unknown location';
-        if (e.location) return e.location;
+
+        // Handle location as object {city, area}
+        if (e.location && typeof e.location === 'object') {
+            const locObj = e.location as { city?: string; area?: string };
+            const parts = [locObj.area, locObj.city].filter(Boolean);
+            return parts.join(', ') || 'Unknown location';
+        }
+
+        // Handle location as string
+        if (e.location && typeof e.location === 'string') {
+            return e.location;
+        }
+
+        // Handle legacy locations field
         if (e.locations) {
             const parts = [e.locations.area, e.locations.city, e.locations.country].filter(Boolean);
             return parts.join(', ') || 'Unknown location';
         }
+
         return 'Unknown location';
     };
 
@@ -73,11 +151,53 @@ export default function EscortViewPage() {
 
         const result = await unlockEscort(params.id as string, mpesaPhone)
 
-        if (result.success) {
-            setIsUnlocked(true)
-            setShowPaymentModal(false)
-            setMpesaPhone('')
-            alert('Payment successful! Contact unlocked.')
+        if (result.success && result.data?.paymentId) {
+            // STK push was sent, now poll for payment status
+            setIsWaitingForPayment(true)
+            const paymentId = result.data.paymentId
+            let attempts = 0
+            const maxAttempts = 30 // Poll for up to 60 seconds (every 2 seconds)
+
+            const pollPaymentStatus = async () => {
+                attempts++
+                try {
+                    const statusResult = await checkPaymentStatus(paymentId)
+                    const status = statusResult.data?.status
+
+                    if (status === 'COMPLETED') {
+                        setIsWaitingForPayment(false)
+                        setIsUnlocked(true)
+                        // Save unlock to localStorage for 24 hours
+                        saveUnlockToStorage(params.id as string)
+                        setShowPaymentModal(false)
+                        setMpesaPhone('')
+                        alert('Payment successful! Contact unlocked.')
+                        return
+                    } else if (status === 'FAILED') {
+                        setIsWaitingForPayment(false)
+                        alert('Payment failed. Please try again.')
+                        return
+                    } else if (attempts < maxAttempts) {
+                        // Still pending, continue polling
+                        setTimeout(pollPaymentStatus, 2000)
+                    } else {
+                        // Timeout - payment still pending
+                        setIsWaitingForPayment(false)
+                        alert('Payment is still processing. Please refresh the page in a few moments to check if payment was successful.')
+                        setShowPaymentModal(false)
+                    }
+                } catch (err) {
+                    console.error('Error checking payment status:', err)
+                    if (attempts < maxAttempts) {
+                        setTimeout(pollPaymentStatus, 2000)
+                    } else {
+                        setIsWaitingForPayment(false)
+                    }
+                }
+            }
+
+            // Start polling after a short delay to give user time to complete
+            setTimeout(pollPaymentStatus, 3000)
         } else {
             alert(result.error || 'Payment failed. Please try again.')
         }
@@ -138,7 +258,7 @@ export default function EscortViewPage() {
     // Get display values
     const displayName = getDisplayName(escort)
     const locationStr = getLocation(escort)
-    const unlockPrice = escort.unlockPrice || escort.pricing?.unlockPrice || 150
+    const unlockPrice = 150 // Fixed unlock price
     const hourlyRate = escort.pricing?.hourlyRate || escort.hourlyRate || 300
 
     return (
@@ -227,13 +347,6 @@ export default function EscortViewPage() {
                                     <div>
                                         <p className="text-sm text-gray-400">Location</p>
                                         <p className="text-white font-medium">{locationStr}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Star className="w-5 h-5 text-yellow-400" />
-                                    <div>
-                                        <p className="text-sm text-gray-400">Rating</p>
-                                        <p className="text-white font-medium">4.5 / 5.0 (Based on profile quality)</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -419,21 +532,27 @@ export default function EscortViewPage() {
                                 onClick={() => {
                                     setShowPaymentModal(false)
                                     setMpesaPhone('')
+                                    setIsWaitingForPayment(false)
                                 }}
-                                disabled={isProcessingPayment}
+                                disabled={isProcessingPayment || isWaitingForPayment}
                                 className="flex-1 px-4 py-3 border border-gray-600 text-gray-200 rounded-lg hover:bg-gray-700 font-medium transition-colors disabled:opacity-50"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handlePayment}
-                                disabled={isProcessingPayment || !mpesaPhone.trim()}
+                                disabled={isProcessingPayment || isWaitingForPayment || !mpesaPhone.trim()}
                                 className="flex-1 px-4 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                             >
                                 {isProcessingPayment ? (
                                     <>
                                         <Loader2 className="w-5 h-5 animate-spin" />
-                                        <span>Processing...</span>
+                                        <span>Sending...</span>
+                                    </>
+                                ) : isWaitingForPayment ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        <span>Waiting for payment...</span>
                                     </>
                                 ) : (
                                     <span>Pay KSh {unlockPrice}</span>
@@ -445,6 +564,18 @@ export default function EscortViewPage() {
                             <div className="mt-4 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
                                 <p className="text-sm text-blue-300 text-center">
                                     Check your phone for M-Pesa prompt...
+                                </p>
+                            </div>
+                        )}
+
+                        {isWaitingForPayment && (
+                            <div className="mt-4 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
+                                <div className="flex items-center justify-center gap-2 mb-2">
+                                    <Loader2 className="w-5 h-5 animate-spin text-yellow-400" />
+                                    <p className="text-yellow-300 font-semibold">Processing Payment...</p>
+                                </div>
+                                <p className="text-sm text-yellow-200 text-center">
+                                    Please complete the M-Pesa payment on your phone. This page will update automatically once payment is confirmed.
                                 </p>
                             </div>
                         )}

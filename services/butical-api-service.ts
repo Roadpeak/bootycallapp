@@ -52,18 +52,21 @@ export interface EscortRegistration {
     contactPhone: string
     about: string
     languages: string[]
-    termsAccepted: boolean
-    ageConfirmed: boolean
     // Optional fields
     displayName?: string
-    dateOfBirth?: string
-    gender?: string
-    city?: string
-    hourlyRate?: number
     referralCode?: string
     photos?: string[] // base64 encoded
-    services?: string[]
-    availability?: Record<string, { available: boolean; from: string; to: string }>
+    // Backend expects location as object with city property
+    location?: { city: string; country?: string; regions?: string[] }
+    // Backend expects services as array of objects with name property
+    services?: { name: string; description?: string }[]
+    // Backend expects pricing as object with hourlyRate
+    pricing?: { hourlyRate?: number; services?: { name: string; price: number }[] }
+    // Backend expects availability as { days: string[], hours: string }
+    availability?: { days?: string[]; hours?: string }
+    unlockPrice?: number
+    experienceYears?: number
+    tags?: string[]
 }
 
 export interface HookupUserRegistration {
@@ -194,7 +197,8 @@ export interface Escort {
     isNew?: boolean
     // Computed/display properties (for backwards compatibility)
     displayName?: string
-    location?: string
+    // location can be either a string (legacy) or an object with city/area
+    location?: string | EscortLocation
     hourlyRate?: number
     isVerified?: boolean
     isVIP?: boolean
@@ -597,7 +601,9 @@ apiClient.interceptors.response.use(
                         refreshToken,
                     })
 
-                    const { accessToken, refreshToken: newRefreshToken } = response.data
+                    // API wraps response in { status, data: { accessToken, refreshToken } }
+                    const tokenData = response.data?.data || response.data
+                    const { accessToken, refreshToken: newRefreshToken } = tokenData
 
                     TokenService.setAccessToken(accessToken)
                     if (newRefreshToken) {
@@ -663,6 +669,8 @@ const ButicalAPI = {
         view: (id: string) => apiClient.post(`/escorts/${id}/view`),
         getStats: (id: string) => apiClient.get<EscortStats>(`/escorts/${id}/stats`),
         getUnlocks: () => apiClient.get<string[]>('/escorts/me/unlocks'),
+        getPopularLocations: (limit?: number) =>
+            apiClient.get<ApiResponseWrapper<{ city: string; count: number }[]>>('/escorts/locations', { params: { limit } }),
     },
 
     // DATING PROFILES

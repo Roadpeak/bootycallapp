@@ -218,7 +218,19 @@ export const EscortCard: React.FC<EscortCardProps> = ({
                     <div className="flex items-start gap-1.5 text-gray-700">
                         <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5 text-pink-500" />
                         <span className="text-sm">
-                            {city && location ? `${city}, ${location}` : city || location || 'Kenya'}
+                            {(() => {
+                                // Handle city that might be object or string
+                                const cityStr = typeof city === 'object' && city !== null
+                                    ? (city as any).city || (city as any).name || ''
+                                    : (city || '');
+                                // Handle location that might be object or string
+                                const locStr = typeof location === 'object' && location !== null
+                                    ? (location as any).area || (location as any).city || ''
+                                    : (location || '');
+
+                                if (cityStr && locStr) return `${cityStr}, ${locStr}`;
+                                return cityStr || locStr || 'Kenya';
+                            })()}
                         </span>
                     </div>
 
@@ -297,7 +309,7 @@ export const EscortCard: React.FC<EscortCardProps> = ({
                         className="w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 bg-pink-500 hover:bg-pink-600 text-white"
                     >
                         <Lock className="w-4 h-4" />
-                        Unlock Contact - KSh {price}
+                        Unlock
                     </button>
                 )}
             </div>
