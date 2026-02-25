@@ -456,12 +456,14 @@ function DatingSignupPageContent() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
                                         First Name *
                                     </label>
                                     <input
+                                        id="firstName"
                                         type="text"
                                         name="firstName"
+                                        autoComplete="given-name"
                                         value={formData.firstName}
                                         onChange={handleInputChange}
                                         required
@@ -469,12 +471,14 @@ function DatingSignupPageContent() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
                                         Last Name *
                                     </label>
                                     <input
+                                        id="lastName"
                                         type="text"
                                         name="lastName"
+                                        autoComplete="family-name"
                                         value={formData.lastName}
                                         onChange={handleInputChange}
                                         required
@@ -484,12 +488,14 @@ function DatingSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-1">
                                     Display Name (Optional)
                                 </label>
                                 <input
+                                    id="displayName"
                                     type="text"
                                     name="displayName"
+                                    autoComplete="nickname"
                                     value={formData.displayName}
                                     onChange={handleInputChange}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
@@ -498,12 +504,14 @@ function DatingSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                                     Email *
                                 </label>
                                 <input
+                                    id="email"
                                     type="email"
                                     name="email"
+                                    autoComplete="email"
                                     value={formData.email}
                                     onChange={handleInputChange}
                                     required
@@ -512,12 +520,14 @@ function DatingSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
                                     Phone Number *
                                 </label>
                                 <input
+                                    id="phone"
                                     type="tel"
                                     name="phone"
+                                    autoComplete="tel"
                                     value={formData.phone}
                                     onChange={handleInputChange}
                                     required
@@ -528,13 +538,15 @@ function DatingSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                                     Password *
                                 </label>
                                 <div className="relative">
                                     <input
+                                        id="password"
                                         type={showPassword ? 'text' : 'password'}
                                         name="password"
+                                        autoComplete="new-password"
                                         value={formData.password}
                                         onChange={handleInputChange}
                                         required
@@ -544,6 +556,7 @@ function DatingSignupPageContent() {
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                        aria-label={showPassword ? 'Hide password' : 'Show password'}
                                     >
                                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                     </button>
@@ -551,13 +564,15 @@ function DatingSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
                                     Confirm Password *
                                 </label>
                                 <div className="relative">
                                     <input
+                                        id="confirmPassword"
                                         type={showConfirmPassword ? 'text' : 'password'}
                                         name="confirmPassword"
+                                        autoComplete="new-password"
                                         value={formData.confirmPassword}
                                         onChange={handleInputChange}
                                         required
@@ -567,6 +582,7 @@ function DatingSignupPageContent() {
                                         type="button"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                        aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                                     >
                                         {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                     </button>
@@ -574,12 +590,14 @@ function DatingSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 mb-1">
                                     Date of Birth *
                                 </label>
                                 <input
+                                    id="dateOfBirth"
                                     type="date"
                                     name="dateOfBirth"
+                                    autoComplete="bday"
                                     value={formData.dateOfBirth}
                                     onChange={handleInputChange}
                                     required
@@ -590,11 +608,13 @@ function DatingSignupPageContent() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-1">
                                         Gender *
                                     </label>
                                     <select
+                                        id="gender"
                                         name="gender"
+                                        autoComplete="sex"
                                         value={formData.gender}
                                         onChange={handleInputChange}
                                         required
@@ -609,10 +629,11 @@ function DatingSignupPageContent() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label htmlFor="sexualOrientation" className="block text-sm font-medium text-gray-700 mb-1">
                                         Sexual Orientation
                                     </label>
                                     <select
+                                        id="sexualOrientation"
                                         name="sexualOrientation"
                                         value={formData.sexualOrientation}
                                         onChange={handleInputChange}
@@ -630,10 +651,11 @@ function DatingSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="lookingFor" className="block text-sm font-medium text-gray-700 mb-1">
                                     Looking For *
                                 </label>
                                 <select
+                                    id="lookingFor"
                                     name="lookingFor"
                                     value={formData.lookingFor}
                                     onChange={handleInputChange}
@@ -648,15 +670,17 @@ function DatingSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="referralCode" className="block text-sm font-medium text-gray-700 mb-1">
                                     <span className="flex items-center gap-2">
                                         <Gift className="w-4 h-4 text-pink-500" />
                                         Referral Code (Optional)
                                     </span>
                                 </label>
                                 <input
+                                    id="referralCode"
                                     type="text"
                                     name="referralCode"
+                                    autoComplete="off"
                                     value={formData.referralCode}
                                     onChange={handleInputChange}
                                     placeholder="Enter referral code if you have one"
@@ -676,12 +700,14 @@ function DatingSignupPageContent() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
                                         City / Location *
                                     </label>
                                     <input
+                                        id="city"
                                         type="text"
                                         name="city"
+                                        autoComplete="address-level2"
                                         value={formData.city}
                                         onChange={handleInputChange}
                                         required
@@ -691,12 +717,14 @@ function DatingSignupPageContent() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
                                         Country *
                                     </label>
                                     <input
+                                        id="country"
                                         type="text"
                                         name="country"
+                                        autoComplete="country-name"
                                         value={formData.country}
                                         onChange={handleInputChange}
                                         required
@@ -706,10 +734,11 @@ function DatingSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">
                                     About Me *
                                 </label>
                                 <textarea
+                                    id="bio"
                                     name="bio"
                                     value={formData.bio}
                                     onChange={handleInputChange}
@@ -742,12 +771,14 @@ function DatingSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="education" className="block text-sm font-medium text-gray-700 mb-1">
                                     Education (Optional)
                                 </label>
                                 <input
+                                    id="education"
                                     type="text"
                                     name="education"
+                                    autoComplete="off"
                                     value={formData.education}
                                     onChange={handleInputChange}
                                     placeholder="e.g., Bachelor's Degree"
@@ -756,12 +787,14 @@ function DatingSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="occupation" className="block text-sm font-medium text-gray-700 mb-1">
                                     Occupation (Optional)
                                 </label>
                                 <input
+                                    id="occupation"
                                     type="text"
                                     name="occupation"
+                                    autoComplete="organization-title"
                                     value={formData.occupation}
                                     onChange={handleInputChange}
                                     placeholder="e.g., Software Engineer"
@@ -821,8 +854,9 @@ function DatingSignupPageContent() {
                             </div>
 
                             <div className="space-y-3 pt-4">
-                                <label className="flex items-start">
+                                <label htmlFor="ageConfirmed" className="flex items-start cursor-pointer">
                                     <input
+                                        id="ageConfirmed"
                                         type="checkbox"
                                         name="ageConfirmed"
                                         checked={formData.ageConfirmed}
@@ -835,8 +869,9 @@ function DatingSignupPageContent() {
                                     </span>
                                 </label>
 
-                                <label className="flex items-start">
+                                <label htmlFor="termsAccepted" className="flex items-start cursor-pointer">
                                     <input
+                                        id="termsAccepted"
                                         type="checkbox"
                                         name="termsAccepted"
                                         checked={formData.termsAccepted}
@@ -846,11 +881,11 @@ function DatingSignupPageContent() {
                                     />
                                     <span className="text-sm text-gray-700">
                                         I agree to the{' '}
-                                        <Link href="/terms" className="text-pink-500 hover:text-pink-600">
+                                        <Link href="/legal/terms" className="text-pink-500 hover:text-pink-600">
                                             Terms & Conditions
                                         </Link>{' '}
                                         and{' '}
-                                        <Link href="/privacy" className="text-pink-500 hover:text-pink-600">
+                                        <Link href="/legal/privacy" className="text-pink-500 hover:text-pink-600">
                                             Privacy Policy
                                         </Link>{' '}
                                         *
@@ -905,11 +940,14 @@ function DatingSignupPageContent() {
 
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label htmlFor="mpesaPhone" className="block text-sm font-medium text-gray-700 mb-1">
                                             M-Pesa Phone Number
                                         </label>
                                         <input
+                                            id="mpesaPhone"
                                             type="tel"
+                                            name="mpesaPhone"
+                                            autoComplete="tel"
                                             value={mpesaPhone || formData.phone}
                                             onChange={(e) => setMpesaPhone(e.target.value)}
                                             placeholder="0712345678"

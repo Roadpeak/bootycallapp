@@ -256,7 +256,7 @@ function LoginContent() {
                                 <span className="ml-2 text-sm text-gray-700">Remember me</span>
                             </label>
 
-                            <Link href="/auth/forgot-password" className="text-sm text-pink-500 hover:text-pink-600">
+<Link href="/auth/forgot-password" className="text-sm text-pink-500 hover:text-pink-600">
                                 Forgot password?
                             </Link>
                         </div>

@@ -595,72 +595,82 @@ function EscortSignupPageContent() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
                                         First Name *
                                     </label>
                                     <input
+                                        id="firstName"
                                         type="text"
                                         name="firstName"
                                         value={formData.firstName}
                                         onChange={handleInputChange}
                                         required
+                                        autoComplete="given-name"
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
                                         Last Name *
                                     </label>
                                     <input
+                                        id="lastName"
                                         type="text"
                                         name="lastName"
                                         value={formData.lastName}
                                         onChange={handleInputChange}
                                         required
+                                        autoComplete="family-name"
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-1">
                                     Display Name / Stage Name *
                                 </label>
                                 <input
+                                    id="displayName"
                                     type="text"
                                     name="displayName"
                                     value={formData.displayName}
                                     onChange={handleInputChange}
                                     required
+                                    autoComplete="off"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     placeholder="How clients will see you"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                                     Email *
                                 </label>
                                 <input
+                                    id="email"
                                     type="email"
                                     name="email"
                                     value={formData.email}
                                     onChange={handleInputChange}
                                     required
+                                    autoComplete="email"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
                                     Phone Number *
                                 </label>
                                 <input
+                                    id="phone"
                                     type="tel"
                                     name="phone"
                                     value={formData.phone}
                                     onChange={handleInputChange}
                                     required
+                                    autoComplete="tel"
                                     placeholder="0712345678"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
@@ -668,15 +678,17 @@ function EscortSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700 mb-1">
                                     Contact Phone (For Clients) *
                                 </label>
                                 <input
+                                    id="contactPhone"
                                     type="tel"
                                     name="contactPhone"
                                     value={formData.contactPhone}
                                     onChange={handleInputChange}
                                     required
+                                    autoComplete="tel"
                                     placeholder="0712345678"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
@@ -684,22 +696,25 @@ function EscortSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                                     Password *
                                 </label>
                                 <div className="relative">
                                     <input
+                                        id="password"
                                         type={showPassword ? 'text' : 'password'}
                                         name="password"
                                         value={formData.password}
                                         onChange={handleInputChange}
                                         required
+                                        autoComplete="new-password"
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                        aria-label={showPassword ? 'Hide password' : 'Show password'}
                                     >
                                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                     </button>
@@ -707,22 +722,25 @@ function EscortSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
                                     Confirm Password *
                                 </label>
                                 <div className="relative">
                                     <input
+                                        id="confirmPassword"
                                         type={showConfirmPassword ? 'text' : 'password'}
                                         name="confirmPassword"
                                         value={formData.confirmPassword}
                                         onChange={handleInputChange}
                                         required
+                                        autoComplete="new-password"
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                        aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                                     >
                                         {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                     </button>
@@ -731,29 +749,33 @@ function EscortSignupPageContent() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 mb-1">
                                         Date of Birth *
                                     </label>
                                     <input
+                                        id="dateOfBirth"
                                         type="date"
                                         name="dateOfBirth"
                                         value={formData.dateOfBirth}
                                         onChange={handleInputChange}
                                         required
+                                        autoComplete="off"
                                         max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-1">
                                         Gender *
                                     </label>
                                     <select
+                                        id="gender"
                                         name="gender"
                                         value={formData.gender}
                                         onChange={handleInputChange}
                                         required
+                                        autoComplete="off"
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     >
                                         <option value="">Select gender</option>
@@ -767,14 +789,16 @@ function EscortSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="referralCode" className="block text-sm font-medium text-gray-700 mb-1">
                                     Referral Code (Optional)
                                 </label>
                                 <input
+                                    id="referralCode"
                                     type="text"
                                     name="referralCode"
                                     value={formData.referralCode}
                                     onChange={handleInputChange}
+                                    autoComplete="off"
                                     placeholder="Enter referral code if you have one"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
@@ -788,30 +812,34 @@ function EscortSignupPageContent() {
                             <h2 className="text-xl font-bold text-gray-900 mb-4">Profile & Location</h2>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
                                     City *
                                 </label>
                                 <input
+                                    id="city"
                                     type="text"
                                     name="city"
                                     value={formData.city}
                                     onChange={handleInputChange}
                                     required
+                                    autoComplete="off"
                                     placeholder="e.g. Nairobi"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="area" className="block text-sm font-medium text-gray-700 mb-1">
                                     Area / Neighborhood *
                                 </label>
                                 <input
+                                    id="area"
                                     type="text"
                                     name="area"
                                     value={formData.area}
                                     onChange={handleInputChange}
                                     required
+                                    autoComplete="off"
                                     placeholder="e.g. Westlands, Kilimani, CBD"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
@@ -819,15 +847,17 @@ function EscortSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
                                     About You *
                                 </label>
                                 <textarea
+                                    id="description"
                                     name="description"
                                     value={formData.description}
                                     onChange={handleInputChange}
                                     required
                                     rows={5}
+                                    autoComplete="off"
                                     placeholder="Describe yourself and what makes you special..."
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
                                 />
@@ -855,14 +885,16 @@ function EscortSignupPageContent() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="hourlyRate" className="block text-sm font-medium text-gray-700 mb-1">
                                     Hourly Rate (KSh)
                                 </label>
                                 <input
+                                    id="hourlyRate"
                                     type="number"
                                     name="hourlyRate"
                                     value={formData.hourlyRate}
                                     onChange={handleInputChange}
+                                    autoComplete="off"
                                     placeholder="5000"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
@@ -1030,14 +1062,16 @@ function EscortSignupPageContent() {
 
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label htmlFor="mpesaPhone" className="block text-sm font-medium text-gray-700 mb-1">
                                             M-Pesa Phone Number
                                         </label>
                                         <input
+                                            id="mpesaPhone"
                                             type="tel"
                                             name="mpesaPhone"
                                             value={formData.mpesaPhone || formData.phone}
                                             onChange={handleInputChange}
+                                            autoComplete="tel"
                                             placeholder="0712345678"
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                         />
@@ -1133,8 +1167,9 @@ function EscortSignupPageContent() {
 
                             {/* Terms & Conditions */}
                             <div className="space-y-3 pt-4 border-t">
-                                <label className="flex items-start">
+                                <label htmlFor="ageConfirmed" className="flex items-start">
                                     <input
+                                        id="ageConfirmed"
                                         type="checkbox"
                                         name="ageConfirmed"
                                         checked={formData.ageConfirmed}
@@ -1147,8 +1182,9 @@ function EscortSignupPageContent() {
                                     </span>
                                 </label>
 
-                                <label className="flex items-start">
+                                <label htmlFor="termsAccepted" className="flex items-start">
                                     <input
+                                        id="termsAccepted"
                                         type="checkbox"
                                         name="termsAccepted"
                                         checked={formData.termsAccepted}
@@ -1158,15 +1194,15 @@ function EscortSignupPageContent() {
                                     />
                                     <span className="text-sm text-gray-700">
                                         I agree to the{' '}
-                                        <Link href="/terms" className="text-purple-500 hover:text-purple-600">
+                                        <Link href="/legal/terms" className="text-purple-500 hover:text-purple-600">
                                             Terms & Conditions
                                         </Link>
                                         ,{' '}
-                                        <Link href="/privacy" className="text-purple-500 hover:text-purple-600">
+                                        <Link href="/legal/privacy" className="text-purple-500 hover:text-purple-600">
                                             Privacy Policy
                                         </Link>
                                         , and{' '}
-                                        <Link href="/community-guidelines" className="text-purple-500 hover:text-purple-600">
+                                        <Link href="/legal/guidelines" className="text-purple-500 hover:text-purple-600">
                                             Community Guidelines
                                         </Link>{' '}
                                         *

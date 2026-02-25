@@ -650,6 +650,10 @@ const ButicalAPI = {
             TokenService.clearTokens()
             return Promise.resolve()
         },
+        forgotPassword: (email: string) =>
+            apiClient.post<ApiResponseWrapper<{ message: string }>>('/auth/forgot-password', { email }),
+        resetPassword: (token: string, password: string) =>
+            apiClient.post<ApiResponseWrapper<{ message: string }>>('/auth/reset-password', { token, password }),
     },
 
     // USERS
