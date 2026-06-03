@@ -725,8 +725,8 @@ function DatingSignupPageContent() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                                        City / Location *
+                                    <label htmlFor="city" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                                        City *
                                     </label>
                                     <input
                                         id="city"
@@ -742,20 +742,34 @@ function DatingSignupPageContent() {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Country *
+                                    <label htmlFor="area" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                                        Area / Neighborhood
                                     </label>
                                     <input
-                                        id="country"
+                                        id="area"
                                         type="text"
-                                        name="country"
-                                        autoComplete="country-name"
-                                        value={formData.country}
+                                        name="area"
+                                        value={formData.area}
                                         onChange={handleInputChange}
                                         placeholder="e.g. Kilimani, Westlands"
                                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-pink-400 outline-none transition-colors bg-gray-50 focus:bg-white text-sm"
                                     />
                                 </div>
+                            </div>
+
+                            <div>
+                                <label htmlFor="country" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                                    Country *
+                                </label>
+                                <input
+                                    id="country"
+                                    type="text"
+                                    name="country"
+                                    autoComplete="country-name"
+                                    value={formData.country}
+                                    onChange={handleInputChange}
+                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-pink-400 outline-none transition-colors bg-gray-50 focus:bg-white text-sm"
+                                />
                             </div>
 
                             <div>
