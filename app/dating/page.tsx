@@ -4,7 +4,8 @@
 import React, { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Search, Filter, MapPin, Heart, MessageCircle, AlertCircle, Lock, Sparkles } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Search, Filter, MapPin, Heart, MessageCircle, AlertCircle, Lock, Sparkles, ChevronDown, X } from 'lucide-react'
 import { DatingCard } from '../components/cards/DatingCard'
 import { MatchNotificationModal } from '../components/common/MatchNotificationModal'
 import MobileBottomNav from '../components/layout/MobileBottomNav'
@@ -30,18 +31,26 @@ const kenyanCounties = [
 ]
 
 const CompactReferralBanner = () => (
-    <div className="bg-gradient-to-r from-pink-600 to-purple-600 text-white p-3 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-        <div className="flex items-start sm:items-center gap-2">
-            <Sparkles className="w-4 h-4 mt-0.5 sm:mt-0 flex-shrink-0" />
-            <span className="text-sm font-medium">Earn money for each friend you refer and also from every person your referee refers!</span>
+    <motion.div
+        className="bg-gradient-to-r from-pink-600 via-rose-500 to-purple-600 text-white p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5 shadow-lg shadow-pink-500/20 relative overflow-hidden"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+    >
+        <div className="absolute inset-0 bg-white/5 backdrop-blur-sm" />
+        <div className="relative flex items-start sm:items-center gap-2.5">
+            <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-4 h-4" />
+            </div>
+            <span className="text-sm font-medium">Earn money for each friend you refer — and from every person they refer too!</span>
         </div>
         <Link
             href="/referral"
-            className="text-xs bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded transition-colors whitespace-nowrap"
+            className="relative text-xs bg-white/20 hover:bg-white/30 px-4 py-2 rounded-xl font-semibold transition-colors whitespace-nowrap border border-white/20"
         >
-            Learn More
+            Learn More →
         </Link>
-    </div>
+    </motion.div>
 )
 
 function DatingPageContent() {
@@ -184,13 +193,14 @@ function DatingPageContent() {
     const profiles: ProfileData[] = filteredDatingProfiles.map((profile: DatingProfile) => {
         // Extract location from profile
         const location = profile.location as { city?: string; area?: string; country?: string } | undefined
-        const cityDisplay = location?.city || location?.area || 'Location not set'
 
         return {
             id: profile.id,
             name: getDisplayName(profile),
             age: profile.age || calculateAge(profile.dateOfBirth),
-            distance: cityDisplay,
+            distance: location?.city || undefined,
+            area: location?.area || undefined,
+            country: location?.country || undefined,
             bio: profile.bio || '',
             photos: profile.photos && profile.photos.length > 0
                 ? profile.photos
@@ -209,7 +219,6 @@ function DatingPageContent() {
 
         // Extract location from profile or datingProfile
         const location = (datingProfile.location || profile.location) as { city?: string; area?: string; country?: string } | undefined
-        const cityDisplay = location?.city || location?.area || 'Location not set'
 
         // Get photos from datingProfile or profile level
         const photos = datingProfile.photos || profile.photos
@@ -227,7 +236,9 @@ function DatingPageContent() {
             id: profile.id,
             name: getDisplayName(profile),
             age: profile.age || calculateAge(dateOfBirth),
-            distance: cityDisplay,
+            distance: location?.city || undefined,
+            area: location?.area || undefined,
+            country: location?.country || undefined,
             bio: bio,
             photos: photos && photos.length > 0
                 ? photos
@@ -387,225 +398,165 @@ function DatingPageContent() {
             {/* Subscription Banner */}
             <SubscriptionBanner />
 
-            {/* Header */}
-            <header className="sticky top-0 z-10 bg-white border-b border-gray-200 p-4">
-                <div className="max-w-7xl mx-auto">
-                    <div className="flex justify-between items-center">
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dating</h1>
+            {/* Sticky Header */}
+            <header className="sticky top-0 z-10 bg-white/95 backdrop-blur-xl border-b border-gray-100 shadow-sm">
+                <div className="max-w-7xl mx-auto px-4 py-3">
+                    {/* Top row */}
+                    <div className="flex justify-between items-center gap-3">
+                        <h1 className="text-2xl font-bold text-gray-900">Dating</h1>
 
-                        {/* Action Buttons - Aligned with title */}
-                        <div className="flex gap-2">
-                            <Link
-                                href="/dating/activity"
-                                className="flex-shrink-0 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2 relative"
-                            >
+                        <div className="flex items-center gap-2">
+                            <Link href="/dating/activity" className="relative flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-pink-50 hover:border-pink-200 hover:text-pink-600 text-sm font-medium transition-all">
                                 <Heart className="w-4 h-4" />
                                 <span className="hidden sm:inline">Activity</span>
                                 {matchCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
-                                        {matchCount}
+                                    <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                                        {matchCount > 9 ? '9+' : matchCount}
                                     </span>
                                 )}
                             </Link>
 
-                            <Link
-                                href="/chat"
-                                className="flex-shrink-0 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2"
-                            >
+                            <Link href="/chat" className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-pink-50 hover:border-pink-200 hover:text-pink-600 text-sm font-medium transition-all">
                                 <MessageCircle className="w-4 h-4" />
                                 <span className="hidden sm:inline">Messages</span>
                             </Link>
 
-                            <button
+                            <motion.button
                                 onClick={() => setIsFilterOpen(!isFilterOpen)}
-                                className="flex-shrink-0 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2"
+                                className={`flex items-center gap-1.5 px-3 py-2 border rounded-xl text-sm font-medium transition-all ${isFilterOpen ? 'bg-pink-500 border-pink-500 text-white' : 'border-gray-200 text-gray-600 hover:bg-pink-50 hover:border-pink-200 hover:text-pink-600'}`}
+                                whileTap={{ scale: 0.95 }}
                             >
                                 <Filter className="w-4 h-4" />
                                 <span className="hidden sm:inline">Filter</span>
-                            </button>
+                            </motion.button>
 
-                            <div className="relative flex-shrink-0">
-                                <button
+                            <div className="relative">
+                                <motion.button
                                     onClick={() => setIsLocationOpen(!isLocationOpen)}
-                                    className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center gap-2"
+                                    className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-pink-50 hover:border-pink-200 hover:text-pink-600 text-sm font-medium transition-all"
+                                    whileTap={{ scale: 0.95 }}
                                 >
-                                    <MapPin className="w-4 h-4" />
+                                    <MapPin className="w-4 h-4 text-pink-500" />
                                     <span className="hidden sm:inline">{selectedLocation}</span>
-                                </button>
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                </motion.button>
 
-                                {isLocationOpen && (
-                                    <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto z-20">
-                                        {kenyanCounties.map((county) => (
-                                            <button
-                                                key={county}
-                                                onClick={() => {
-                                                    handleLocationChange(county)
-                                                    setIsLocationOpen(false)
-                                                }}
-                                                className={`w-full text-left px-4 py-2 hover:bg-pink-50 transition-colors ${
-                                                    selectedLocation === county ? 'bg-pink-100 text-pink-700 font-medium' : 'text-gray-700'
-                                                }`}
-                                            >
-                                                {county}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
+                                <AnimatePresence>
+                                    {isLocationOpen && (
+                                        <motion.div
+                                            className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-2xl shadow-2xl max-h-72 overflow-y-auto z-30"
+                                            initial={{ opacity: 0, y: -10, scale: 0.97 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: -10, scale: 0.97 }}
+                                            transition={{ duration: 0.15 }}
+                                        >
+                                            {kenyanCounties.map((county) => (
+                                                <button key={county} onClick={() => { handleLocationChange(county); setIsLocationOpen(false) }}
+                                                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${selectedLocation === county ? 'bg-pink-50 text-pink-600 font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}
+                                                >
+                                                    {county}
+                                                </button>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </div>
                     </div>
 
-                    <div className="mt-4 flex gap-2">
-                        <button
-                            onClick={() => setActiveView('all')}
-                            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${activeView === 'all'
-                                    ? 'bg-pink-500 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                        >
-                            All
-                        </button>
-                        <button
-                            onClick={() => setActiveView('matches')}
-                            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors relative ${activeView === 'matches'
-                                    ? 'bg-pink-500 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                        >
-                            Matches {matchCount > 0 && `(${matchCount})`}
-                            {matchCount > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                                    {matchCount}
-                                </span>
-                            )}
-                        </button>
+                    {/* View toggle */}
+                    <div className="mt-3 flex gap-1.5 bg-gray-100 p-1 rounded-xl">
+                        {(['all', 'matches'] as const).map((view) => (
+                            <button key={view} onClick={() => setActiveView(view)}
+                                className={`relative flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-all capitalize ${activeView === view ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                {view === 'matches' && matchCount > 0 ? `Matches (${matchCount})` : view === 'all' ? 'All Profiles' : 'Matches'}
+                                {view === 'matches' && matchCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] rounded-full w-3.5 h-3.5 flex items-center justify-center font-bold">{matchCount > 9 ? '9+' : matchCount}</span>
+                                )}
+                            </button>
+                        ))}
                     </div>
 
+                    {/* Search */}
                     <div className="mt-3 relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Search by name, interests, or bio"
+                            placeholder="Search by name, interests, or bio..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                            className="w-full pl-10 pr-10 py-2.5 border-2 border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:border-pink-400 outline-none transition-colors bg-gray-50 focus:bg-white"
                         />
+                        {searchQuery && (
+                            <button onClick={() => setSearchQuery('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                <X className="w-4 h-4" />
+                            </button>
+                        )}
                     </div>
                 </div>
             </header>
 
             {/* Filter Panel */}
-            {isFilterOpen && (
-                <div className="bg-white border-b border-gray-200 p-4">
-                    <div className="max-w-7xl mx-auto space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Gender
-                                </label>
-                                <select
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                                    onChange={(e) => setFilters(prev => ({
-                                        ...prev,
-                                        gender: e.target.value || undefined
-                                    }))}
-                                >
-                                    <option value="">Any</option>
-                                    <option value="male">Men</option>
-                                    <option value="female">Women</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Distance (km): {filters.maxDistance}
-                                </label>
-                                <input
-                                    type="range"
-                                    min="1"
-                                    max="100"
-                                    value={filters.maxDistance}
-                                    onChange={(e) => setFilters(prev => ({
-                                        ...prev,
-                                        maxDistance: parseInt(e.target.value)
-                                    }))}
-                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-pink-500"
-                                />
-                                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                                    <span>1 km</span>
-                                    <span>50 km</span>
-                                    <span>100 km</span>
+            <AnimatePresence>
+                {isFilterOpen && (
+                    <motion.div
+                        className="bg-white border-b border-gray-100 shadow-sm"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                    >
+                        <div className="max-w-7xl mx-auto px-4 py-5">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Gender</label>
+                                    <select className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm text-gray-700 focus:border-pink-400 outline-none transition-colors"
+                                        onChange={(e) => setFilters(prev => ({ ...prev, gender: e.target.value || undefined }))}>
+                                        <option value="">Any</option>
+                                        <option value="male">Men</option>
+                                        <option value="female">Women</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Distance: {filters.maxDistance}km</label>
+                                    <input type="range" min="1" max="100" value={filters.maxDistance}
+                                        onChange={(e) => setFilters(prev => ({ ...prev, maxDistance: parseInt(e.target.value) }))}
+                                        className="w-full h-2 bg-pink-100 rounded-lg appearance-none cursor-pointer accent-pink-500" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Age Range</label>
+                                    <div className="flex items-center gap-2">
+                                        <input type="number" min="18" max="99" placeholder="Min" value={filters.minAge || ''}
+                                            onChange={(e) => setFilters(prev => ({ ...prev, minAge: e.target.value ? parseInt(e.target.value) : undefined }))}
+                                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-pink-400 outline-none transition-colors" />
+                                        <span className="text-gray-400 text-sm">–</span>
+                                        <input type="number" min="18" max="99" placeholder="Max" value={filters.maxAge || ''}
+                                            onChange={(e) => setFilters(prev => ({ ...prev, maxAge: e.target.value ? parseInt(e.target.value) : undefined }))}
+                                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-pink-400 outline-none transition-colors" />
+                                    </div>
                                 </div>
                             </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Age Range
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="number"
-                                        min="18"
-                                        max="99"
-                                        placeholder="Min"
-                                        value={filters.minAge || ''}
-                                        onChange={(e) => setFilters(prev => ({
-                                            ...prev,
-                                            minAge: e.target.value ? parseInt(e.target.value) : undefined
-                                        }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                                    />
-                                    <span className="text-gray-500">to</span>
-                                    <input
-                                        type="number"
-                                        min="18"
-                                        max="99"
-                                        placeholder="Max"
-                                        value={filters.maxAge || ''}
-                                        onChange={(e) => setFilters(prev => ({
-                                            ...prev,
-                                            maxAge: e.target.value ? parseInt(e.target.value) : undefined
-                                        }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                                    />
-                                </div>
+                            <div className="flex justify-end gap-2">
+                                <button onClick={() => setIsFilterOpen(false)} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition-colors">Cancel</button>
+                                <button onClick={handleApplyFilters} className="px-4 py-2 bg-pink-500 text-white rounded-xl text-sm font-semibold hover:bg-pink-600 transition-colors shadow-md shadow-pink-500/25">Apply Filters</button>
                             </div>
                         </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
-                        <div className="flex justify-end gap-2">
-                            <button
-                                onClick={() => setIsFilterOpen(false)}
-                                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleApplyFilters}
-                                className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors"
-                            >
-                                Apply Filters
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Error Message - Only show if it's NOT a subscription error */}
+            {/* Error */}
             {error && !error.toLowerCase().includes('subscription') && !error.toLowerCase().includes('subscribe') && (
                 <div className="max-w-7xl mx-auto px-4 pt-4">
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+                    <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3">
                         <AlertCircle className="w-5 h-5 text-red-400" />
                         <div>
-                            <p className="text-red-800 font-medium">Failed to load profiles</p>
-                            <p className="text-red-600 text-sm">{error}</p>
+                            <p className="text-red-700 font-medium text-sm">Failed to load profiles</p>
+                            <p className="text-red-500 text-xs">{error}</p>
                         </div>
-                        <button
-                            onClick={() => refetch()}
-                            className="ml-auto px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
-                        >
-                            Retry
-                        </button>
+                        <button onClick={() => refetch()} className="ml-auto px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 transition-colors">Retry</button>
                     </div>
                 </div>
             )}
@@ -616,47 +567,45 @@ function DatingPageContent() {
 
                 {(isLoading || (activeView === 'matches' && matchesLoading)) ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {[...Array(6)].map((_, index) => (
-                            <div key={index} className="w-full">
-                                <div className="animate-pulse">
-                                    <div className="bg-gray-300 aspect-[3/4] rounded-xl mb-2"></div>
-                                    <div className="bg-gray-300 h-4 rounded-md w-3/4 mb-2"></div>
-                                    <div className="bg-gray-300 h-3 rounded-md w-1/2 mb-4"></div>
-                                    <div className="flex gap-2">
-                                        <div className="bg-gray-300 h-8 rounded-md w-1/2"></div>
-                                        <div className="bg-gray-300 h-8 rounded-md w-1/2"></div>
-                                    </div>
+                        {[...Array(8)].map((_, i) => (
+                            <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100">
+                                <div className="shimmer aspect-[3/4] bg-gray-200" />
+                                <div className="p-3 space-y-2">
+                                    <div className="shimmer h-4 rounded-lg bg-gray-200 w-3/4" />
+                                    <div className="shimmer h-3 rounded-lg bg-gray-200 w-1/2" />
+                                    <div className="shimmer h-8 rounded-xl bg-gray-200 w-full mt-1" />
                                 </div>
                             </div>
                         ))}
                     </div>
                 ) : filteredProfiles.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <motion.div
+                        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ staggerChildren: 0.05 }}
+                    >
                         {filteredProfiles.map(profile => (
-                            <DatingCard
-                                key={profile.id}
-                                profile={profile}
-                                onLike={handleLike}
-                                onMessage={handleMessage}
-                                onView={handleViewProfile}
-                            />
+                            <DatingCard key={profile.id} profile={profile} onLike={handleLike} onMessage={handleMessage} onView={handleViewProfile} />
                         ))}
-                    </div>
+                    </motion.div>
                 ) : (
-                    <div className="text-center py-12">
-                        <div className="text-gray-500 text-lg mb-2">
-                            {!hasDatingAccess
-                                ? 'Subscribe to view dating profiles'
-                                : activeView === 'matches' ? 'No matches yet' : 'No profiles found'}
+                    <motion.div className="text-center py-16" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                        <div className="w-16 h-16 bg-pink-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <Heart className="w-8 h-8 text-pink-300" />
                         </div>
-                        <p className="text-gray-600">
-                            {!hasDatingAccess
-                                ? 'Get access to our dating community and start making connections'
-                                : activeView === 'matches'
-                                    ? 'Start liking profiles to see your matches here'
-                                    : 'Try adjusting your search or filters'}
+                        <p className="text-gray-700 font-semibold text-lg">
+                            {!hasDatingAccess ? 'Subscribe to view dating profiles' : activeView === 'matches' ? 'No matches yet' : 'No profiles found'}
                         </p>
-                    </div>
+                        <p className="text-gray-400 text-sm mt-1 max-w-xs mx-auto">
+                            {!hasDatingAccess ? 'Get access to our dating community and start making connections' : activeView === 'matches' ? 'Start liking profiles to get matches' : 'Try adjusting your search or filters'}
+                        </p>
+                        {!hasDatingAccess && (
+                            <Link href="/subscription/dating" className="inline-block mt-4 px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl text-sm font-semibold shadow-md shadow-pink-500/25 hover:shadow-pink-500/40 transition-all">
+                                Subscribe Now
+                            </Link>
+                        )}
+                    </motion.div>
                 )}
             </main>
 
