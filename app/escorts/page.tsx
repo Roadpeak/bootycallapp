@@ -200,7 +200,7 @@ export default function HookupPage() {
             const pollPaymentStatus = async () => {
                 attempts++
                 try {
-                    const statusResult = await checkPaymentStatus(paymentId)
+                    const statusResult = await checkPaymentStatus(paymentId, mpesaPhone)
                     const status = statusResult.data?.status
 
                     if (status === 'COMPLETED') {

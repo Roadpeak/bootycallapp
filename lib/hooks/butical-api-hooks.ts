@@ -606,7 +606,7 @@ interface UsePaymentReturn {
     subscribeDating: (phone: string) => Promise<ApiResponse<PaymentResponse>>;
     unlockEscort: (escortId: string, phone: string) => Promise<ApiResponse<PaymentResponse>>;
     subscribeVIP: (phone: string) => Promise<ApiResponse<PaymentResponse>>;
-    checkPaymentStatus: (paymentId: string) => Promise<ApiResponse<any>>;
+    checkPaymentStatus: (paymentId: string, phone?: string) => Promise<ApiResponse<any>>;
 }
 
 export const usePayment = (): UsePaymentReturn => {
@@ -664,9 +664,14 @@ export const usePayment = (): UsePaymentReturn => {
         }
     };
 
-    const checkPaymentStatus = async (paymentId: string): Promise<ApiResponse<any>> => {
+    // `phone` is only needed for escort unlocks, where it proves the caller is
+    // the payer and releases the access token.
+    const checkPaymentStatus = async (
+        paymentId: string,
+        phone?: string
+    ): Promise<ApiResponse<any>> => {
         try {
-            const response = await ButicalAPI.payments.getPaymentStatus(paymentId);
+            const response = await ButicalAPI.payments.getPaymentStatus(paymentId, phone);
             // Unwrap API response
             const statusData = (response.data as any)?.data || response.data;
             return { success: true, data: statusData };

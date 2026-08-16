@@ -160,7 +160,7 @@ export default function EscortViewPage() {
             const pollPaymentStatus = async () => {
                 attempts++
                 try {
-                    const statusResult = await checkPaymentStatus(paymentId)
+                    const statusResult = await checkPaymentStatus(paymentId, mpesaPhone)
                     const status = statusResult.data?.status
 
                     if (status === 'COMPLETED') {

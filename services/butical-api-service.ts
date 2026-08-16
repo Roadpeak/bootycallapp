@@ -741,9 +741,14 @@ const ButicalAPI = {
         // Subscribe to VIP (KES 3,000/year) - for ESCORTs only
         subscribeVIP: (phone: string) =>
             apiClient.post<ApiResponseWrapper<PaymentInitiateResponse>>('/pay/vip', { phone }),
-        // Check payment status
-        getPaymentStatus: (paymentId: string) =>
-            apiClient.get<ApiResponseWrapper<PaymentStatus>>(`/payments/${paymentId}`),
+        // Check payment status.
+        // `phone` is required to receive the escort-unlock access token back:
+        // the endpoint is public, so it only releases the token to a caller who
+        // can name the number that paid. Status polling works without it.
+        getPaymentStatus: (paymentId: string, phone?: string) =>
+            apiClient.get<ApiResponseWrapper<PaymentStatus>>(`/payments/${paymentId}`, {
+                params: phone ? { phone } : undefined,
+            }),
         // M-Pesa callback webhook (internal use)
         mpesaCallback: (data: any) =>
             apiClient.post('/mpesa/callback', data),
