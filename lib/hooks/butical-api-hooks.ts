@@ -107,7 +107,10 @@ export const useAuth = (): UseAuthReturn => {
             const response = await ButicalAPI.auth.login(credentials);
             // Unwrap API response (API wraps in { status, data })
             const authData = (response.data as any)?.data || response.data;
-            const { accessToken, refreshToken, user: userData } = authData;
+            // Login nests the tokens under `tokens`, registration returns them
+            // flat. Accept either, so neither endpoint silently stores nothing.
+            const { accessToken, refreshToken } = authData?.tokens ?? authData;
+            const userData = authData?.user;
 
             TokenService.setAccessToken(accessToken);
             if (refreshToken) {
