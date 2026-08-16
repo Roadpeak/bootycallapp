@@ -17,7 +17,8 @@ import ButicalAPI, {
     HookupUserRegistration,
     LoginCredentials,
     ReferralApplyResponse,
-    ReferredUser,
+    ReferralRecord,
+    ReferralSummary,
     AccessTokenResponse,
     DatingSearchParams as ApiDatingSearchParams,
     Subscription,
@@ -35,12 +36,17 @@ interface ApiResponse<T> {
 
 interface EscortFilters {
     location?: string;
+    /** Neighbourhood within the city, e.g. "Kilimani". */
+    area?: string;
     minAge?: number;
     maxAge?: number;
     minRate?: number;
     maxRate?: number;
     page?: number;
     limit?: number;
+    sortBy?: 'tier' | 'newest' | 'price';
+    /** Keeps the within-tier shuffle stable across requests in a session. */
+    seed?: string;
 }
 
 interface DatingSearchParams {
@@ -101,7 +107,10 @@ export const useAuth = (): UseAuthReturn => {
             const response = await ButicalAPI.auth.login(credentials);
             // Unwrap API response (API wraps in { status, data })
             const authData = (response.data as any)?.data || response.data;
-            const { accessToken, refreshToken, user: userData } = authData;
+            // Login nests the tokens under `tokens`, registration returns them
+            // flat. Accept either, so neither endpoint silently stores nothing.
+            const { accessToken, refreshToken } = authData?.tokens ?? authData;
+            const userData = authData?.user;
 
             TokenService.setAccessToken(accessToken);
             if (refreshToken) {
@@ -606,7 +615,7 @@ interface UsePaymentReturn {
     subscribeDating: (phone: string) => Promise<ApiResponse<PaymentResponse>>;
     unlockEscort: (escortId: string, phone: string) => Promise<ApiResponse<PaymentResponse>>;
     subscribeVIP: (phone: string) => Promise<ApiResponse<PaymentResponse>>;
-    checkPaymentStatus: (paymentId: string) => Promise<ApiResponse<any>>;
+    checkPaymentStatus: (paymentId: string, phone?: string) => Promise<ApiResponse<any>>;
 }
 
 export const usePayment = (): UsePaymentReturn => {
@@ -664,9 +673,14 @@ export const usePayment = (): UsePaymentReturn => {
         }
     };
 
-    const checkPaymentStatus = async (paymentId: string): Promise<ApiResponse<any>> => {
+    // `phone` is only needed for escort unlocks, where it proves the caller is
+    // the payer and releases the access token.
+    const checkPaymentStatus = async (
+        paymentId: string,
+        phone?: string
+    ): Promise<ApiResponse<any>> => {
         try {
-            const response = await ButicalAPI.payments.getPaymentStatus(paymentId);
+            const response = await ButicalAPI.payments.getPaymentStatus(paymentId, phone);
             // Unwrap API response
             const statusData = (response.data as any)?.data || response.data;
             return { success: true, data: statusData };
@@ -766,9 +780,24 @@ export const useWallet = (): UseWalletReturn => {
 
 // ==================== REFERRALS HOOKS ====================
 
+const EMPTY_SUMMARY: ReferralSummary = {
+    totalReferrals: 0,
+    totalEarnings: 0,
+    pendingEarnings: 0,
+    directCount: 0,
+    directEarnings: 0,
+    chainCount: 0,
+    chainEarnings: 0,
+};
+
 interface UseReferralsReturn {
     referralCode: string | null;
-    myReferrals: ReferredUser[];
+    myReferrals: ReferralRecord[];
+    /** People you invited yourself. */
+    directReferrals: ReferralRecord[];
+    /** People invited by your referrals, which still earn you a share. */
+    chainReferrals: ReferralRecord[];
+    summary: ReferralSummary;
     totalEarnings: number;
     loading: boolean;
     error: string | null;
@@ -778,8 +807,10 @@ interface UseReferralsReturn {
 
 export const useReferrals = (): UseReferralsReturn => {
     const [referralCode, setReferralCode] = useState<string | null>(null);
-    const [myReferrals, setMyReferrals] = useState<ReferredUser[]>([]);
-    const [totalEarnings, setTotalEarnings] = useState<number>(0);
+    const [myReferrals, setMyReferrals] = useState<ReferralRecord[]>([]);
+    const [directReferrals, setDirectReferrals] = useState<ReferralRecord[]>([]);
+    const [chainReferrals, setChainReferrals] = useState<ReferralRecord[]>([]);
+    const [summary, setSummary] = useState<ReferralSummary>(EMPTY_SUMMARY);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -795,14 +826,35 @@ export const useReferrals = (): UseReferralsReturn => {
             const codeData = (codeRes.data as any)?.data || codeRes.data;
             setReferralCode(codeData?.referralCode || codeData?.code || null);
 
-            // Unwrap API response: { status, data: { referrals: [...], totalEarnings } }
+            // Unwrap API response: { status, data: { referrals, direct, chain, summary } }
             const referralsData = (referralsRes.data as any)?.data || referralsRes.data;
-            setMyReferrals(referralsData?.referrals || []);
-            setTotalEarnings(referralsData?.totalEarnings || 0);
+            const rows: ReferralRecord[] = referralsData?.referrals || [];
+            setMyReferrals(rows);
+
+            // Prefer the pre-split lists, but derive them from `level` if an
+            // older API build only returns the flat list.
+            setDirectReferrals(
+                referralsData?.direct ?? rows.filter((row) => row.level !== 2)
+            );
+            setChainReferrals(
+                referralsData?.chain ?? rows.filter((row) => row.level === 2)
+            );
+
+            // Totals are nested under `summary`; the flat form is kept as a
+            // fallback so an older API build still reports earnings instead of 0.
+            setSummary({
+                ...EMPTY_SUMMARY,
+                ...(referralsData?.summary ?? {}),
+                totalEarnings:
+                    referralsData?.summary?.totalEarnings ?? referralsData?.totalEarnings ?? 0,
+            });
             setError(null);
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to fetch referral data');
             setMyReferrals([]);
+            setDirectReferrals([]);
+            setChainReferrals([]);
+            setSummary(EMPTY_SUMMARY);
         } finally {
             setLoading(false);
         }
@@ -831,7 +883,10 @@ export const useReferrals = (): UseReferralsReturn => {
     return {
         referralCode,
         myReferrals,
-        totalEarnings,
+        directReferrals,
+        chainReferrals,
+        summary,
+        totalEarnings: summary.totalEarnings,
         loading,
         error,
         applyCode,

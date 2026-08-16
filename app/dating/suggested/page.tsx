@@ -9,6 +9,7 @@ import type { ProfileData } from '@/app/components/cards/EscortCard'
 import type { DatingProfile } from '@/services/butical-api-service'
 import { useDatingSuggested, useAuth, useSubscription } from '@/lib/hooks/butical-api-hooks'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
+import { getPublicDisplayName } from '@/lib/utils/display-name'
 
 export default function SuggestedProfilesPage() {
     const router = useRouter()
@@ -28,13 +29,8 @@ export default function SuggestedProfilesPage() {
     }, [router])
 
     // Helper to get display name from dating profile
-    const getDisplayName = (profile: DatingProfile): string => {
-        if (profile.name) return profile.name
-        if (profile.user) {
-            return profile.user.displayName || profile.user.firstName || 'Anonymous'
-        }
-        return 'Anonymous'
-    }
+    const getDisplayName = (profile: DatingProfile): string =>
+        getPublicDisplayName(profile as any, profile.user)
 
     // Helper to calculate age from dateOfBirth
     const calculateAge = (dateOfBirth: string | undefined): number => {
@@ -50,11 +46,14 @@ export default function SuggestedProfilesPage() {
     }
 
     // Transform dating profile to ProfileData
-    const transformProfile = (profile: DatingProfile): ProfileData => ({
+    const transformProfile = (profile: DatingProfile): ProfileData => {
+        const location = profile.location as { city?: string; area?: string } | undefined
+        return {
         id: profile.id,
         name: getDisplayName(profile),
         age: profile.age || calculateAge(profile.dateOfBirth),
-        distance: 0,
+        city: location?.city || undefined,
+        area: location?.area || undefined,
         bio: profile.bio || '',
         photos: profile.photos && profile.photos.length > 0
             ? profile.photos
@@ -62,7 +61,8 @@ export default function SuggestedProfilesPage() {
         isVerified: profile.isVerified || false,
         isLiked: false,
         tags: profile.interests || [],
-    })
+        }
+    }
 
     const handleLike = async (profileId: string) => {
         try {

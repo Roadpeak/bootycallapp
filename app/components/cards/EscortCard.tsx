@@ -5,6 +5,35 @@ import Link from 'next/link'
 import { Heart, MessageSquare, Lock, Unlock, Phone, MapPin, Image as ImageIcon, Video, Star } from 'lucide-react'
 import { getImageUrl } from '@/lib/utils/image'
 
+export type EscortTier = 'REGULAR' | 'PRIME' | 'VIP' | 'VVIP'
+
+/**
+ * Badge styling per plan. Colours follow the published plan card: copper for
+ * Regular, bronze/green for Prime, silver/blue for VIP, gold/purple for VVIP.
+ */
+export const TIER_STYLES: Record<EscortTier, { label: string; text: string; badge: string }> = {
+    VVIP: {
+        label: 'VVIP',
+        text: 'text-purple-600',
+        badge: 'bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white',
+    },
+    VIP: {
+        label: 'VIP',
+        text: 'text-blue-600',
+        badge: 'bg-gradient-to-r from-blue-500 to-sky-500 text-white',
+    },
+    PRIME: {
+        label: 'Prime',
+        text: 'text-emerald-600',
+        badge: 'bg-gradient-to-r from-emerald-500 to-green-500 text-white',
+    },
+    REGULAR: {
+        label: 'Regular',
+        text: 'text-orange-600',
+        badge: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white',
+    },
+}
+
 // Combined interface for all profile types
 export interface ProfileData {
     id: string
@@ -23,11 +52,17 @@ export interface ProfileData {
     price?: number
     isUnlocked?: boolean
     isVip?: boolean
+    /** Subscription plan. Drives the badge and listing order. */
+    tier?: EscortTier | null
     hasDirectCall?: boolean
     services?: (string | { name: string })[]
-    // Additional escort fields
+    // Location. `city` is the broad locality (county/town); `area` is the
+    // precise neighbourhood the user gave at signup, e.g. "Kilimani".
+    // `location` is the escort-side alias of `area`, kept for compatibility.
     location?: string
     city?: string
+    area?: string
+    country?: string
     ethnicity?: string
     category?: string
     photoCount?: number
@@ -161,7 +196,7 @@ export const EscortCard: React.FC<EscortCardProps> = ({
 }) => {
     const {
         id, name, age, location, city, ethnicity, category, photos, photoCount,
-        isVerified, isVip, isNew, price, isUnlocked, hasDirectCall, services, bio
+        isVerified, isVip, isNew, price, isUnlocked, hasDirectCall, services, bio, tier
     } = profile
 
     // Helper to get service name from service (can be string or object)
@@ -264,12 +299,19 @@ export const EscortCard: React.FC<EscortCardProps> = ({
                                 <span>Verified</span>
                             </div>
                         )}
-                        {isVip && (
+                        {tier ? (
+                            <div
+                                className={`flex items-center gap-1 text-xs font-semibold ${TIER_STYLES[tier].text}`}
+                            >
+                                <Star className="w-3 h-3 fill-current" />
+                                <span>{TIER_STYLES[tier].label}</span>
+                            </div>
+                        ) : isVip ? (
                             <div className="flex items-center gap-1 text-purple-600 text-xs font-medium">
                                 <Star className="w-3 h-3 fill-current" />
                                 <span>VIP</span>
                             </div>
-                        )}
+                        ) : null}
                     </div>
 
                     {/* Services */}

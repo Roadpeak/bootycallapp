@@ -15,6 +15,7 @@ import { useDatingProfiles, useDatingMatches, useDatingLikes, useDatingLikedBy, 
 import type { DatingProfile } from '@/services/butical-api-service'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 import ChatService from '@/services/chat-service'
+import { getPublicDisplayName } from '@/lib/utils/display-name'
 
 // All 47 counties in Kenya
 const kenyanCounties = [
@@ -142,17 +143,8 @@ function DatingPageContent() {
     }, [])
 
     // Helper to get display name from dating profile
-    const getDisplayName = (profile: DatingProfile): string => {
-        if (profile.name) return profile.name
-        // Check for displayName/firstName at top level (from matches/likes endpoints)
-        if ((profile as any).displayName) return (profile as any).displayName
-        if ((profile as any).firstName) return (profile as any).firstName
-        // Check nested user object (from regular profiles)
-        if (profile.user) {
-            return profile.user.displayName || profile.user.firstName || 'Anonymous'
-        }
-        return 'Anonymous'
-    }
+    const getDisplayName = (profile: DatingProfile): string =>
+        getPublicDisplayName(profile as any, profile.user)
 
     // Helper to calculate age from dateOfBirth
     const calculateAge = (dateOfBirth: string | undefined): number => {
@@ -198,7 +190,7 @@ function DatingPageContent() {
             id: profile.id,
             name: getDisplayName(profile),
             age: profile.age || calculateAge(profile.dateOfBirth),
-            distance: location?.city || undefined,
+            city: location?.city || undefined,
             area: location?.area || undefined,
             country: location?.country || undefined,
             bio: profile.bio || '',
@@ -236,7 +228,7 @@ function DatingPageContent() {
             id: profile.id,
             name: getDisplayName(profile),
             age: profile.age || calculateAge(dateOfBirth),
-            distance: location?.city || undefined,
+            city: location?.city || undefined,
             area: location?.area || undefined,
             country: location?.country || undefined,
             bio: bio,

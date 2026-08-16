@@ -181,6 +181,9 @@ export interface Escort {
     verified: boolean
     vipStatus: boolean
     vipExpiresAt?: string
+    /** Active subscription plan, null when the escort has none. */
+    tier?: 'REGULAR' | 'PRIME' | 'VIP' | 'VVIP' | null
+    subscriptionExpiresAt?: string | null
     moderationStatus: string
     unlockPrice: number
     experienceYears?: number
@@ -207,9 +210,54 @@ export interface Escort {
     views?: number
 }
 
+export type AdActionType = 'LINK' | 'WHATSAPP' | 'CALL'
+
+export interface Advertisement {
+    id: string
+    name: string
+    detail: string | null
+    imageUrl: string
+    actionType: AdActionType
+    /** URL for LINK; a normalised 254… phone number for WHATSAPP and CALL. */
+    actionValue: string
+    actionLabel: string | null
+}
+
+export interface SubscriptionPlanOption {
+    id: string
+    tier: 'REGULAR' | 'PRIME' | 'VIP' | 'VVIP'
+    durationDays: number
+    price: number
+    label: string | null
+}
+
+export interface EscortSubscriptionStatus {
+    active: boolean
+    tier: 'REGULAR' | 'PRIME' | 'VIP' | 'VVIP' | null
+    expiresAt: string | null
+    daysRemaining: number
+    /** Whether the platform is currently enforcing subscriptions at all. */
+    enforced: boolean
+    /** True when the escort is locked out until they pay. */
+    mustPay: boolean
+    hiddenFromListings: boolean
+    history: {
+        id: string
+        tier: string
+        status: string
+        startsAt: string
+        expiresAt: string
+        amountPaid: string | number
+        createdAt: string
+    }[]
+}
+
 export interface EscortListParams {
+    /** Broad locality. `city` is the canonical name; `location` is accepted as an alias. */
     location?: string
     city?: string
+    /** Neighbourhood within the city, e.g. "Kilimani". */
+    area?: string
     minAge?: number
     maxAge?: number
     minRate?: number
@@ -219,6 +267,12 @@ export interface EscortListParams {
     verified?: boolean
     page?: number
     limit?: number
+    sortBy?: 'tier' | 'newest' | 'price'
+    /**
+     * Keeps the within-tier shuffle stable while paging. Without it, each page
+     * reshuffles and the same escort can appear twice.
+     */
+    seed?: string
 }
 
 export interface PaginationInfo {
@@ -369,14 +423,47 @@ export interface ReferralApplyResponse {
 
 export interface ReferredUser {
     id: string
-    displayName: string
+    displayName: string | null
+    firstName: string
     createdAt: string
 }
 
-export interface MyReferralsResponse {
-    referrals: ReferredUser[]
-    totalCount: number
+/** A referral row as returned by GET /referral/my-referrals. */
+export interface ReferralRecord {
+    id: string
+    rewardAmount: string | number
+    status: 'PENDING' | 'COMPLETED' | 'REJECTED'
+    createdAt: string
+    /** 1 = you invited them; 2 = they were invited by someone you invited. */
+    level: 1 | 2
+    /** The person who signed up. Null if they have since been removed. */
+    referred: ReferredUser | null
+    payment: {
+        type: string
+        amount: string | number
+        createdAt: string
+    } | null
+}
+
+export interface ReferralSummary {
+    totalReferrals: number
     totalEarnings: number
+    pendingEarnings: number
+    /** Distinct people you invited yourself. */
+    directCount: number
+    directEarnings: number
+    /** Distinct people invited by the people you invited. */
+    chainCount: number
+    chainEarnings: number
+}
+
+export interface MyReferralsResponse {
+    referrals: ReferralRecord[]
+    /** Level-1 rows only — people you invited yourself. */
+    direct: ReferralRecord[]
+    /** Level-2 rows — earnings from your referrals' own invites. */
+    chain: ReferralRecord[]
+    summary: ReferralSummary
 }
 
 // Legacy type for backwards compatibility
@@ -675,6 +762,9 @@ const ButicalAPI = {
         getUnlocks: () => apiClient.get<string[]>('/escorts/me/unlocks'),
         getPopularLocations: (limit?: number) =>
             apiClient.get<ApiResponseWrapper<{ city: string; count: number }[]>>('/escorts/locations', { params: { limit } }),
+        /** The signed-in escort's own subscription state, for the paywall gate. */
+        getMySubscription: () =>
+            apiClient.get<ApiResponseWrapper<EscortSubscriptionStatus>>('/escorts/me/subscription'),
     },
 
     // DATING PROFILES
@@ -718,14 +808,44 @@ const ButicalAPI = {
         unlockEscort: (escortId: string, phone: string) =>
             apiClient.post<ApiResponseWrapper<PaymentInitiateResponse>>('/pay/unlock', { phone, escortId }),
         // Subscribe to VIP (KES 3,000/year) - for ESCORTs only
+        /** Buy or renew a specific tiered escort plan. */
+        subscribeToPlan: (planId: string, phone: string) =>
+            apiClient.post<ApiResponseWrapper<PaymentInitiateResponse>>('/pay/plan', {
+                planId,
+                phone,
+            }),
         subscribeVIP: (phone: string) =>
             apiClient.post<ApiResponseWrapper<PaymentInitiateResponse>>('/pay/vip', { phone }),
-        // Check payment status
-        getPaymentStatus: (paymentId: string) =>
-            apiClient.get<ApiResponseWrapper<PaymentStatus>>(`/payments/${paymentId}`),
+        // Check payment status.
+        // `phone` is required to receive the escort-unlock access token back:
+        // the endpoint is public, so it only releases the token to a caller who
+        // can name the number that paid. Status polling works without it.
+        getPaymentStatus: (paymentId: string, phone?: string) =>
+            apiClient.get<ApiResponseWrapper<PaymentStatus>>(`/payments/${paymentId}`, {
+                params: phone ? { phone } : undefined,
+            }),
         // M-Pesa callback webhook (internal use)
         mpesaCallback: (data: any) =>
             apiClient.post('/mpesa/callback', data),
+    },
+
+    // ADVERTISEMENTS
+    ads: {
+        /** Active carousel ads. Public — the browsing page is too. */
+        list: () => apiClient.get<ApiResponseWrapper<Advertisement[]>>('/ads'),
+        /** Records a click and returns the destination. */
+        trackClick: (adId: string) =>
+            apiClient.post<ApiResponseWrapper<{ actionType: AdActionType; actionValue: string }>>(
+                `/ads/${adId}/click`
+            ),
+        recordImpressions: (adIds: string[]) =>
+            apiClient.post('/ads/impressions', { adIds }),
+    },
+
+    // SUBSCRIPTION PLANS
+    plans: {
+        /** Public catalogue of purchasable escort plans. No auth required. */
+        list: () => apiClient.get<ApiResponseWrapper<SubscriptionPlanOption[]>>('/plans'),
     },
 
     // REFERRALS

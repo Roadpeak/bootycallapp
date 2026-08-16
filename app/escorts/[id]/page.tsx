@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useEscort, usePayment, useAuth, useSubscription } from '@/lib/hooks/butical-api-hooks'
 import { getImageUrl, getImageUrls } from '@/lib/utils/image'
+import { getPublicDisplayName } from '@/lib/utils/display-name'
 
 // Helper functions to manage unlock state in localStorage (24 hour expiration)
 const UNLOCK_STORAGE_KEY = 'escort_unlocks'
@@ -99,9 +100,7 @@ export default function EscortViewPage() {
     // Helper to get display name from escort
     const getDisplayName = (e: typeof escort): string => {
         if (!e) return 'Unknown';
-        if (e.displayName) return e.displayName;
-        if (e.user) return `${e.user.firstName} ${e.user.lastName}`.trim();
-        return 'Anonymous';
+        return getPublicDisplayName(e, e.user);
     };
 
     // Helper to get location string
@@ -161,7 +160,7 @@ export default function EscortViewPage() {
             const pollPaymentStatus = async () => {
                 attempts++
                 try {
-                    const statusResult = await checkPaymentStatus(paymentId)
+                    const statusResult = await checkPaymentStatus(paymentId, mpesaPhone)
                     const status = statusResult.data?.status
 
                     if (status === 'COMPLETED') {

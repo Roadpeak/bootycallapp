@@ -13,6 +13,7 @@ import {
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 import type { User, DatingProfile, Subscription, WalletSummary, ReferralCode } from '@/services/butical-api-service'
 import { getImageUrl } from '@/lib/utils/image'
+import { getPublicDisplayName } from '@/lib/utils/display-name'
 
 // Subscription plan details
 const SUBSCRIPTION_PLANS = {
@@ -285,13 +286,8 @@ export default function DatingProfilePage() {
     }
 
     // Helper to get display name from dating profile
-    const getDisplayName = (p: DatingProfile): string => {
-        if (p.name) return p.name
-        if (p.user) {
-            return p.user.displayName || p.user.firstName || 'Anonymous'
-        }
-        return 'Anonymous'
-    }
+    const getDisplayName = (p: DatingProfile): string =>
+        getPublicDisplayName(p as any, p.user)
 
     // Helper to calculate age from dateOfBirth
     const calculateAge = (dateOfBirth: string | undefined): number => {
@@ -761,6 +757,30 @@ export default function DatingProfilePage() {
                                             }))
                                         }}
                                         placeholder="e.g., Nairobi"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Area / Neighborhood
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="locationArea"
+                                        value={typeof editedProfile.location === 'object'
+                                            ? (editedProfile.location as any)?.area || ''
+                                            : ''}
+                                        onChange={(e) => {
+                                            setEditedProfile(prev => ({
+                                                ...prev,
+                                                location: {
+                                                    ...(typeof prev.location === 'object' ? prev.location : {}),
+                                                    area: e.target.value
+                                                }
+                                            }))
+                                        }}
+                                        placeholder="e.g., Kilimani, Westlands"
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                     />
                                 </div>

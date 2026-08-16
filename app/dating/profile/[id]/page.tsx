@@ -13,6 +13,7 @@ import type { DatingProfile } from '@/services/butical-api-service'
 import { useSubscription, useAuth } from '@/lib/hooks/butical-api-hooks'
 import { getImageUrl } from '@/lib/utils/image'
 import ChatService from '@/services/chat-service'
+import { getPublicDisplayName } from '@/lib/utils/display-name'
 
 export default function DatingProfileViewPage() {
     const params = useParams()
@@ -215,13 +216,8 @@ export default function DatingProfileViewPage() {
     }
 
     // Helper to get display name from dating profile
-    const getDisplayName = (p: DatingProfile): string => {
-        if (p.name) return p.name
-        if (p.user) {
-            return p.user.displayName || p.user.firstName || 'Anonymous'
-        }
-        return 'Anonymous'
-    }
+    const getDisplayName = (p: DatingProfile): string =>
+        getPublicDisplayName(p as any, p.user)
 
     // Helper to calculate age from dateOfBirth
     const calculateAge = (dateOfBirth: string | undefined): number => {

@@ -9,6 +9,8 @@ import type { ProfileData } from '../components/cards/EscortCard'
 import { useEscorts, usePayment } from '@/lib/hooks/butical-api-hooks'
 import type { Escort } from '@/services/butical-api-service'
 import ButicalAPI from '@/services/butical-api-service'
+import { getPublicDisplayName } from '@/lib/utils/display-name'
+import AdCarousel from '../components/ads/AdCarousel'
 
 // All 47 counties in Kenya
 const kenyanCounties = [
@@ -62,9 +64,15 @@ export default function HookupPage() {
         fetchPopularLocations()
     }, [])
 
+    // Escorts are shuffled within each tier so everyone on a plan gets equal
+    // exposure. The seed is fixed for the browsing session so the order stays
+    // put while filtering or paging, but rotates on a fresh visit.
+    const [shuffleSeed] = useState(() => Math.random().toString(36).slice(2))
+
     // Fetch escorts using the hook
     const { escorts, loading: isLoading, error, refetch } = useEscorts({
         location: filters.location,
+        seed: shuffleSeed,
         page: 1,
         limit: 50,
     })
@@ -81,11 +89,8 @@ export default function HookupPage() {
     const safeEscorts = Array.isArray(escorts) ? escorts : []
 
     // Helper to get display name from escort
-    const getDisplayName = (escort: Escort): string => {
-        if (escort.displayName) return escort.displayName;
-        if (escort.user) return `${escort.user.firstName} ${escort.user.lastName}`.trim();
-        return 'Anonymous';
-    };
+    const getDisplayName = (escort: Escort): string =>
+        getPublicDisplayName(escort, escort.user);
 
     // Helper to get location string
     const getLocation = (escort: Escort): string => {
@@ -154,6 +159,7 @@ export default function HookupPage() {
         videoCount: escort.videos?.length || 0,
         isVerified: escort.isVerified || escort.verified || false,
         isVip: escort.vipStatus || escort.isVIP || false,
+        tier: escort.tier ?? null,
         isNew: escort.isNew || false,
         rating: escort.rating || 4.5,
         price: escort.unlockPrice || escort.pricing?.unlockPrice || 150,
@@ -202,7 +208,7 @@ export default function HookupPage() {
             const pollPaymentStatus = async () => {
                 attempts++
                 try {
-                    const statusResult = await checkPaymentStatus(paymentId)
+                    const statusResult = await checkPaymentStatus(paymentId, mpesaPhone)
                     const status = statusResult.data?.status
 
                     if (status === 'COMPLETED') {
@@ -341,6 +347,11 @@ export default function HookupPage() {
                     </div>
                 </div>
             </header>
+
+            {/* Sponsored carousel, directly beneath the locations row */}
+            <div className="max-w-7xl mx-auto px-4 pt-4">
+                <AdCarousel />
+            </div>
 
             {/* Filter Panel */}
             {isFilterOpen && (

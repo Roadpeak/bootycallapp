@@ -11,6 +11,7 @@ import type { MatchNotification } from '@/app/components/types/chat'
 import type { DatingProfile } from '@/services/butical-api-service'
 import { useDatingMatches, useDatingLikes, useDatingLikedBy, useAuth, useSubscription } from '@/lib/hooks/butical-api-hooks'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
+import { getPublicDisplayName } from '@/lib/utils/display-name'
 
 type ActivityTab = 'matches' | 'likes' | 'liked-by'
 
@@ -49,13 +50,8 @@ export default function DatingActivityPage() {
     }, [router])
 
     // Helper to get display name from dating profile
-    const getDisplayName = (profile: DatingProfile): string => {
-        if (profile.name) return profile.name
-        if (profile.user) {
-            return profile.user.displayName || profile.user.firstName || 'Anonymous'
-        }
-        return 'Anonymous'
-    }
+    const getDisplayName = (profile: DatingProfile): string =>
+        getPublicDisplayName(profile as any, profile.user)
 
     // Helper to calculate age from dateOfBirth
     const calculateAge = (dateOfBirth: string | undefined): number => {
@@ -74,13 +70,13 @@ export default function DatingActivityPage() {
     const transformProfile = (profile: DatingProfile, isLiked: boolean = true, isMatched: boolean = false): ProfileData => {
         // Extract location from profile
         const location = profile.location as { city?: string; area?: string; country?: string } | undefined
-        const cityDisplay = location?.city || location?.area || 'Location not set'
 
         return {
             id: profile.id,
             name: getDisplayName(profile),
             age: profile.age || calculateAge(profile.dateOfBirth),
-            distance: cityDisplay,
+            city: location?.city || undefined,
+            area: location?.area || undefined,
             bio: profile.bio || '',
             photos: profile.photos && profile.photos.length > 0
                 ? profile.photos
