@@ -18,6 +18,7 @@ import ButicalAPI, {
     LoginCredentials,
     ReferralApplyResponse,
     ReferralRecord,
+    ReferralSummary,
     AccessTokenResponse,
     DatingSearchParams as ApiDatingSearchParams,
     Subscription,
@@ -776,9 +777,24 @@ export const useWallet = (): UseWalletReturn => {
 
 // ==================== REFERRALS HOOKS ====================
 
+const EMPTY_SUMMARY: ReferralSummary = {
+    totalReferrals: 0,
+    totalEarnings: 0,
+    pendingEarnings: 0,
+    directCount: 0,
+    directEarnings: 0,
+    chainCount: 0,
+    chainEarnings: 0,
+};
+
 interface UseReferralsReturn {
     referralCode: string | null;
     myReferrals: ReferralRecord[];
+    /** People you invited yourself. */
+    directReferrals: ReferralRecord[];
+    /** People invited by your referrals, which still earn you a share. */
+    chainReferrals: ReferralRecord[];
+    summary: ReferralSummary;
     totalEarnings: number;
     loading: boolean;
     error: string | null;
@@ -789,7 +805,9 @@ interface UseReferralsReturn {
 export const useReferrals = (): UseReferralsReturn => {
     const [referralCode, setReferralCode] = useState<string | null>(null);
     const [myReferrals, setMyReferrals] = useState<ReferralRecord[]>([]);
-    const [totalEarnings, setTotalEarnings] = useState<number>(0);
+    const [directReferrals, setDirectReferrals] = useState<ReferralRecord[]>([]);
+    const [chainReferrals, setChainReferrals] = useState<ReferralRecord[]>([]);
+    const [summary, setSummary] = useState<ReferralSummary>(EMPTY_SUMMARY);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -805,18 +823,35 @@ export const useReferrals = (): UseReferralsReturn => {
             const codeData = (codeRes.data as any)?.data || codeRes.data;
             setReferralCode(codeData?.referralCode || codeData?.code || null);
 
-            // Unwrap API response: { status, data: { referrals: [...], summary: { totalEarnings } } }
+            // Unwrap API response: { status, data: { referrals, direct, chain, summary } }
             const referralsData = (referralsRes.data as any)?.data || referralsRes.data;
-            setMyReferrals(referralsData?.referrals || []);
-            // The API nests the totals under `summary`; the flat form is kept as a
-            // fallback so an older API build still reports earnings instead of 0.
-            setTotalEarnings(
-                referralsData?.summary?.totalEarnings ?? referralsData?.totalEarnings ?? 0
+            const rows: ReferralRecord[] = referralsData?.referrals || [];
+            setMyReferrals(rows);
+
+            // Prefer the pre-split lists, but derive them from `level` if an
+            // older API build only returns the flat list.
+            setDirectReferrals(
+                referralsData?.direct ?? rows.filter((row) => row.level !== 2)
             );
+            setChainReferrals(
+                referralsData?.chain ?? rows.filter((row) => row.level === 2)
+            );
+
+            // Totals are nested under `summary`; the flat form is kept as a
+            // fallback so an older API build still reports earnings instead of 0.
+            setSummary({
+                ...EMPTY_SUMMARY,
+                ...(referralsData?.summary ?? {}),
+                totalEarnings:
+                    referralsData?.summary?.totalEarnings ?? referralsData?.totalEarnings ?? 0,
+            });
             setError(null);
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to fetch referral data');
             setMyReferrals([]);
+            setDirectReferrals([]);
+            setChainReferrals([]);
+            setSummary(EMPTY_SUMMARY);
         } finally {
             setLoading(false);
         }
@@ -845,7 +880,10 @@ export const useReferrals = (): UseReferralsReturn => {
     return {
         referralCode,
         myReferrals,
-        totalEarnings,
+        directReferrals,
+        chainReferrals,
+        summary,
+        totalEarnings: summary.totalEarnings,
         loading,
         error,
         applyCode,

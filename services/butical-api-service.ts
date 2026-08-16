@@ -421,6 +421,8 @@ export interface ReferralRecord {
     rewardAmount: string | number
     status: 'PENDING' | 'COMPLETED' | 'REJECTED'
     createdAt: string
+    /** 1 = you invited them; 2 = they were invited by someone you invited. */
+    level: 1 | 2
     /** The person who signed up. Null if they have since been removed. */
     referred: ReferredUser | null
     payment: {
@@ -434,10 +436,20 @@ export interface ReferralSummary {
     totalReferrals: number
     totalEarnings: number
     pendingEarnings: number
+    /** Distinct people you invited yourself. */
+    directCount: number
+    directEarnings: number
+    /** Distinct people invited by the people you invited. */
+    chainCount: number
+    chainEarnings: number
 }
 
 export interface MyReferralsResponse {
     referrals: ReferralRecord[]
+    /** Level-1 rows only — people you invited yourself. */
+    direct: ReferralRecord[]
+    /** Level-2 rows — earnings from your referrals' own invites. */
+    chain: ReferralRecord[]
     summary: ReferralSummary
 }
 

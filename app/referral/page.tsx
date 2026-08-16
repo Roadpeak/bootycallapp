@@ -16,7 +16,13 @@ export default function ReferralPage() {
     const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview')
 
     // Fetch referral, wallet, and user data from API
-    const { referralCode, myReferrals, totalEarnings, loading: referralsLoading } = useReferrals()
+    const {
+        referralCode,
+        myReferrals,
+        totalEarnings,
+        summary,
+        loading: referralsLoading,
+    } = useReferrals()
     const { wallet, loading: walletLoading } = useWallet()
     const { user, loading: userLoading } = useAuth()
 
@@ -34,7 +40,9 @@ export default function ReferralPage() {
     const referralLink = referralCode ? `https://lovebiteglobal.com${getSignupRoute()}?ref=${referralCode}` : ''
     const availableBalance = wallet?.currentBalance || wallet?.balance || 0
     const pendingEarnings = wallet?.pendingWithdrawals || 0
-    const totalReferralsCount = myReferrals.length
+    // Distinct people, not payment rows: a referral who renews produces
+    // several rows and would otherwise be counted several times.
+    const totalReferralsCount = summary.directCount + summary.chainCount
 
     const handleCopyCode = () => {
         if (referralCode) {
@@ -115,12 +123,12 @@ export default function ReferralPage() {
                         <div className="flex items-center gap-2 mb-4">
                             <Gift className="w-8 h-8" />
                             <span className="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full">
-                                Earn 50% Commission
+                                Earn On Every Referral
                             </span>
                         </div>
                         <h2 className="text-3xl font-bold mb-3">Invite Friends & Earn Money!</h2>
                         <p className="text-pink-100 text-lg mb-6 max-w-2xl">
-                            Share your referral code and earn 50% commission on all qualifying payments from your referrals.
+                            Share your referral code and earn a commission on every qualifying payment your referrals make - and a share when they refer others too.
                         </p>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -300,7 +308,7 @@ export default function ReferralPage() {
                             <div>
                                 <h4 className="font-semibold text-gray-900 mb-1">Earn Commission</h4>
                                 <p className="text-gray-600 text-sm">
-                                    You earn 50% on every payment they make (subscriptions, unlocks, VIP upgrades).
+                                    You earn a share of every subscription payment they make - including their renewals.
                                 </p>
                             </div>
                         </div>
@@ -405,7 +413,7 @@ export default function ReferralPage() {
                             <div>
                                 <h4 className="font-semibold text-gray-900 mb-4">Performance Overview</h4>
 
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                                     <div className="p-4 bg-gray-50 rounded-lg">
                                         <p className="text-sm text-gray-600 mb-1">Total Earnings</p>
                                         <p className="text-xl font-bold text-gray-900">
@@ -419,12 +427,34 @@ export default function ReferralPage() {
                                         </p>
                                     </div>
                                     <div className="p-4 bg-gray-50 rounded-lg">
-                                        <p className="text-sm text-gray-600 mb-1">Total Referrals</p>
+                                        <p className="text-sm text-gray-600 mb-1">You invited</p>
                                         <p className="text-xl font-bold text-gray-900">
-                                            {totalReferralsCount}
+                                            {summary.directCount}
+                                        </p>
+                                        <p className="text-xs text-green-600 mt-0.5">
+                                            KSh {summary.directEarnings.toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <div className="p-4 bg-gray-50 rounded-lg">
+                                        <p className="text-sm text-gray-600 mb-1">Their invites</p>
+                                        <p className="text-xl font-bold text-gray-900">
+                                            {summary.chainCount}
+                                        </p>
+                                        <p className="text-xs text-green-600 mt-0.5">
+                                            KSh {summary.chainEarnings.toLocaleString()}
                                         </p>
                                     </div>
                                 </div>
+
+                                <Link
+                                    href="/referral/earnings"
+                                    className="flex items-center justify-between mb-6 px-4 py-3 bg-pink-50 border border-pink-200 rounded-lg hover:bg-pink-100 transition-colors"
+                                >
+                                    <span className="text-sm font-medium text-pink-900">
+                                        See who joined and what each one earned you
+                                    </span>
+                                    <ChevronRight className="w-4 h-4 text-pink-600 flex-shrink-0" />
+                                </Link>
 
                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                     <h5 className="font-semibold text-blue-900 mb-2">Pro Tips</h5>
@@ -447,12 +477,25 @@ export default function ReferralPage() {
                                                 key={referral.id}
                                                 className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                                             >
-                                                <div className="flex-1">
-                                                    <h5 className="font-semibold text-gray-900">
-                                                        {getPublicDisplayName(referral.referred)}
-                                                    </h5>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <h5 className="font-semibold text-gray-900 truncate">
+                                                            {getPublicDisplayName(referral.referred)}
+                                                        </h5>
+                                                        {referral.level === 2 && (
+                                                            <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700">
+                                                                via your referral
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <p className="text-xs text-gray-500 mt-1">
-                                                        Joined {new Date(referral.referred?.createdAt ?? referral.createdAt).toLocaleDateString()}
+                                                        Joined {new Date(referral.referred?.createdAt ?? referral.createdAt).toLocaleString('en-KE', {
+                                                            day: 'numeric',
+                                                            month: 'short',
+                                                            year: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit',
+                                                        })}
                                                     </p>
                                                 </div>
                                                 <div className="text-right">
@@ -494,7 +537,7 @@ export default function ReferralPage() {
                         Terms & Conditions
                     </h4>
                     <ul className="space-y-1 text-xs text-gray-600">
-                        <li>50% commission applies to all qualifying payments (subscriptions, unlocks, VIP)</li>
+                        <li>Commission applies to all qualifying subscription payments, including renewals</li>
                         <li>Earnings are verified within 24-48 hours after payment</li>
                         <li>Minimum withdrawal amount is KSh 100</li>
                         <li>Fraudulent referrals will result in account suspension</li>
