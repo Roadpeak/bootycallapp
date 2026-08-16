@@ -181,6 +181,9 @@ export interface Escort {
     verified: boolean
     vipStatus: boolean
     vipExpiresAt?: string
+    /** Active subscription plan, null when the escort has none. */
+    tier?: 'REGULAR' | 'PRIME' | 'VIP' | 'VVIP' | null
+    subscriptionExpiresAt?: string | null
     moderationStatus: string
     unlockPrice: number
     experienceYears?: number
@@ -207,9 +210,41 @@ export interface Escort {
     views?: number
 }
 
+export interface SubscriptionPlanOption {
+    id: string
+    tier: 'REGULAR' | 'PRIME' | 'VIP' | 'VVIP'
+    durationDays: number
+    price: number
+    label: string | null
+}
+
+export interface EscortSubscriptionStatus {
+    active: boolean
+    tier: 'REGULAR' | 'PRIME' | 'VIP' | 'VVIP' | null
+    expiresAt: string | null
+    daysRemaining: number
+    /** Whether the platform is currently enforcing subscriptions at all. */
+    enforced: boolean
+    /** True when the escort is locked out until they pay. */
+    mustPay: boolean
+    hiddenFromListings: boolean
+    history: {
+        id: string
+        tier: string
+        status: string
+        startsAt: string
+        expiresAt: string
+        amountPaid: string | number
+        createdAt: string
+    }[]
+}
+
 export interface EscortListParams {
+    /** Broad locality. `city` is the canonical name; `location` is accepted as an alias. */
     location?: string
     city?: string
+    /** Neighbourhood within the city, e.g. "Kilimani". */
+    area?: string
     minAge?: number
     maxAge?: number
     minRate?: number
@@ -219,6 +254,12 @@ export interface EscortListParams {
     verified?: boolean
     page?: number
     limit?: number
+    sortBy?: 'tier' | 'newest' | 'price'
+    /**
+     * Keeps the within-tier shuffle stable while paging. Without it, each page
+     * reshuffles and the same escort can appear twice.
+     */
+    seed?: string
 }
 
 export interface PaginationInfo {
@@ -696,6 +737,9 @@ const ButicalAPI = {
         getUnlocks: () => apiClient.get<string[]>('/escorts/me/unlocks'),
         getPopularLocations: (limit?: number) =>
             apiClient.get<ApiResponseWrapper<{ city: string; count: number }[]>>('/escorts/locations', { params: { limit } }),
+        /** The signed-in escort's own subscription state, for the paywall gate. */
+        getMySubscription: () =>
+            apiClient.get<ApiResponseWrapper<EscortSubscriptionStatus>>('/escorts/me/subscription'),
     },
 
     // DATING PROFILES
@@ -752,6 +796,12 @@ const ButicalAPI = {
         // M-Pesa callback webhook (internal use)
         mpesaCallback: (data: any) =>
             apiClient.post('/mpesa/callback', data),
+    },
+
+    // SUBSCRIPTION PLANS
+    plans: {
+        /** Public catalogue of purchasable escort plans. No auth required. */
+        list: () => apiClient.get<ApiResponseWrapper<SubscriptionPlanOption[]>>('/plans'),
     },
 
     // REFERRALS

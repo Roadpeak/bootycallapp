@@ -35,12 +35,17 @@ interface ApiResponse<T> {
 
 interface EscortFilters {
     location?: string;
+    /** Neighbourhood within the city, e.g. "Kilimani". */
+    area?: string;
     minAge?: number;
     maxAge?: number;
     minRate?: number;
     maxRate?: number;
     page?: number;
     limit?: number;
+    sortBy?: 'tier' | 'newest' | 'price';
+    /** Keeps the within-tier shuffle stable across requests in a session. */
+    seed?: string;
 }
 
 interface DatingSearchParams {

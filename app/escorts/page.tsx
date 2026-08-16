@@ -63,9 +63,15 @@ export default function HookupPage() {
         fetchPopularLocations()
     }, [])
 
+    // Escorts are shuffled within each tier so everyone on a plan gets equal
+    // exposure. The seed is fixed for the browsing session so the order stays
+    // put while filtering or paging, but rotates on a fresh visit.
+    const [shuffleSeed] = useState(() => Math.random().toString(36).slice(2))
+
     // Fetch escorts using the hook
     const { escorts, loading: isLoading, error, refetch } = useEscorts({
         location: filters.location,
+        seed: shuffleSeed,
         page: 1,
         limit: 50,
     })
@@ -152,6 +158,7 @@ export default function HookupPage() {
         videoCount: escort.videos?.length || 0,
         isVerified: escort.isVerified || escort.verified || false,
         isVip: escort.vipStatus || escort.isVIP || false,
+        tier: escort.tier ?? null,
         isNew: escort.isNew || false,
         rating: escort.rating || 4.5,
         price: escort.unlockPrice || escort.pricing?.unlockPrice || 150,
