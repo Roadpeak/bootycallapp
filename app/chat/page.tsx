@@ -8,6 +8,7 @@ import ChatService, { Conversation } from '@/services/chat-service'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 import type { DatingProfile } from '@/services/butical-api-service'
 import { getImageUrl } from '@/lib/utils/image'
+import { getPublicDisplayName, getSearchableName } from '@/lib/utils/display-name'
 
 const formatMessageTime = (timestamp: string) => {
     const date = new Date(timestamp)
@@ -66,9 +67,7 @@ export default function ChatPage() {
             const query = searchQuery.toLowerCase()
             setFilteredConversations(
                 conversations.filter(conv =>
-                    conv.otherParticipant.displayName?.toLowerCase().includes(query) ||
-                    conv.otherParticipant.firstName?.toLowerCase().includes(query) ||
-                    conv.otherParticipant.lastName?.toLowerCase().includes(query) ||
+                    getSearchableName(conv.otherParticipant).includes(query) ||
                     conv.lastMessagePreview?.toLowerCase().includes(query)
                 )
             )
@@ -212,8 +211,7 @@ export default function ChatPage() {
                                             <h3 className={`font-semibold text-gray-900 truncate ${
                                                 conversation.unreadCount > 0 ? 'font-bold' : ''
                                             }`}>
-                                                {conversation.otherParticipant.displayName ||
-                                                    `${conversation.otherParticipant.firstName} ${conversation.otherParticipant.lastName}`}
+                                                {getPublicDisplayName(conversation.otherParticipant)}
                                             </h3>
                                             {conversation.lastMessageAt && (
                                                 <span className="text-xs text-gray-500 flex-shrink-0">

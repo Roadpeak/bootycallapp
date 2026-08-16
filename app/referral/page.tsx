@@ -9,6 +9,7 @@ import {
     ChevronRight, ExternalLink, Wallet, ArrowUpRight, Loader2
 } from 'lucide-react'
 import { useReferrals, useWallet, useAuth } from '@/lib/hooks/butical-api-hooks'
+import { getPublicDisplayName } from '@/lib/utils/display-name'
 
 export default function ReferralPage() {
     const [copied, setCopied] = useState(false)
@@ -447,14 +448,19 @@ export default function ReferralPage() {
                                                 className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                                             >
                                                 <div className="flex-1">
-                                                    <h5 className="font-semibold text-gray-900">{referral.displayName}</h5>
+                                                    <h5 className="font-semibold text-gray-900">
+                                                        {getPublicDisplayName(referral.referred)}
+                                                    </h5>
                                                     <p className="text-xs text-gray-500 mt-1">
-                                                        Joined {new Date(referral.createdAt).toLocaleDateString()}
+                                                        Joined {new Date(referral.referred?.createdAt ?? referral.createdAt).toLocaleDateString()}
                                                     </p>
                                                 </div>
                                                 <div className="text-right">
-                                                    <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                                        Active
+                                                    <p className="font-semibold text-green-600">
+                                                        +KSh {Number(referral.rewardAmount).toLocaleString()}
+                                                    </p>
+                                                    <span className="inline-block mt-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                                        {referral.status === 'COMPLETED' ? 'Paid' : 'Pending'}
                                                     </span>
                                                 </div>
                                             </div>

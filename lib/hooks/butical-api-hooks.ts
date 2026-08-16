@@ -17,7 +17,7 @@ import ButicalAPI, {
     HookupUserRegistration,
     LoginCredentials,
     ReferralApplyResponse,
-    ReferredUser,
+    ReferralRecord,
     AccessTokenResponse,
     DatingSearchParams as ApiDatingSearchParams,
     Subscription,
@@ -768,7 +768,7 @@ export const useWallet = (): UseWalletReturn => {
 
 interface UseReferralsReturn {
     referralCode: string | null;
-    myReferrals: ReferredUser[];
+    myReferrals: ReferralRecord[];
     totalEarnings: number;
     loading: boolean;
     error: string | null;
@@ -778,7 +778,7 @@ interface UseReferralsReturn {
 
 export const useReferrals = (): UseReferralsReturn => {
     const [referralCode, setReferralCode] = useState<string | null>(null);
-    const [myReferrals, setMyReferrals] = useState<ReferredUser[]>([]);
+    const [myReferrals, setMyReferrals] = useState<ReferralRecord[]>([]);
     const [totalEarnings, setTotalEarnings] = useState<number>(0);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -795,10 +795,14 @@ export const useReferrals = (): UseReferralsReturn => {
             const codeData = (codeRes.data as any)?.data || codeRes.data;
             setReferralCode(codeData?.referralCode || codeData?.code || null);
 
-            // Unwrap API response: { status, data: { referrals: [...], totalEarnings } }
+            // Unwrap API response: { status, data: { referrals: [...], summary: { totalEarnings } } }
             const referralsData = (referralsRes.data as any)?.data || referralsRes.data;
             setMyReferrals(referralsData?.referrals || []);
-            setTotalEarnings(referralsData?.totalEarnings || 0);
+            // The API nests the totals under `summary`; the flat form is kept as a
+            // fallback so an older API build still reports earnings instead of 0.
+            setTotalEarnings(
+                referralsData?.summary?.totalEarnings ?? referralsData?.totalEarnings ?? 0
+            );
             setError(null);
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to fetch referral data');

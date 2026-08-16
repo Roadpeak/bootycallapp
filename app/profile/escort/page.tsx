@@ -147,7 +147,10 @@ export default function EscortPage() {
                 // Add display properties from user data
                 const enrichedEscort = {
                     ...escortData,
-                    displayName: userData.displayName || `${userData.firstName} ${userData.lastName}`,
+                    // Never synthesise a display name from the legal name here: this
+                    // object is what the edit form saves back, so a fallback would
+                    // persist the real name as the public displayName.
+                    displayName: userData.displayName,
                     user: {
                         id: userData.id,
                         firstName: userData.firstName,
@@ -893,7 +896,9 @@ export default function EscortPage() {
                             <div className="space-y-4">
                                 <div>
                                     <h3 className="text-2xl font-bold text-gray-900">
-                                        {profile.displayName}, {age}
+                                        {profile.displayName
+                                            ? `${profile.displayName}, ${age}`
+                                            : `Set a display name, ${age}`}
                                     </h3>
                                     <div className="flex items-center text-gray-600 mt-1">
                                         <MapPin className="w-4 h-4 mr-1" />

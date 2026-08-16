@@ -5,26 +5,10 @@ import Link from 'next/link'
 import { Heart, MessageSquare, Lock, Unlock, Phone, MapPin } from 'lucide-react'
 import { getImageUrl } from '@/lib/utils/image'
 
-// Combined interface for all profile types
-export interface ProfileData {
-    id: string
-    name: string
-    age: number
-    distance?: string | number
-    bio?: string
-    photos: string[]
-    // Dating specific
-    isVerified?: boolean
-    isLiked?: boolean
-    isMatched?: boolean
-    tags?: string[]
-    // Hookup/Escort specific
-    rating?: number
-    price?: number
-    isUnlocked?: boolean
-    isVip?: boolean
-    hasDirectCall?: boolean
-}
+// Single source of truth for the card shape. This file used to declare its own
+// copy, which silently drifted from the one every page actually imports.
+import type { ProfileData } from './EscortCard'
+export type { ProfileData }
 
 interface DatingCardProps {
     profile: ProfileData
@@ -48,7 +32,14 @@ export const DatingCard: React.FC<DatingCardProps> = ({
     onMessage,
     className = '',
 }) => {
-    const { id, name, age, distance, bio, photos, isLiked, isMatched, tags } = profile
+    const { id, name, age, distance, bio, photos, isLiked, isMatched, tags, city, area } = profile
+
+    // Prefer the real place over the distance badge: "Kilimani, Nairobi" is more
+    // useful than "Nairobi" alone, and `distance` was historically used to carry
+    // the city when no precise area was available.
+    const locationLabel =
+        [area, city].filter(Boolean).join(', ') ||
+        (typeof distance === 'number' ? `${distance} km away` : distance || '')
 
     const handleLike = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -73,11 +64,11 @@ export const DatingCard: React.FC<DatingCardProps> = ({
                         className="w-full h-full object-cover transition-transform hover:scale-105 duration-300"
                     />
 
-                    {/* Distance Badge */}
-                    {distance && (
-                        <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800 text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            {typeof distance === 'number' ? `${distance} km away` : distance}
+                    {/* Location Badge */}
+                    {locationLabel && (
+                        <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800 text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1 max-w-[calc(100%-1.5rem)]">
+                            <MapPin className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">{locationLabel}</span>
                         </div>
                     )}
                 </div>
@@ -89,10 +80,10 @@ export const DatingCard: React.FC<DatingCardProps> = ({
                             <h3 className="font-bold text-base text-gray-900">
                                 {name}, {age}
                             </h3>
-                            {distance && (
+                            {locationLabel && (
                                 <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                                    <MapPin className="w-3 h-3" />
-                                    {typeof distance === 'number' ? `${distance} km away` : distance}
+                                    <MapPin className="w-3 h-3 flex-shrink-0" />
+                                    <span className="truncate">{locationLabel}</span>
                                 </p>
                             )}
                         </div>

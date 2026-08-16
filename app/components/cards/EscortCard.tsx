@@ -25,9 +25,13 @@ export interface ProfileData {
     isVip?: boolean
     hasDirectCall?: boolean
     services?: (string | { name: string })[]
-    // Additional escort fields
+    // Location. `city` is the broad locality (county/town); `area` is the
+    // precise neighbourhood the user gave at signup, e.g. "Kilimani".
+    // `location` is the escort-side alias of `area`, kept for compatibility.
     location?: string
     city?: string
+    area?: string
+    country?: string
     ethnicity?: string
     category?: string
     photoCount?: number

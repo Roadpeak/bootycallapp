@@ -369,14 +369,35 @@ export interface ReferralApplyResponse {
 
 export interface ReferredUser {
     id: string
-    displayName: string
+    displayName: string | null
+    firstName: string
     createdAt: string
 }
 
-export interface MyReferralsResponse {
-    referrals: ReferredUser[]
-    totalCount: number
+/** A referral row as returned by GET /referral/my-referrals. */
+export interface ReferralRecord {
+    id: string
+    rewardAmount: string | number
+    status: 'PENDING' | 'COMPLETED' | 'REJECTED'
+    createdAt: string
+    /** The person who signed up. Null if they have since been removed. */
+    referred: ReferredUser | null
+    payment: {
+        type: string
+        amount: string | number
+        createdAt: string
+    } | null
+}
+
+export interface ReferralSummary {
+    totalReferrals: number
     totalEarnings: number
+    pendingEarnings: number
+}
+
+export interface MyReferralsResponse {
+    referrals: ReferralRecord[]
+    summary: ReferralSummary
 }
 
 // Legacy type for backwards compatibility

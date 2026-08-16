@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Send, Loader2, AlertCircle } from 'lucide-react'
 import ChatService, { Message, ConversationDetail } from '@/services/chat-service'
 import { TokenService } from '@/services/butical-api-service'
+import { getPublicDisplayName } from '@/lib/utils/display-name'
 
 const formatMessageTime = (timestamp: string) => {
     const date = new Date(timestamp)
@@ -328,8 +329,7 @@ export default function ChatDetailPage() {
                             </div>
                             <div>
                                 <h2 className="font-semibold text-gray-900">
-                                    {otherParticipant?.displayName ||
-                                        `${otherParticipant?.firstName} ${otherParticipant?.lastName}`}
+                                    {getPublicDisplayName(otherParticipant)}
                                 </h2>
                                 {isTyping && (
                                     <p className="text-xs text-pink-500">Typing...</p>
