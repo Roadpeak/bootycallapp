@@ -783,6 +783,12 @@ const ButicalAPI = {
         unlockEscort: (escortId: string, phone: string) =>
             apiClient.post<ApiResponseWrapper<PaymentInitiateResponse>>('/pay/unlock', { phone, escortId }),
         // Subscribe to VIP (KES 3,000/year) - for ESCORTs only
+        /** Buy or renew a specific tiered escort plan. */
+        subscribeToPlan: (planId: string, phone: string) =>
+            apiClient.post<ApiResponseWrapper<PaymentInitiateResponse>>('/pay/plan', {
+                planId,
+                phone,
+            }),
         subscribeVIP: (phone: string) =>
             apiClient.post<ApiResponseWrapper<PaymentInitiateResponse>>('/pay/vip', { phone }),
         // Check payment status.

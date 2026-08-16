@@ -13,6 +13,7 @@ import {
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 import type { User, Escort, Subscription, WalletSummary, ReferralCode } from '@/services/butical-api-service'
 import { getImageUrl } from '@/lib/utils/image'
+import EscortPaywall from '@/app/components/common/EscortPaywall'
 
 // Subscription plan details
 const SUBSCRIPTION_PLANS = {
@@ -64,7 +65,7 @@ const hasService = (services: (string | { name: string })[] | undefined, service
     return services.some(s => getServiceName(s) === serviceName)
 }
 
-export default function EscortPage() {
+function EscortPageContent() {
     const router = useRouter()
     const [isEditing, setIsEditing] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
@@ -1301,5 +1302,17 @@ export default function EscortPage() {
                 </div>
             </main>
         </div>
+    )
+}
+
+/**
+ * An escort whose subscription has lapsed sees the payment prompt instead of
+ * their profile. The wrapper renders children untouched for everyone else.
+ */
+export default function EscortPage() {
+    return (
+        <EscortPaywall>
+            <EscortPageContent />
+        </EscortPaywall>
     )
 }
