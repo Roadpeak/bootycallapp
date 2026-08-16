@@ -210,6 +210,19 @@ export interface Escort {
     views?: number
 }
 
+export type AdActionType = 'LINK' | 'WHATSAPP' | 'CALL'
+
+export interface Advertisement {
+    id: string
+    name: string
+    detail: string | null
+    imageUrl: string
+    actionType: AdActionType
+    /** URL for LINK; a normalised 254… phone number for WHATSAPP and CALL. */
+    actionValue: string
+    actionLabel: string | null
+}
+
 export interface SubscriptionPlanOption {
     id: string
     tier: 'REGULAR' | 'PRIME' | 'VIP' | 'VVIP'
@@ -814,6 +827,19 @@ const ButicalAPI = {
         // M-Pesa callback webhook (internal use)
         mpesaCallback: (data: any) =>
             apiClient.post('/mpesa/callback', data),
+    },
+
+    // ADVERTISEMENTS
+    ads: {
+        /** Active carousel ads. Public — the browsing page is too. */
+        list: () => apiClient.get<ApiResponseWrapper<Advertisement[]>>('/ads'),
+        /** Records a click and returns the destination. */
+        trackClick: (adId: string) =>
+            apiClient.post<ApiResponseWrapper<{ actionType: AdActionType; actionValue: string }>>(
+                `/ads/${adId}/click`
+            ),
+        recordImpressions: (adIds: string[]) =>
+            apiClient.post('/ads/impressions', { adIds }),
     },
 
     // SUBSCRIPTION PLANS

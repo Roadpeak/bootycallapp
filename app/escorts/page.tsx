@@ -10,6 +10,7 @@ import { useEscorts, usePayment } from '@/lib/hooks/butical-api-hooks'
 import type { Escort } from '@/services/butical-api-service'
 import ButicalAPI from '@/services/butical-api-service'
 import { getPublicDisplayName } from '@/lib/utils/display-name'
+import AdCarousel from '../components/ads/AdCarousel'
 
 // All 47 counties in Kenya
 const kenyanCounties = [
@@ -346,6 +347,11 @@ export default function HookupPage() {
                     </div>
                 </div>
             </header>
+
+            {/* Sponsored carousel, directly beneath the locations row */}
+            <div className="max-w-7xl mx-auto px-4 pt-4">
+                <AdCarousel />
+            </div>
 
             {/* Filter Panel */}
             {isFilterOpen && (
