@@ -252,6 +252,15 @@ export interface EscortSubscriptionStatus {
     }[]
 }
 
+export interface WithdrawalLimits {
+    /** Smallest amount that may be withdrawn, in KES. */
+    minimum: number
+    /** Largest single withdrawal. M-Pesa caps a single B2C payout. */
+    maximum: number
+    /** True when payouts go straight to M-Pesa instead of awaiting review. */
+    autoPayout: boolean
+}
+
 export interface EscortListParams {
     /** Broad locality. `city` is the canonical name; `location` is accepted as an alias. */
     location?: string
@@ -860,6 +869,9 @@ const ButicalAPI = {
         getSummary: () => apiClient.get<WalletSummary>('/wallet'),
         getTransactions: (params?: { page?: number; limit?: number }) =>
             apiClient.get<WalletTransactionsResponse>('/wallet/transactions', { params }),
+        /** Limits and payout mode the withdrawal form should follow. */
+        getWithdrawalLimits: () =>
+            apiClient.get<ApiResponseWrapper<WithdrawalLimits>>('/wallet/withdrawal-limits'),
         withdraw: (data: WithdrawRequest) =>
             apiClient.post<WithdrawResponse>('/wallet/withdraw', data),
     },
