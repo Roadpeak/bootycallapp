@@ -1,7 +1,7 @@
 // app/referral/cashout/page.tsx
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
     ArrowLeft, Smartphone, AlertCircle, Check, Loader2,
@@ -9,8 +9,9 @@ import {
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useWallet } from '@/lib/hooks/butical-api-hooks'
+import ButicalAPI from '@/services/butical-api-service'
+import type { WithdrawalLimits } from '@/services/butical-api-service'
 
-const MINIMUM_WITHDRAWAL = 100
 
 export default function CashoutPage() {
     const router = useRouter()
@@ -22,6 +23,27 @@ export default function CashoutPage() {
 
     // Fetch wallet data from API
     const { wallet, withdraw, loading: walletLoading } = useWallet()
+
+    // Limits come from platform settings rather than being hardcoded here, so
+    // the form can never promise something the server will reject. The
+    // fallbacks only apply if the request fails.
+    const [limits, setLimits] = useState<WithdrawalLimits>({
+        minimum: 100,
+        maximum: 70000,
+        autoPayout: false,
+    })
+
+    useEffect(() => {
+        ButicalAPI.wallet
+            .getWithdrawalLimits()
+            .then((res) => {
+                const data = (res.data as any)?.data || res.data
+                if (data?.minimum !== undefined) setLimits(data)
+            })
+            .catch(() => {
+                // Keep the defaults; the server still enforces the real rules.
+            })
+    }, [])
 
     const availableBalance = wallet?.currentBalance || wallet?.balance || 0
 
@@ -38,8 +60,17 @@ export default function CashoutPage() {
             return false
         }
 
-        if (withdrawalAmount < MINIMUM_WITHDRAWAL) {
-            setError(`Minimum withdrawal is KSh ${MINIMUM_WITHDRAWAL.toLocaleString()}`)
+        if (withdrawalAmount < limits.minimum) {
+            setError(`Minimum withdrawal is KSh ${limits.minimum.toLocaleString()}`)
+            return false
+        }
+
+        if (limits.maximum > 0 && withdrawalAmount > limits.maximum) {
+            // M-Pesa caps a single payout, so a larger request cannot be paid
+            // in one go however much the user holds.
+            setError(
+                `The most you can withdraw at once is KSh ${limits.maximum.toLocaleString()}`
+            )
             return false
         }
 
@@ -113,10 +144,12 @@ export default function CashoutPage() {
                             <Clock className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
                             <div>
                                 <p className="text-sm font-semibold text-orange-900 mb-1">
-                                    Payment Schedule - Friday Only
+                                    {limits.autoPayout ? 'On its way' : 'Being reviewed'}
                                 </p>
                                 <p className="text-sm text-orange-800">
-                                    All payments are processed on Fridays. You will receive your M-Pesa payment on the next Friday.
+                                    {limits.autoPayout
+                                        ? 'Your M-Pesa payment is being sent now and should arrive within a few minutes.'
+                                        : 'Your request has been received. It is reviewed and paid within 24-48 hours.'}
                                 </p>
                             </div>
                         </div>
@@ -189,7 +222,7 @@ export default function CashoutPage() {
                             />
                         </div>
                         <p className="text-xs text-gray-500 mt-2">
-                            Minimum withdrawal: KSh {MINIMUM_WITHDRAWAL.toLocaleString()}
+                            Minimum withdrawal: KSh {limits.minimum.toLocaleString()}
                         </p>
                     </div>
 
@@ -215,7 +248,7 @@ export default function CashoutPage() {
                         </div>
                         <button
                             onClick={() => handleQuickAmount(availableBalance)}
-                            disabled={availableBalance < MINIMUM_WITHDRAWAL}
+                            disabled={availableBalance < limits.minimum}
                             className="w-full mt-2 px-4 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Withdraw All
@@ -256,7 +289,7 @@ export default function CashoutPage() {
                     {/* Withdrawal Button */}
                     <button
                         onClick={handleWithdrawal}
-                        disabled={isProcessing || availableBalance < MINIMUM_WITHDRAWAL}
+                        disabled={isProcessing || availableBalance < limits.minimum}
                         className="w-full px-6 py-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {isProcessing ? (
@@ -283,7 +316,7 @@ export default function CashoutPage() {
 
                 {/* Information Cards */}
                 <div className="space-y-4">
-                    {/* Friday Payment Notice */}
+                    {/* How the payout is handled */}
                     <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-300 rounded-xl shadow-sm p-6">
                         <div className="flex items-start gap-4">
                             <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -292,10 +325,12 @@ export default function CashoutPage() {
                             <div>
                                 <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
                                     <AlertCircle className="w-5 h-5 text-orange-600" />
-                                    Payment Schedule - Friday Only
+                                    {limits.autoPayout ? 'Paid straight to M-Pesa' : 'Reviewed before payment'}
                                 </h4>
                                 <p className="text-sm text-gray-800 font-medium mb-2">
-                                    All payments are processed on Fridays only. If you withdraw on any other day, you will need to wait until Friday to receive your cash.
+                                    {limits.autoPayout
+                                        ? 'Withdrawals are sent to your M-Pesa automatically, usually within a few minutes.'
+                                        : 'Each request is checked by our team before payment, normally within 24-48 hours.'}
                                 </p>
                                 <p className="text-xs text-gray-600">
                                     Please plan your withdrawals accordingly.
@@ -330,9 +365,8 @@ export default function CashoutPage() {
                                 <h4 className="font-semibold text-gray-900 mb-2">Important Information</h4>
                                 <ul className="space-y-2 text-sm text-gray-600">
                                     <li>No withdrawal fees charged</li>
-                                    <li>Minimum withdrawal: KSh {MINIMUM_WITHDRAWAL.toLocaleString()}</li>
-                                    <li>Maximum per transaction: KSh 150,000</li>
-                                    <li>Daily withdrawal limit: KSh 300,000</li>
+                                    <li>Minimum withdrawal: KSh {limits.minimum.toLocaleString()}</li>
+                                    <li>Maximum per withdrawal: KSh {limits.maximum.toLocaleString()}</li>
                                 </ul>
                             </div>
                         </div>
