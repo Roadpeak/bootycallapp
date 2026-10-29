@@ -240,6 +240,16 @@ export interface PublicPricing {
     escortFreeSignupEnabled: boolean
 }
 
+/** An admin notification shown in the bell. */
+export interface AppNotification {
+    id: string
+    title: string
+    body: string
+    link: string | null
+    createdAt: string
+    read: boolean
+}
+
 export interface EscortSubscriptionStatus {
     active: boolean
     tier: 'REGULAR' | 'PRIME' | 'VIP' | 'VVIP' | null
@@ -877,6 +887,15 @@ const ButicalAPI = {
         list: () => apiClient.get<ApiResponseWrapper<SubscriptionPlanOption[]>>('/plans'),
         /** Admin-set dating subscription price/days and escort unlock fee. No auth required. */
         pricing: () => apiClient.get<ApiResponseWrapper<PublicPricing>>('/plans/pricing'),
+    },
+
+    // NOTIFICATIONS (sent by admins)
+    notifications: {
+        list: (page = 1, limit = 20) =>
+            apiClient.get<ApiResponseWrapper<AppNotification[]> & { unread: number; pagination: PaginationInfo }>('/notifications', { params: { page, limit } }),
+        unreadCount: () => apiClient.get<ApiResponseWrapper<{ unread: number }>>('/notifications/unread-count'),
+        markRead: (id: string) => apiClient.post(`/notifications/${id}/read`),
+        markAllRead: () => apiClient.post('/notifications/read-all'),
     },
 
     // REFERRALS
