@@ -818,7 +818,7 @@ const ButicalAPI = {
         getStats: (id: string) => apiClient.get(`/dating-profiles/${id}/stats`),
         // Like/Match endpoints - using correct /dating-likes/ paths from API docs
         like: (profileId: string) => apiClient.post<ApiResponseWrapper<{ matched: boolean }>>(`/dating-likes/${profileId}/like`),
-        unlike: (profileId: string) => apiClient.delete(`/dating-likes/${profileId}/unlike`),
+        unlike: (profileId: string) => apiClient.delete(`/dating-likes/${profileId}/like`),
         getLikeStatus: (profileId: string) => apiClient.get<ApiResponseWrapper<{ liked: boolean; matched: boolean }>>(`/dating-likes/${profileId}/status`),
         getMatches: () => apiClient.get<ApiResponseWrapper<DatingProfile[]>>('/dating-likes/matches'),
         getLikes: () => apiClient.get<ApiResponseWrapper<DatingProfile[]>>('/dating-likes/liked-by-me'),

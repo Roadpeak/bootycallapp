@@ -68,23 +68,26 @@ export default function DatingActivityPage() {
 
     // Transform dating profile to ProfileData
     const transformProfile = (profile: DatingProfile, isLiked: boolean = true, isMatched: boolean = false): ProfileData => {
-        // Extract location from profile
-        const location = profile.location as { city?: string; area?: string; country?: string } | undefined
+        // The API returns photos, bio and location at the top level; older
+        // responses only had them on the nested datingProfile.
+        const nested = (profile as any).datingProfile || {}
+        const location = (profile.location || nested.location) as { city?: string; area?: string; country?: string } | undefined
+        const photos: string[] = profile.photos?.length ? profile.photos : nested.photos || []
 
         return {
             id: profile.id,
             name: getDisplayName(profile),
-            age: profile.age || calculateAge(profile.dateOfBirth),
+            age: profile.age || calculateAge(profile.dateOfBirth || nested.dateOfBirth),
             city: location?.city || undefined,
             area: location?.area || undefined,
-            bio: profile.bio || '',
-            photos: profile.photos && profile.photos.length > 0
-                ? profile.photos
+            bio: profile.bio || nested.bio || '',
+            photos: photos.length > 0
+                ? photos
                 : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
             isVerified: profile.isVerified || false,
             isLiked,
             isMatched,
-            tags: profile.interests || [],
+            tags: profile.interests?.length ? profile.interests : nested.interests || [],
         }
     }
 
@@ -169,6 +172,13 @@ export default function DatingActivityPage() {
     }
 
     const handleViewProfile = (profileId: string) => {
+        // Escorts on a plan can like dating members; their profile lives on
+        // the escort page, not the dating one.
+        const profile = data?.find((p: DatingProfile) => p.id === profileId) as any
+        if (profile?.kind === 'escort' && profile.escortId) {
+            router.push(`/escorts/${profile.escortId}`)
+            return
+        }
         router.push(`/dating/profile/${profileId}`)
     }
 

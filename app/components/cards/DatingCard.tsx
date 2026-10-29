@@ -78,7 +78,7 @@ export const DatingCard: React.FC<DatingCardProps> = ({
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex-1">
                             <h3 className="font-bold text-base text-gray-900">
-                                {name}, {age}
+                                {name}{age ? `, ${age}` : ''}
                             </h3>
                             {locationLabel && (
                                 <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
@@ -184,7 +184,7 @@ export const EscortCard: React.FC<EscortCardProps> = ({
                     {/* Gradient overlay at bottom with name */}
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent p-3">
                         <h3 className="text-white font-bold text-lg drop-shadow-md">
-                            {name}, {age}
+                            {name}{age ? `, ${age}` : ''}
                         </h3>
                         {distance && (
                             <p className="text-white/90 text-sm drop-shadow-md">
