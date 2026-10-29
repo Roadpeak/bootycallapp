@@ -6,7 +6,12 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TrendingUp, Upload, X, Eye, EyeOff, Check, AlertCircle } from 'lucide-react'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
-import type { EscortRegistration } from '@/services/butical-api-service'
+import type { EscortRegistration, SubscriptionPlanOption } from '@/services/butical-api-service'
+import { usePublicPricing } from '@/lib/hooks/butical-api-hooks'
+import { TIER_STYLES, type EscortTier } from '@/app/components/cards/EscortCard'
+
+const SIGNUP_TIER_ORDER: EscortTier[] = ['VVIP', 'VIP', 'PRIME', 'REGULAR']
+const formatPlanDuration = (days: number) => `${days} Day${days === 1 ? '' : 's'}`
 
 function EscortSignupPageContent() {
     const searchParams = useSearchParams()
@@ -49,6 +54,31 @@ function EscortSignupPageContent() {
     const [isProcessing, setIsProcessing] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'pending' | 'success' | 'failed'>('idle')
+
+    // Escort plans and prices are managed in admin (Platform Settings)
+    const { pricing } = usePublicPricing()
+    const [plans, setPlans] = useState<SubscriptionPlanOption[]>([])
+    const [plansError, setPlansError] = useState<string | null>(null)
+    const [activeTier, setActiveTier] = useState<EscortTier>('VVIP')
+    const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanOption | null>(null)
+
+    useEffect(() => {
+        ButicalAPI.plans
+            .list()
+            .then((res) => {
+                const list = ((res.data as any)?.data || res.data || []) as SubscriptionPlanOption[]
+                setPlans(Array.isArray(list) ? list : [])
+                const firstTier = SIGNUP_TIER_ORDER.find((tier) => list.some((plan) => plan.tier === tier))
+                if (firstTier) setActiveTier(firstTier)
+            })
+            .catch(() => setPlansError('Could not load plans. You can continue with a free account and pick a plan later.'))
+    }, [])
+
+    const availableTiers = SIGNUP_TIER_ORDER.filter((tier) => plans.some((plan) => plan.tier === tier))
+    const tierPlans = plans
+        .filter((plan) => plan.tier === activeTier)
+        .sort((a, b) => a.durationDays - b.durationDays)
+    const selectedPriceLabel = selectedPlan ? `KSh ${selectedPlan.price.toLocaleString()}` : '—'
 
     // Services state
     const [selectedServices, setSelectedServices] = useState<string[]>([])
@@ -274,7 +304,7 @@ function EscortSignupPageContent() {
                     TokenService.setRefreshToken(refreshToken)
                 }
 
-                // Process payment for VIP subscription
+                // Pay for the chosen plan
                 await handlePayment()
             } else {
                 // Registration successful but no token - still redirect
@@ -394,10 +424,12 @@ function EscortSignupPageContent() {
                 throw new Error('Invalid phone format. Use 07XXXXXXXX or 254XXXXXXXXX')
             }
 
-            console.log('Initiating M-Pesa VIP payment for phone:', phoneNumber)
+            if (!selectedPlan) {
+                throw new Error('Please choose a plan')
+            }
 
-            // Initiate payment - this sends the STK push
-            const paymentResponse = await ButicalAPI.payments.subscribeVIP(phoneNumber)
+            // Initiate payment for the chosen admin-priced plan - sends the STK push
+            const paymentResponse = await ButicalAPI.payments.subscribeToPlan(selectedPlan.id, phoneNumber)
             console.log('Payment initiation response:', paymentResponse)
 
             if (paymentResponse?.data) {
@@ -475,7 +507,7 @@ function EscortSignupPageContent() {
         } catch (error: any) {
             console.error('Payment error:', error)
             setPaymentStatus('failed')
-            setError(error.response?.data?.message || error.message || 'Payment failed. You can upgrade to VIP later from your dashboard.')
+            setError(error.response?.data?.message || error.message || 'Payment failed. You can choose a plan later from your dashboard.')
 
             // Still allow user to proceed after payment failure
             setTimeout(() => {
@@ -572,7 +604,7 @@ function EscortSignupPageContent() {
                                         {currentStep > step ? <Check className="w-5 h-5" /> : step}
                                     </div>
                                     <span className="text-xs mt-1 text-gray-600 hidden md:block">
-                                        {step === 1 ? 'Basic' : step === 2 ? 'Profile' : step === 3 ? 'Services' : 'VIP'}
+                                        {step === 1 ? 'Basic' : step === 2 ? 'Profile' : step === 3 ? 'Services' : 'Plan'}
                                     </span>
                                 </div>
                                 {step < 4 && (
@@ -1019,41 +1051,61 @@ function EscortSignupPageContent() {
                             <div className="text-center mb-6">
                                 <h2 className="text-xl font-bold text-gray-900 mb-2">Complete Your Registration</h2>
                                 <p className="text-gray-600">
-                                    Subscribe to Escort VIP and start earning!
+                                    Pick a plan to get listed and start earning!
                                 </p>
                             </div>
 
-                            {/* VIP Subscription Display */}
+                            {/* Plan picker - tiers and prices come from admin */}
                             <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-300">
                                 <div className="text-center mb-4">
                                     <div className="w-16 h-16 mx-auto mb-3 bg-purple-500 rounded-full flex items-center justify-center">
                                         <TrendingUp className="w-8 h-8 text-white" />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-gray-900">Escort VIP</h3>
-                                    <p className="text-sm text-gray-600">1 Year Subscription</p>
+                                    <h3 className="text-2xl font-bold text-gray-900">Choose your plan</h3>
+                                    <p className="text-sm text-gray-600">Higher tiers are listed first in search results</p>
                                 </div>
 
-                                <div className="text-center mb-6">
-                                    <span className="text-4xl font-bold text-purple-600">KSh 3,000</span>
-                                    <span className="text-gray-500 text-sm ml-2">/year</span>
-                                </div>
+                                {plansError && (
+                                    <p className="text-sm text-red-600 text-center mb-4">{plansError}</p>
+                                )}
+                                {!plansError && plans.length === 0 && (
+                                    <p className="text-sm text-gray-500 text-center mb-4">Loading plans…</p>
+                                )}
 
-                                <ul className="space-y-3 mb-6">
-                                    {[
-                                        'Featured placement on homepage',
-                                        'VIP badge on your profile',
-                                        'Higher ranking in search results',
-                                        'Free contact visibility (no unlock fees)',
-                                        'Priority customer support'
-                                    ].map((benefit, index) => (
-                                        <li key={index} className="flex items-start gap-3">
-                                            <div className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                                <Check className="w-3 h-3 text-white" />
-                                            </div>
-                                            <span className="text-gray-700">{benefit}</span>
-                                        </li>
+                                {availableTiers.length > 0 && (
+                                    <div className="flex flex-wrap justify-center gap-2 mb-4">
+                                        {availableTiers.map((tier) => (
+                                            <button
+                                                key={tier}
+                                                type="button"
+                                                onClick={() => setActiveTier(tier)}
+                                                className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${activeTier === tier
+                                                    ? TIER_STYLES[tier].badge
+                                                    : 'bg-white text-gray-700 border border-gray-300 hover:border-purple-400'
+                                                    }`}
+                                            >
+                                                {TIER_STYLES[tier].label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    {tierPlans.map((plan) => (
+                                        <button
+                                            key={plan.id}
+                                            type="button"
+                                            onClick={() => setSelectedPlan(plan)}
+                                            className={`p-4 rounded-lg border-2 text-left transition-colors bg-white ${selectedPlan?.id === plan.id
+                                                ? 'border-purple-500 ring-2 ring-purple-200'
+                                                : 'border-gray-200 hover:border-purple-300'
+                                                }`}
+                                        >
+                                            <p className="text-sm text-gray-600">{formatPlanDuration(plan.durationDays)}</p>
+                                            <p className="text-xl font-bold text-gray-900">KSh {plan.price.toLocaleString()}</p>
+                                        </button>
                                     ))}
-                                </ul>
+                                </div>
                             </div>
 
                             {/* Payment Section */}
@@ -1085,12 +1137,14 @@ function EscortSignupPageContent() {
                                 <div className="mt-6 p-4 bg-white rounded-lg border">
                                     <h4 className="font-semibold text-gray-900 mb-3">Order Summary</h4>
                                     <div className="flex justify-between items-center mb-2">
-                                        <span className="text-gray-600">Escort VIP Subscription</span>
-                                        <span className="font-medium">KSh 3,000</span>
+                                        <span className="text-gray-600">
+                                            {selectedPlan ? `${TIER_STYLES[selectedPlan.tier].label} plan` : 'No plan selected'}
+                                        </span>
+                                        <span className="font-medium">{selectedPriceLabel}</span>
                                     </div>
                                     <div className="flex justify-between items-center mb-2 text-sm text-gray-500">
                                         <span>Duration</span>
-                                        <span>1 Year</span>
+                                        <span>{selectedPlan ? formatPlanDuration(selectedPlan.durationDays) : '—'}</span>
                                     </div>
                                     {formData.referralCode && (
                                         <div className="flex justify-between items-center text-sm text-green-600">
@@ -1104,7 +1158,7 @@ function EscortSignupPageContent() {
                                     <div className="border-t mt-3 pt-3">
                                         <div className="flex justify-between items-center font-bold text-lg">
                                             <span>Total</span>
-                                            <span className="text-purple-600">KSh 3,000</span>
+                                            <span className="text-purple-600">{selectedPriceLabel}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1150,9 +1204,9 @@ function EscortSignupPageContent() {
                             {/* Free Account Option */}
                             <div className="p-4 bg-gray-100 rounded-xl border border-gray-200">
                                 <div className="text-center">
-                                    <h4 className="font-medium text-gray-700 mb-2">Not ready to go VIP?</h4>
+                                    <h4 className="font-medium text-gray-700 mb-2">Not ready to pay yet?</h4>
                                     <p className="text-sm text-gray-500 mb-3">
-                                        You can start with a free account. Clients will pay KSh 150 to unlock your contact info.
+                                        You can start with a free account. Clients will pay {pricing ? `KSh ${pricing.unlockEscortFee.toLocaleString()}` : 'a small fee'} to unlock your contact info.
                                     </p>
                                     <button
                                         type="button"
@@ -1247,7 +1301,7 @@ function EscortSignupPageContent() {
                             <button
                                 type="button"
                                 onClick={handleRegistration}
-                                disabled={isProcessing || paymentStatus === 'success'}
+                                disabled={isProcessing || !selectedPlan || paymentStatus === 'success'}
                                 className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                             >
                                 {isProcessing ? (
@@ -1256,7 +1310,7 @@ function EscortSignupPageContent() {
                                         Processing...
                                     </>
                                 ) : (
-                                    'Complete & Pay KSh 3,000'
+                                    selectedPlan ? `Complete & Pay ${selectedPriceLabel}` : 'Choose a plan to continue'
                                 )}
                             </button>
                         )}
