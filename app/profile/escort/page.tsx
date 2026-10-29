@@ -19,8 +19,14 @@ import EscortPaywall from '@/app/components/common/EscortPaywall'
 const SUBSCRIPTION_PLANS = {
     BASIC: { name: 'Starter', price: 0, color: 'gray', icon: Star },
     PREMIUM: { name: 'Professional', price: 3000, color: 'purple', icon: Zap },
-    VIP: { name: 'VIP Elite', price: 3000, color: 'yellow', icon: Crown }
+    VIP: { name: 'VIP', price: 0, color: 'yellow', icon: Crown },
+    // Admin-managed tier plans (prices live in admin, not here)
+    REGULAR: { name: 'Regular', price: 0, color: 'gray', icon: Star },
+    PRIME: { name: 'Prime', price: 0, color: 'purple', icon: Zap },
+    VVIP: { name: 'VVIP', price: 0, color: 'yellow', icon: Crown },
 }
+const GOLD_TIERS = ['VIP', 'VVIP']
+const PURPLE_TIERS = ['PREMIUM', 'PRIME']
 
 const serviceOptions = [
     'Massage',
@@ -118,9 +124,11 @@ function EscortPageContent() {
             }
 
             // Fetch all data in parallel
-            const [userResponse, subscriptionResponse] = await Promise.all([
+            const [userResponse, subscriptionResponse, planStatusResponse] = await Promise.all([
                 ButicalAPI.users.getMe(),
                 ButicalAPI.users.getSubscription().catch(() => null),
+                // Tier plans bought from /subscription/escort live here
+                ButicalAPI.escorts.getMySubscription().catch(() => null),
             ])
 
             // API wraps responses in { status, data: T } - unwrap if needed
@@ -163,8 +171,20 @@ function EscortPageContent() {
                 setProfile(enrichedEscort)
                 setEditedProfile(enrichedEscort)
 
-                // Derive subscription from escort's vipExpiresAt
-                if (escortData.vipStatus && escortData.vipExpiresAt) {
+                const planStatus: any = planStatusResponse ? unwrap<any>(planStatusResponse.data) : null
+
+                if (planStatus?.active && planStatus.tier && planStatus.expiresAt) {
+                    // Active tier plan (REGULAR/PRIME/VIP/VVIP)
+                    setSubscription({
+                        type: planStatus.tier,
+                        status: 'ACTIVE',
+                        isSubscribed: true,
+                        expiresAt: planStatus.expiresAt,
+                        endDate: planStatus.expiresAt,
+                        autoRenew: false
+                    } as unknown as Subscription)
+                } else if (escortData.vipStatus && escortData.vipExpiresAt) {
+                    // Legacy flat-rate VIP
                     const vipExpiry = new Date(escortData.vipExpiresAt)
                     const isActive = vipExpiry > new Date()
                     setSubscription({
@@ -415,8 +435,9 @@ function EscortPageContent() {
         return Math.ceil(diff / (1000 * 60 * 60 * 24))
     }
 
+    // Plans can be as short as 3 days, so warn only in the last 2
     const isExpiringSoon = () => {
-        return getDaysRemaining() <= 7 && getDaysRemaining() > 0
+        return getDaysRemaining() <= 2 && getDaysRemaining() > 0
     }
 
     const isExpired = () => {
@@ -433,7 +454,7 @@ function EscortPageContent() {
     }
 
     const isVIP = () => {
-        return subscription?.type === 'VIP' && subscription?.status === 'ACTIVE' && !isExpired()
+        return GOLD_TIERS.includes(subscription?.type as string) && subscription?.status === 'ACTIVE' && !isExpired()
     }
 
     // Loading state
@@ -569,20 +590,20 @@ function EscortPageContent() {
 
                 {/* Subscription Status Banner */}
                 {hasSubscription() && subscription && (subscription.status === 'ACTIVE' || subscription.isSubscribed) && !isExpired() && !isExpiringSoon() && (
-                    <div className={`rounded-xl p-4 mb-6 ${subscription.type === 'VIP'
+                    <div className={`rounded-xl p-4 mb-6 ${GOLD_TIERS.includes(subscription.type as string)
                             ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
-                            : subscription.type === 'PREMIUM'
+                            : PURPLE_TIERS.includes(subscription.type as string)
                                 ? 'bg-gradient-to-r from-purple-500 to-pink-600'
                                 : 'bg-gradient-to-r from-gray-700 to-gray-800'
                         } text-white`}>
                         <div className="flex items-center justify-between flex-wrap gap-4">
                             <div className="flex items-center gap-3">
-                                {subscription.type === 'VIP' && <Crown className="w-8 h-8" />}
-                                {subscription.type === 'PREMIUM' && <Zap className="w-8 h-8" />}
-                                {subscription.type === 'BASIC' && <Star className="w-8 h-8" />}
+                                {GOLD_TIERS.includes(subscription.type as string) && <Crown className="w-8 h-8" />}
+                                {PURPLE_TIERS.includes(subscription.type as string) && <Zap className="w-8 h-8" />}
+                                {!GOLD_TIERS.includes(subscription.type as string) && !PURPLE_TIERS.includes(subscription.type as string) && <Star className="w-8 h-8" />}
                                 <div>
                                     <h3 className="font-semibold text-lg">
-                                        Active Subscription
+                                        Active {getCurrentPlan()?.name} Plan
                                     </h3>
                                     <p className="text-sm opacity-90">
                                         {getDaysRemaining()} days remaining • Expires {new Date(subscription.expiresAt || subscription.endDate || '').toLocaleDateString()}
