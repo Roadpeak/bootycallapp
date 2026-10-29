@@ -14,7 +14,7 @@ import { getPublicDisplayName } from '@/lib/utils/display-name'
 export default function SuggestedProfilesPage() {
     const router = useRouter()
     const { user } = useAuth()
-    const { hasDatingAccess } = useSubscription()
+    const { canUseDating: hasDatingAccess } = useSubscription()
     const [limit] = useState(20)
 
     // Fetch AI suggested profiles

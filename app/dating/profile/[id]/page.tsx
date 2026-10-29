@@ -27,7 +27,7 @@ export default function DatingProfileViewPage() {
 
     // Check subscription and user info
     const { user } = useAuth()
-    const { hasDatingAccess, loading: subscriptionLoading } = useSubscription()
+    const { canUseDating: hasDatingAccess, loading: subscriptionLoading } = useSubscription()
 
     useEffect(() => {
         const fetchProfile = async () => {
