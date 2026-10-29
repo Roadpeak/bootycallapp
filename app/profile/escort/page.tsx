@@ -83,6 +83,12 @@ function EscortPageContent() {
     const [profile, setProfile] = useState<Escort | null>(null)
     const [editedProfile, setEditedProfile] = useState<Partial<Escort>>({})
     const [subscription, setSubscription] = useState<Subscription | null>(null)
+    // Extra detail for tier plans: what was paid, and anything queued after
+    const [planDetails, setPlanDetails] = useState<{
+        amountPaid: number | null
+        upcoming: { tier: string; startsAt: string; expiresAt: string }[]
+        coverageEndsAt: string | null
+    } | null>(null)
     const [wallet, setWallet] = useState<WalletSummary | null>(null)
     const [referralCode, setReferralCode] = useState<ReferralCode | null>(null)
 
@@ -179,10 +185,16 @@ function EscortPageContent() {
                         type: planStatus.tier,
                         status: 'ACTIVE',
                         isSubscribed: true,
+                        startDate: planStatus.current?.startsAt,
                         expiresAt: planStatus.expiresAt,
                         endDate: planStatus.expiresAt,
                         autoRenew: false
                     } as unknown as Subscription)
+                    setPlanDetails({
+                        amountPaid: planStatus.current?.amountPaid ?? null,
+                        upcoming: Array.isArray(planStatus.upcoming) ? planStatus.upcoming : [],
+                        coverageEndsAt: planStatus.coverageEndsAt ?? null,
+                    })
                 } else if (escortData.vipStatus && escortData.vipExpiresAt) {
                     // Legacy flat-rate VIP
                     const vipExpiry = new Date(escortData.vipExpiresAt)
@@ -740,9 +752,13 @@ function EscortPageContent() {
                                     <Zap className="w-6 h-6 text-purple-600" />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="font-semibold text-gray-900">Escort Subscription</h3>
+                                    <h3 className="font-semibold text-gray-900">{getCurrentPlan()?.name} Plan</h3>
                                     <p className="text-sm text-gray-600">
-                                        KSh 3,000/year
+                                        {planDetails?.amountPaid
+                                            ? `KSh ${planDetails.amountPaid.toLocaleString()} paid`
+                                            : planDetails && planDetails.amountPaid === 0
+                                                ? 'Resumed after an upgrade'
+                                                : 'Active plan'}
                                     </p>
                                 </div>
                                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${subscription.status === 'EXPIRED' || isExpired()
@@ -755,6 +771,21 @@ function EscortPageContent() {
                                         isExpiringSoon() ? 'Expiring Soon' : 'Active'}
                                 </span>
                             </div>
+
+                            {planDetails && planDetails.upcoming.length > 0 && (
+                                <div className="p-3 rounded-lg bg-purple-50 border border-purple-100 text-sm text-purple-900 space-y-1">
+                                    <p className="font-medium">Coming up next</p>
+                                    {planDetails.upcoming.map((u, i) => (
+                                        <p key={i}>
+                                            {SUBSCRIPTION_PLANS[u.tier as keyof typeof SUBSCRIPTION_PLANS]?.name || u.tier} plan
+                                            {' '}from {new Date(u.startsAt).toLocaleDateString()} to {new Date(u.expiresAt).toLocaleDateString()}
+                                        </p>
+                                    ))}
+                                    {planDetails.coverageEndsAt && (
+                                        <p className="text-purple-700">Paid up until {new Date(planDetails.coverageEndsAt).toLocaleDateString()}</p>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>

@@ -135,7 +135,7 @@ export default function EscortViewPage() {
     const isEscortVip = escort?.vipStatus || escort?.isVIP || false;
 
     const handleUnlock = () => {
-        if (!isUnlocked && escort && !isEscortVerified) {
+        if (!isContactUnlocked && escort) {
             setShowPaymentModal(true)
         }
     }
@@ -251,10 +251,14 @@ export default function EscortViewPage() {
     const photos = getImageUrls(escort.photos)
 
     // Check if contact should be unlocked
-    // - VIP/verified escorts are always unlocked
+    // - Escorts on any plan show their contact to everyone
     // - Dating users get free access to all escort contacts
-    // - Other users must pay the admin-set unlock fee
-    const isContactUnlocked = isUnlocked || isEscortVerified || hasDatingAccess
+    // - Escorts without a plan need the admin-set unlock fee
+    // The API returns the contact when the viewer may see it: the escort is
+    // on any plan, the viewer has dating access, or they paid to unlock.
+    // Only escorts without a plan need the unlock button.
+    const contactFromApi = Boolean(escort && !(escort as any).contactHidden && escort.contactPhone)
+    const isContactUnlocked = contactFromApi || isUnlocked || hasDatingAccess
 
     // Get display values
     const displayName = getDisplayName(escort)
