@@ -58,7 +58,7 @@ export default function DatingProfileViewPage() {
                     const likeStatus = await ButicalAPI.datingProfiles.getLikeStatus(profileId)
                     // Unwrap API response
                     const likeData = (likeStatus.data as any)?.data || likeStatus.data
-                    setIsLiked(likeData.liked)
+                    setIsLiked(Boolean(likeData?.liked ?? likeData?.hasLiked))
                 } catch (likeErr) {
                     // User may not be logged in or endpoint may not exist yet
                     console.warn('Failed to get like status:', likeErr)
@@ -68,8 +68,10 @@ export default function DatingProfileViewPage() {
                 console.error('Failed to fetch dating profile:', err)
 
                 // Check if it's a 404 or route not found error
-                if (err.response?.status === 404 || err.response?.data?.message === 'Route not found') {
-                    setError('This feature is not available yet. The profile viewing endpoint is still being implemented on the server.')
+                if (err.response?.status === 404) {
+                    setError('This profile no longer exists or has been removed.')
+                } else if (err.response?.status === 403) {
+                    setError(err.response?.data?.message || 'You need an active dating subscription to view profiles.')
                 } else {
                     setError(err.response?.data?.message || err.message || 'Failed to load profile')
                 }
@@ -103,7 +105,7 @@ export default function DatingProfileViewPage() {
                 // Unwrap API response
                 const likeResult = (response.data as any)?.data || response.data
                 // Check if it's a match
-                if (likeResult.matched) {
+                if (likeResult?.matched || likeResult?.isMatch) {
                     setTimeout(() => {
                         setShowMatchModal(true)
                     }, 500)
@@ -136,8 +138,9 @@ export default function DatingProfileViewPage() {
             }
 
             // Start or get conversation
-            const conversation = await ChatService.startConversation(profile.userId)
-            router.push(`/chat/${conversation.id}`)
+            await ChatService.startConversation(profile.userId)
+            // /chat/[id] takes the other person's user id, not a conversation id.
+            router.push(`/chat/${profile.userId}`)
         } catch (err: any) {
             console.error('Failed to start conversation:', err)
             // If error is 403, redirect to subscription
