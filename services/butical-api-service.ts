@@ -231,6 +231,13 @@ export interface SubscriptionPlanOption {
     label: string | null
 }
 
+/** One-off prices set in admin Platform Settings. */
+export interface PublicPricing {
+    datingSubscriptionPrice: number
+    datingSubscriptionDays: number
+    unlockEscortFee: number
+}
+
 export interface EscortSubscriptionStatus {
     active: boolean
     tier: 'REGULAR' | 'PRIME' | 'VIP' | 'VVIP' | null
@@ -855,6 +862,8 @@ const ButicalAPI = {
     plans: {
         /** Public catalogue of purchasable escort plans. No auth required. */
         list: () => apiClient.get<ApiResponseWrapper<SubscriptionPlanOption[]>>('/plans'),
+        /** Admin-set dating subscription price/days and escort unlock fee. No auth required. */
+        pricing: () => apiClient.get<ApiResponseWrapper<PublicPricing>>('/plans/pricing'),
     },
 
     // REFERRALS

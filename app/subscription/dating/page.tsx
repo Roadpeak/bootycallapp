@@ -8,14 +8,16 @@ import {
     Gift, ChevronRight, X, Clock, AlertCircle, Sparkles
 } from 'lucide-react'
 import ButicalAPI from '@/services/butical-api-service'
+import { usePublicPricing } from '@/lib/hooks/butical-api-hooks'
 
 // Dating subscription plans
-const DATING_PLANS = [
+const BASE_DATING_PLANS = [
     {
         id: 'premium',
         name: 'Dating Premium',
-        price: 300,
-        duration: '1 Year',
+        // Price and length come from admin Platform Settings at runtime
+        price: 0,
+        duration: '',
         features: [
             'Unlimited Likes',
             'See who likes you',
@@ -39,7 +41,22 @@ const CURRENT_SUBSCRIPTION = {
     autoRenew: false
 }
 
+/** "365" days reads as "1 Year", "30" as "30 Days". */
+function formatDuration(days: number): string {
+    if (days > 0 && days % 365 === 0) return days === 365 ? '1 Year' : `${days / 365} Years`
+    return `${days} Days`
+}
+
 export default function DatingSubscriptionPage() {
+    const { pricing, isLoading: pricingLoading } = usePublicPricing()
+    const DATING_PLANS = BASE_DATING_PLANS.map(plan => ({
+        ...plan,
+        price: pricing?.datingSubscriptionPrice ?? 0,
+        duration: pricing ? formatDuration(pricing.datingSubscriptionDays) : '',
+    }))
+    const priceLabel = pricing
+        ? `KSh ${pricing.datingSubscriptionPrice.toLocaleString()}`
+        : pricingLoading ? 'KSh …' : 'Price unavailable'
     const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
     const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'wallet' | 'card'>('mpesa')
     const [mpesaPhone, setMpesaPhone] = useState('')
@@ -314,7 +331,7 @@ export default function DatingSubscriptionPage() {
 
                                     <div className="mb-6">
                                         <span className="text-5xl font-bold text-pink-600">
-                                            KSh {plan.price.toLocaleString()}
+                                            {priceLabel}
                                         </span>
                                         <span className="text-gray-500 text-lg">/year</span>
                                     </div>
@@ -445,7 +462,7 @@ export default function DatingSubscriptionPage() {
                                         </p>
                                     </div>
                                     <p className="text-xl font-bold text-pink-600">
-                                        KSh {getSelectedPlanDetails()?.price.toLocaleString()}
+                                        {priceLabel}
                                     </p>
                                 </div>
                             </div>
@@ -612,6 +629,7 @@ export default function DatingSubscriptionPage() {
                                 onClick={handlePayment}
                                 disabled={
                                     isProcessing ||
+                                    !pricing ||
                                     paymentStatus === 'success' ||
                                     (paymentMethod === 'wallet' && walletBalance < (getSelectedPlanDetails()?.price || 0)) ||
                                     (paymentMethod === 'mpesa' && !mpesaPhone)
@@ -624,7 +642,7 @@ export default function DatingSubscriptionPage() {
                                         Processing...
                                     </>
                                 ) : (
-                                    <>Pay KSh {getSelectedPlanDetails()?.price.toLocaleString()}</>
+                                    <>Pay {priceLabel}</>
                                 )}
                             </button>
 

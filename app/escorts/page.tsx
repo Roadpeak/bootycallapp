@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Search, Filter, MapPin, X, Loader2, AlertCircle } from 'lucide-react'
 import { EscortCard } from '../components/cards/EscortCard'
 import type { ProfileData } from '../components/cards/EscortCard'
-import { useEscorts, usePayment } from '@/lib/hooks/butical-api-hooks'
+import { useEscorts, usePayment, usePublicPricing } from '@/lib/hooks/butical-api-hooks'
 import type { Escort } from '@/services/butical-api-service'
 import ButicalAPI from '@/services/butical-api-service'
 import { getPublicDisplayName } from '@/lib/utils/display-name'
@@ -31,6 +31,9 @@ export default function HookupPage() {
     const [isLocationOpen, setIsLocationOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [showPaymentModal, setShowPaymentModal] = useState(false)
+    // Unlock fee is set by admin in Platform Settings
+    const { pricing } = usePublicPricing()
+    const unlockFeeLabel = pricing ? `KSh ${pricing.unlockEscortFee.toLocaleString()}` : 'KSh …'
     const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
     const [mpesaPhone, setMpesaPhone] = useState('')
     const [selectedLocation, setSelectedLocation] = useState('Nairobi')
@@ -162,7 +165,7 @@ export default function HookupPage() {
         tier: escort.tier ?? null,
         isNew: escort.isNew || false,
         rating: escort.rating || 4.5,
-        price: escort.unlockPrice || escort.pricing?.unlockPrice || 150,
+        price: pricing?.unlockEscortFee ?? 0,
         isUnlocked: !escort.contactHidden,
         hasDirectCall: !escort.contactHidden,
         services: escort.services || [],
@@ -574,7 +577,7 @@ export default function HookupPage() {
                             </div>
 
                             <div className="bg-pink-500/20 border border-pink-500/30 p-4 rounded-lg text-center mb-4">
-                                <span className="text-white font-bold text-3xl">KSh 150</span>
+                                <span className="text-white font-bold text-3xl">{unlockFeeLabel}</span>
                                 <p className="text-sm text-gray-300 mt-1">One-time unlock fee</p>
                             </div>
 
@@ -630,7 +633,7 @@ export default function HookupPage() {
                             </button>
                             <button
                                 onClick={handlePayment}
-                                disabled={isProcessingPayment || !mpesaPhone.trim()}
+                                disabled={isProcessingPayment || !pricing || !mpesaPhone.trim()}
                                 className="flex-1 px-4 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {isProcessingPayment ? (
@@ -639,7 +642,7 @@ export default function HookupPage() {
                                         <span>Processing...</span>
                                     </>
                                 ) : (
-                                    <span>Pay KSh 150</span>
+                                    <span>Pay {unlockFeeLabel}</span>
                                 )}
                             </button>
                         </div>
