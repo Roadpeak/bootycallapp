@@ -1,6 +1,7 @@
 // app/profile/dating/page.tsx
 'use client'
 
+import { usePublicPricing } from '@/lib/hooks/butical-api-hooks'
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -29,6 +30,11 @@ const interestOptions = [
 ]
 
 export default function DatingProfilePage() {
+    // Dating price is admin-set (Platform Settings)
+    const { pricing } = usePublicPricing()
+    const subscriptionPriceLabel = pricing
+        ? `KSh ${pricing.datingSubscriptionPrice.toLocaleString()}${pricing.datingSubscriptionDays === 365 ? '/year' : ` / ${pricing.datingSubscriptionDays} days`}`
+        : 'KSh …'
     const router = useRouter()
     const [isEditing, setIsEditing] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
@@ -527,7 +533,7 @@ export default function DatingProfilePage() {
                                 <div className="flex-1">
                                     <h3 className="font-semibold text-gray-900">Dating Subscription</h3>
                                     <p className="text-sm text-gray-600">
-                                        KSh 300/year
+                                        {subscriptionPriceLabel}
                                     </p>
                                 </div>
                                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${subscription.status === 'EXPIRED' || isExpired()
@@ -943,7 +949,7 @@ export default function DatingProfilePage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <h3 className="font-semibold text-gray-900 mb-1">Subscription</h3>
-                                <p className="text-sm text-gray-600">KSh 300/year</p>
+                                <p className="text-sm text-gray-600">{subscriptionPriceLabel}</p>
                             </div>
                             <Zap className="w-8 h-8 text-pink-500" />
                         </div>

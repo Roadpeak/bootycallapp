@@ -7,14 +7,16 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Heart, Upload, X, Eye, EyeOff, Check, Crown, Star, Shield, Zap, Gift, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
+import { usePublicPricing } from '@/lib/hooks/butical-api-hooks'
 import type { DatingUserRegistration } from '@/services/butical-api-service'
 
-// Subscription plan - Dating Premium (KSh 300/year)
-const SUBSCRIPTION_PLAN = {
+// Subscription plan - Dating Premium. Price and length are admin-set
+// (Platform Settings) and filled in at runtime from /plans/pricing.
+const BASE_SUBSCRIPTION_PLAN = {
     id: 'premium',
     name: 'Dating Premium',
-    price: 300,
-    duration: '1 Year',
+    price: 0,
+    duration: '',
     features: [
         'Unlimited Likes',
         'See who likes you',
@@ -25,7 +27,22 @@ const SUBSCRIPTION_PLAN = {
     ]
 }
 
+/** "365" days reads as "1 Year", "30" as "30 Days". */
+function formatDuration(days: number): string {
+    if (days > 0 && days % 365 === 0) return days === 365 ? '1 Year' : `${days / 365} Years`
+    return `${days} Days`
+}
+
 function DatingSignupPageContent() {
+    const { pricing, isLoading: pricingLoading } = usePublicPricing()
+    const SUBSCRIPTION_PLAN = {
+        ...BASE_SUBSCRIPTION_PLAN,
+        price: pricing?.datingSubscriptionPrice ?? 0,
+        duration: pricing ? formatDuration(pricing.datingSubscriptionDays) : '',
+    }
+    const priceLabel = pricing
+        ? `KSh ${pricing.datingSubscriptionPrice.toLocaleString()}`
+        : pricingLoading ? 'KSh …' : 'Price unavailable'
     const searchParams = useSearchParams()
     const router = useRouter()
 
@@ -952,7 +969,7 @@ function DatingSignupPageContent() {
 
                                 <div className="text-center mb-6">
                                     <span className="text-4xl font-bold text-pink-600">
-                                        KSh {SUBSCRIPTION_PLAN.price.toLocaleString()}
+                                        {priceLabel}
                                     </span>
                                     <span className="text-gray-500 text-sm ml-2">/year</span>
                                 </div>
@@ -1000,7 +1017,7 @@ function DatingSignupPageContent() {
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="text-gray-600">{SUBSCRIPTION_PLAN.name}</span>
                                         <span className="font-medium">
-                                            KSh {SUBSCRIPTION_PLAN.price.toLocaleString()}
+                                            {priceLabel}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center mb-2 text-sm text-gray-500">
@@ -1020,7 +1037,7 @@ function DatingSignupPageContent() {
                                         <div className="flex justify-between items-center font-bold text-lg">
                                             <span>Total</span>
                                             <span className="text-pink-600">
-                                                KSh {SUBSCRIPTION_PLAN.price.toLocaleString()}
+                                                {priceLabel}
                                             </span>
                                         </div>
                                     </div>
@@ -1099,7 +1116,7 @@ function DatingSignupPageContent() {
                                 Next <ArrowRight className="w-4 h-4" />
                             </motion.button>
                         ) : (
-                            <motion.button type="button" onClick={handleRegistration} disabled={isProcessing || paymentStatus === 'success'}
+                            <motion.button type="button" onClick={handleRegistration} disabled={isProcessing || !pricing || paymentStatus === 'success'}
                                 className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 whileHover={!isProcessing ? { scale: 1.02 } : {}} whileTap={!isProcessing ? { scale: 0.98 } : {}}
                             >
@@ -1108,7 +1125,7 @@ function DatingSignupPageContent() {
                                         <motion.div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
                                         Processing...
                                     </>
-                                ) : `Complete & Pay KSh ${SUBSCRIPTION_PLAN.price.toLocaleString()}`}
+                                ) : `Complete & Pay ${priceLabel}`}
                             </motion.button>
                         )}
                     </div>
