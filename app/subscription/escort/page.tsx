@@ -49,6 +49,35 @@ const formatKes = (amount: number) => `KSh ${amount.toLocaleString()}`
 
 const formatDuration = (days: number) => `${days} Day${days === 1 ? '' : 's'}`
 
+const TIER_RANK: Record<EscortTier, number> = { VVIP: 4, VIP: 3, PRIME: 2, REGULAR: 1 }
+
+/**
+ * What buying `plan` does given the current subscription, matching the API:
+ * same tier extends, a higher tier starts now and pauses the current plan,
+ * a lower tier is queued after what is already paid for.
+ */
+function describePurchase(plan: SubscriptionPlanOption, status: EscortSubscriptionStatus | null) {
+    const fmt = (d: string | Date | null | undefined) => (d ? new Date(d).toLocaleDateString() : '')
+    const paidUntil = (status as any)?.coverageEndsAt ?? status?.expiresAt
+    if (!status?.active || !status.tier) {
+        return { action: 'Choose', note: `Starts now, runs ${formatDuration(plan.durationDays).toLowerCase()}.` }
+    }
+    const current = status.tier as EscortTier
+    if (plan.tier === current) {
+        return { action: 'Extend', note: `Adds ${formatDuration(plan.durationDays).toLowerCase()} to your ${TIER_STYLES[current].label} plan.` }
+    }
+    if (TIER_RANK[plan.tier] > TIER_RANK[current]) {
+        return {
+            action: 'Upgrade',
+            note: `Starts now. Your ${TIER_STYLES[current].label} plan pauses and its remaining ${status.daysRemaining} day${status.daysRemaining === 1 ? '' : 's'} resume afterwards.`,
+        }
+    }
+    return {
+        action: 'Add after',
+        note: `Starts when your paid time ends on ${fmt(paidUntil)}. You stay ${TIER_STYLES[current].label} until then.`,
+    }
+}
+
 export default function EscortSubscriptionPage() {
     const [plans, setPlans] = useState<SubscriptionPlanOption[]>([])
     const [status, setStatus] = useState<EscortSubscriptionStatus | null>(null)
@@ -277,9 +306,7 @@ export default function EscortSubscriptionPage() {
                 ) : (
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         {plansForTier.map((plan) => {
-                            const isCurrent =
-                                status?.active &&
-                                status.tier === plan.tier
+                            const purchase = describePurchase(plan, status)
 
                             return (
                                 <div
@@ -295,6 +322,9 @@ export default function EscortSubscriptionPage() {
                                     <p className="mt-1 text-xs text-gray-500">
                                         {formatKes(Math.round(plan.price / plan.durationDays))} per day
                                     </p>
+                                    {status?.active && (
+                                        <p className="mt-3 text-xs text-gray-600">{purchase.note}</p>
+                                    )}
 
                                     <button
                                         onClick={() => {
@@ -304,7 +334,7 @@ export default function EscortSubscriptionPage() {
                                         }}
                                         className={`mt-4 w-full rounded-lg px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90 ${TIER_STYLES[plan.tier].badge}`}
                                     >
-                                        {isCurrent ? 'Extend' : 'Choose'}
+                                        {purchase.action}
                                     </button>
                                 </div>
                             )
@@ -314,7 +344,8 @@ export default function EscortSubscriptionPage() {
 
                 <p className="mt-6 text-center text-xs text-gray-500">
                     Payments are in Kenyan Shillings and charged via M-Pesa.
-                    Renewing before your plan ends adds the new days onto your existing expiry.
+                    Extending keeps your tier, upgrading starts now and keeps your remaining days for later,
+                    and a lower tier starts after your paid time ends. No paid days are lost.
                 </p>
             </main>
 
@@ -328,6 +359,7 @@ export default function EscortSubscriptionPage() {
                     isProcessing={isProcessing}
                     paymentStatus={paymentStatus}
                     error={paymentError}
+                    note={status?.active ? describePurchase(selectedPlan, status).note : null}
                 />
             )}
         </div>
@@ -403,6 +435,7 @@ function PaymentModal({
     isProcessing,
     paymentStatus,
     error,
+    note,
 }: {
     plan: SubscriptionPlanOption
     phone: string
@@ -412,6 +445,7 @@ function PaymentModal({
     isProcessing: boolean
     paymentStatus: 'idle' | 'pending' | 'success' | 'failed'
     error: string | null
+    note?: string | null
 }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -424,6 +458,7 @@ function PaymentModal({
                         <p className="mt-1 text-2xl font-bold text-gray-900">
                             {formatKes(plan.price)}
                         </p>
+                        {note && <p className="mt-2 text-sm text-gray-600">{note}</p>}
                     </div>
                     <button
                         onClick={onClose}

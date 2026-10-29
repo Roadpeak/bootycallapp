@@ -6,6 +6,7 @@ import { ArrowLeft, Send, Loader2, AlertCircle } from 'lucide-react'
 import ChatService, { Message, ConversationDetail } from '@/services/chat-service'
 import { TokenService } from '@/services/butical-api-service'
 import { getPublicDisplayName } from '@/lib/utils/display-name'
+import { getImageUrl } from '@/lib/utils/image'
 
 const formatMessageTime = (timestamp: string) => {
     const date = new Date(timestamp)
@@ -71,6 +72,7 @@ export default function ChatDetailPage() {
     const [conversation, setConversation] = useState<ConversationDetail | null>(null)
     const [messages, setMessages] = useState<Message[]>([])
     const [newMessage, setNewMessage] = useState('')
+    const [avatarFailed, setAvatarFailed] = useState(false)
     const [loading, setLoading] = useState(true)
     const [sending, setSending] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -322,11 +324,21 @@ export default function ChatDetailPage() {
                         </button>
 
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-semibold">
-                                {otherParticipant?.displayName?.charAt(0)?.toUpperCase() ||
-                                    otherParticipant?.firstName?.charAt(0)?.toUpperCase() ||
-                                    '?'}
-                            </div>
+                            {/* Profile photo, falling back to the initial */}
+                            {(otherParticipant as any)?.profilePhoto && !avatarFailed ? (
+                                <img
+                                    src={getImageUrl((otherParticipant as any).profilePhoto)}
+                                    alt={getPublicDisplayName(otherParticipant)}
+                                    onError={() => setAvatarFailed(true)}
+                                    className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                                />
+                            ) : (
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-semibold">
+                                    {otherParticipant?.displayName?.charAt(0)?.toUpperCase() ||
+                                        otherParticipant?.firstName?.charAt(0)?.toUpperCase() ||
+                                        '?'}
+                                </div>
+                            )}
                             <div>
                                 <h2 className="font-semibold text-gray-900">
                                     {getPublicDisplayName(otherParticipant)}

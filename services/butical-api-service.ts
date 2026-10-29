@@ -250,6 +250,12 @@ export interface EscortSubscriptionStatus {
     /** True when the escort is locked out until they pay. */
     mustPay: boolean
     hiddenFromListings: boolean
+    /** The plan running now. */
+    current?: { tier: string; startsAt: string; expiresAt: string; amountPaid: number } | null
+    /** Paid periods queued after the current one. */
+    upcoming?: { tier: string; startsAt: string; expiresAt: string }[]
+    /** When paid time runs out, counting queued periods. */
+    coverageEndsAt?: string | null
     history: {
         id: string
         tier: string
@@ -286,6 +292,8 @@ export interface EscortListParams {
     page?: number
     limit?: number
     sortBy?: 'tier' | 'newest' | 'price'
+    /** Free-text search over name, city and area (server-side, all counties). */
+    q?: string
     /**
      * Keeps the within-tier shuffle stable while paging. Without it, each page
      * reshuffles and the same escort can appear twice.
@@ -780,6 +788,9 @@ const ButicalAPI = {
         getUnlocks: () => apiClient.get<string[]>('/escorts/me/unlocks'),
         getPopularLocations: (limit?: number) =>
             apiClient.get<ApiResponseWrapper<{ city: string; count: number }[]>>('/escorts/locations', { params: { limit } }),
+        /** Areas recorded for escorts in a county, for the area filter. */
+        getAreas: (city?: string) =>
+            apiClient.get<ApiResponseWrapper<{ area: string; count: number }[]>>('/escorts/locations/areas', { params: { city } }),
         /** The signed-in escort's own subscription state, for the paywall gate. */
         getMySubscription: () =>
             apiClient.get<ApiResponseWrapper<EscortSubscriptionStatus>>('/escorts/me/subscription'),

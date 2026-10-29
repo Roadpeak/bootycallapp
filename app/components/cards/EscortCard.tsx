@@ -11,26 +11,30 @@ export type EscortTier = 'REGULAR' | 'PRIME' | 'VIP' | 'VVIP'
  * Badge styling per plan. Colours follow the published plan card: copper for
  * Regular, bronze/green for Prime, silver/blue for VIP, gold/purple for VVIP.
  */
-export const TIER_STYLES: Record<EscortTier, { label: string; text: string; badge: string }> = {
+export const TIER_STYLES: Record<EscortTier, { label: string; text: string; badge: string; card: string }> = {
     VVIP: {
         label: 'VVIP',
         text: 'text-purple-600',
         badge: 'bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white',
+        card: 'border-t-4 border-purple-500 ring-1 ring-purple-200 bg-purple-50',
     },
     VIP: {
         label: 'VIP',
         text: 'text-blue-600',
         badge: 'bg-gradient-to-r from-blue-500 to-sky-500 text-white',
+        card: 'border-t-4 border-blue-500 ring-1 ring-blue-200 bg-sky-50',
     },
     PRIME: {
         label: 'Prime',
         text: 'text-emerald-600',
         badge: 'bg-gradient-to-r from-emerald-500 to-green-500 text-white',
+        card: 'border-t-4 border-emerald-500 ring-1 ring-emerald-200 bg-emerald-50',
     },
     REGULAR: {
         label: 'Regular',
         text: 'text-orange-600',
         badge: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white',
+        card: 'border-t-4 border-orange-400 ring-1 ring-orange-200 bg-orange-50',
     },
 }
 
@@ -220,7 +224,7 @@ export const EscortCard: React.FC<EscortCardProps> = ({
     const actualPhotoCount = photoCount !== undefined ? photoCount : (photos?.length || 0)
 
     return (
-        <div className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden ${className}`}>
+        <div className={`rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden ${tier ? TIER_STYLES[tier].card : 'bg-white'} ${className}`}>
             <Link href={`/escorts/${id}`}>
                 {/* Profile Image */}
                 <div className="relative aspect-[3/4] overflow-hidden">
@@ -229,6 +233,13 @@ export const EscortCard: React.FC<EscortCardProps> = ({
                         alt={`${name}'s profile`}
                         className="w-full h-full object-cover transition-transform hover:scale-105 duration-300"
                     />
+
+                    {/* Plan badge */}
+                    {tier && (
+                        <div className={`absolute top-2 left-2 text-xs font-bold px-2.5 py-1 rounded-full shadow ${TIER_STYLES[tier].badge}`}>
+                            {TIER_STYLES[tier].label}
+                        </div>
+                    )}
 
                     {/* New Badge */}
                     {isNew && (

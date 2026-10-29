@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Search, Filter, MapPin, X, Loader2, AlertCircle } from 'lucide-react'
-import { EscortCard } from '../components/cards/EscortCard'
+import { EscortCard, TIER_STYLES, type EscortTier } from '../components/cards/EscortCard'
 import type { ProfileData } from '../components/cards/EscortCard'
 import { useEscorts, usePayment, usePublicPricing } from '@/lib/hooks/butical-api-hooks'
 import type { Escort } from '@/services/butical-api-service'
@@ -38,8 +38,17 @@ export default function HookupPage() {
     const [mpesaPhone, setMpesaPhone] = useState('')
     const [selectedLocation, setSelectedLocation] = useState('Nairobi')
     const [popularLocations, setPopularLocations] = useState<{ city: string; count: number }[]>([])
+    // Search runs on the server (all counties), a moment after typing stops
+    const [debouncedQuery, setDebouncedQuery] = useState('')
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 350)
+        return () => clearTimeout(timer)
+    }, [searchQuery])
+    const isSearching = debouncedQuery.length > 0
+    const [areas, setAreas] = useState<{ area: string; count: number }[]>([])
     const [filters, setFilters] = useState({
         location: 'Nairobi',
+        area: '',
         minRating: undefined as number | undefined,
         maxDistance: 50,
         minRate: undefined as number | undefined,
@@ -51,8 +60,16 @@ export default function HookupPage() {
         const fetchPopularLocations = async () => {
             try {
                 const response = await ButicalAPI.escorts.getPopularLocations(10)
-                const locations = response.data?.data || []
-                if (Array.isArray(locations) && locations.length > 0) {
+                const raw = response.data?.data || []
+                // One entry per county even if older data differs by case
+                const merged = new Map<string, { city: string; count: number }>()
+                for (const loc of Array.isArray(raw) ? raw : []) {
+                    const key = loc.city.trim().toLowerCase()
+                    const prev = merged.get(key)
+                    merged.set(key, prev ? { city: prev.city, count: prev.count + loc.count } : { city: loc.city.trim(), count: loc.count })
+                }
+                const locations = [...merged.values()].sort((a, b) => b.count - a.count)
+                if (locations.length > 0) {
                     setPopularLocations(locations)
                     // Set initial location to the most popular one if available
                     if (locations[0]?.city) {
@@ -73,8 +90,21 @@ export default function HookupPage() {
     const [shuffleSeed] = useState(() => Math.random().toString(36).slice(2))
 
     // Fetch escorts using the hook
+    // Areas within the selected county, for the area dropdown
+    useEffect(() => {
+        let cancelled = false
+        ButicalAPI.escorts
+            .getAreas(filters.location)
+            .then((res) => { if (!cancelled) setAreas(res.data?.data || []) })
+            .catch(() => { if (!cancelled) setAreas([]) })
+        return () => { cancelled = true }
+    }, [filters.location])
+
     const { escorts, loading: isLoading, error, refetch } = useEscorts({
-        location: filters.location,
+        // A search looks across every county; otherwise use county and area
+        location: isSearching ? undefined : filters.location,
+        area: isSearching ? undefined : (filters.area || undefined),
+        q: isSearching ? debouncedQuery : undefined,
         seed: shuffleSeed,
         page: 1,
         limit: 50,
@@ -166,8 +196,9 @@ export default function HookupPage() {
         isNew: escort.isNew || false,
         rating: escort.rating || 4.5,
         price: pricing?.unlockEscortFee ?? 0,
-        isUnlocked: !escort.contactHidden,
-        hasDirectCall: !escort.contactHidden,
+        // The listing reports contactLocked; escorts on any plan are free
+        isUnlocked: !(escort as any).contactLocked,
+        hasDirectCall: !(escort as any).contactLocked,
         services: escort.services || [],
     };
     })
@@ -252,7 +283,9 @@ export default function HookupPage() {
     // Handle location change
     const handleLocationChange = (location: string) => {
         setSelectedLocation(location)
-        setFilters(prev => ({ ...prev, location }))
+        setSearchQuery('')
+        // A new county has its own areas
+        setFilters(prev => ({ ...prev, location, area: '' }))
     }
 
     // Apply filters
@@ -261,11 +294,15 @@ export default function HookupPage() {
         setIsFilterOpen(false)
     }
 
-    // Filter profiles based on search query
-    const filteredProfiles = profiles.filter(profile =>
-        profile.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        profile.bio?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    // Search is done by the API; the list is already filtered
+    const filteredProfiles = profiles
+
+    // Sections by plan, top plans first. The API already orders by tier and
+    // shuffles within each tier, so grouping keeps that order.
+    const TIER_SECTIONS: (EscortTier | null)[] = ['VVIP', 'VIP', 'PRIME', 'REGULAR', null]
+    const sections = TIER_SECTIONS
+        .map((tier) => ({ tier, items: filteredProfiles.filter((p) => (p.tier ?? null) === tier) }))
+        .filter((section) => section.items.length > 0)
 
     return (
         <div className="min-h-screen bg-gray-900">
@@ -315,17 +352,44 @@ export default function HookupPage() {
                         </div>
                     </div>
 
-                    {/* Search */}
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Search escorts by name or location"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                        />
+                    {/* Search + area */}
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search by name, county or area"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-10 py-2.5 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                            />
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchQuery('')}
+                                    aria-label="Clear search"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+                        <select
+                            aria-label="Area"
+                            value={filters.area}
+                            disabled={isSearching}
+                            onChange={(e) => setFilters(prev => ({ ...prev, area: e.target.value }))}
+                            className="sm:w-56 px-3 py-2.5 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:opacity-50"
+                        >
+                            <option value="">All areas in {selectedLocation}</option>
+                            {areas.map(({ area, count }) => (
+                                <option key={area} value={area}>{area} ({count})</option>
+                            ))}
+                        </select>
                     </div>
+                    {isSearching && (
+                        <p className="mt-2 text-xs text-gray-400">Searching all counties for “{debouncedQuery}”</p>
+                    )}
 
                     {/* Popular Counties Quick Access */}
                     <div className="mt-4">
@@ -490,7 +554,7 @@ export default function HookupPage() {
                                         <span className="font-semibold text-white">{safeEscorts.length}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-gray-400">In {selectedLocation}</span>
+                                        <span className="text-gray-400">{isSearching ? 'Search results' : `In ${filters.area || selectedLocation}`}</span>
                                         <span className="font-semibold text-green-400">{filteredProfiles.length}</span>
                                     </div>
                                     <div className="flex justify-between">
@@ -520,14 +584,33 @@ export default function HookupPage() {
                                 ))}
                             </div>
                         ) : filteredProfiles.length > 0 ? (
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                {filteredProfiles.map(profile => (
-                                    <EscortCard
-                                        key={profile.id}
-                                        profile={profile}
-                                        onUnlock={handleUnlock}
-                                        onCall={handleCall}
-                                    />
+                            <div className="space-y-8">
+                                {sections.map(({ tier, items }) => (
+                                    <section key={tier ?? 'none'}>
+                                        <div className="flex items-center gap-3 mb-3">
+                                            {tier ? (
+                                                <span className={`px-3 py-1 rounded-full text-sm font-bold ${TIER_STYLES[tier].badge}`}>
+                                                    {TIER_STYLES[tier].label}
+                                                </span>
+                                            ) : (
+                                                <span className="px-3 py-1 rounded-full text-sm font-bold bg-gray-700 text-gray-200">
+                                                    More escorts
+                                                </span>
+                                            )}
+                                            <span className="text-sm text-gray-400">{items.length}</span>
+                                            <div className="flex-1 h-px bg-gray-700" />
+                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                            {items.map(profile => (
+                                                <EscortCard
+                                                    key={profile.id}
+                                                    profile={profile}
+                                                    onUnlock={handleUnlock}
+                                                    onCall={handleCall}
+                                                />
+                                            ))}
+                                        </div>
+                                    </section>
                                 ))}
                             </div>
                         ) : (

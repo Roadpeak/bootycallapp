@@ -48,6 +48,8 @@ interface EscortFilters {
     sortBy?: 'tier' | 'newest' | 'price';
     /** Keeps the within-tier shuffle stable across requests in a session. */
     seed?: string;
+    /** Free-text search over name, city and area. */
+    q?: string;
 }
 
 interface DatingSearchParams {
