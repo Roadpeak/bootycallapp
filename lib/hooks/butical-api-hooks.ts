@@ -22,6 +22,7 @@ import ButicalAPI, {
     AccessTokenResponse,
     DatingSearchParams as ApiDatingSearchParams,
     Subscription,
+    PublicPricing,
 } from '../../services/butical-api-service';
 
 type RegisterData = DatingUserRegistration | EscortRegistration | HookupUserRegistration;
@@ -1059,4 +1060,42 @@ export const useSubscription = (): UseSubscriptionReturn => {
         hasDatingAccess,
         refetch: fetchSubscription,
     };
+};
+// ==================== PUBLIC PRICING ====================
+
+// One request per page load, shared by every component that needs prices.
+let pricingRequest: Promise<PublicPricing | null> | null = null;
+
+/**
+ * Prices an admin can change in Platform Settings. `pricing` is null until
+ * loaded (or if the request fails); callers must not let users pay before
+ * it is known, so the amount they see matches what M-Pesa charges.
+ */
+export const usePublicPricing = (): { pricing: PublicPricing | null; isLoading: boolean } => {
+    const [pricing, setPricing] = useState<PublicPricing | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (!pricingRequest) {
+            pricingRequest = ButicalAPI.plans
+                .pricing()
+                .then((res) => ((res.data as any)?.data ?? res.data ?? null) as PublicPricing | null)
+                .catch(() => {
+                    pricingRequest = null; // allow a retry on the next mount
+                    return null;
+                });
+        }
+        pricingRequest.then((value) => {
+            if (!cancelled) {
+                setPricing(value);
+                setIsLoading(false);
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    return { pricing, isLoading };
 };

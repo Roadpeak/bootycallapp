@@ -7,7 +7,7 @@ import {
     ArrowLeft, MapPin, Star, Clock, Phone, MessageCircle,
     Crown, Check, X, Loader2, Share2, AlertCircle
 } from 'lucide-react'
-import { useEscort, usePayment, useAuth, useSubscription } from '@/lib/hooks/butical-api-hooks'
+import { useEscort, usePayment, useAuth, useSubscription, usePublicPricing } from '@/lib/hooks/butical-api-hooks'
 import { getImageUrl, getImageUrls } from '@/lib/utils/image'
 import { getPublicDisplayName } from '@/lib/utils/display-name'
 
@@ -88,6 +88,8 @@ export default function EscortViewPage() {
     // Get user auth and subscription status
     const { user } = useAuth()
     const { hasDatingAccess } = useSubscription()
+    // Unlock fee is set by admin in Platform Settings
+    const { pricing } = usePublicPricing()
 
     // Payment hook
     const {
@@ -251,13 +253,13 @@ export default function EscortViewPage() {
     // Check if contact should be unlocked
     // - VIP/verified escorts are always unlocked
     // - Dating users get free access to all escort contacts
-    // - Other users must pay the unlock fee (KSh 150)
+    // - Other users must pay the admin-set unlock fee
     const isContactUnlocked = isUnlocked || isEscortVerified || hasDatingAccess
 
     // Get display values
     const displayName = getDisplayName(escort)
     const locationStr = getLocation(escort)
-    const unlockPrice = 150 // Fixed unlock price
+    const unlockPrice = pricing ? pricing.unlockEscortFee.toLocaleString() : '…'
     const hourlyRate = escort.pricing?.hourlyRate || escort.hourlyRate || 300
 
     return (
@@ -540,7 +542,7 @@ export default function EscortViewPage() {
                             </button>
                             <button
                                 onClick={handlePayment}
-                                disabled={isProcessingPayment || isWaitingForPayment || !mpesaPhone.trim()}
+                                disabled={isProcessingPayment || isWaitingForPayment || !pricing || !mpesaPhone.trim()}
                                 className="flex-1 px-4 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                             >
                                 {isProcessingPayment ? (
