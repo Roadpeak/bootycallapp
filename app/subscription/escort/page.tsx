@@ -6,6 +6,7 @@ import Link from 'next/link'
 import {
     ArrowLeft, Crown, Check, Loader2, AlertCircle, Phone, X, Clock,
 } from 'lucide-react'
+import { toMpesaPhone } from '@/lib/utils/phone'
 import ButicalAPI from '@/services/butical-api-service'
 import type {
     EscortSubscriptionStatus,
@@ -114,6 +115,13 @@ export default function EscortSubscriptionPage() {
             return
         }
 
+        // Accept +254 / 07 / spaces, send the 254XXXXXXXXX form M-Pesa expects
+        const phone254 = toMpesaPhone(mpesaPhone)
+        if (!/^254\d{9}$/.test(phone254)) {
+            setPaymentError('Invalid phone number. Use 07XXXXXXXX or +254XXXXXXXXX.')
+            return
+        }
+
         setIsProcessing(true)
         setPaymentStatus('pending')
         setPaymentError(null)
@@ -121,7 +129,7 @@ export default function EscortSubscriptionPage() {
         try {
             const response = await ButicalAPI.payments.subscribeToPlan(
                 selectedPlan.id,
-                mpesaPhone.trim(),
+                phone254,
             )
             const paymentData = (response.data as any)?.data || response.data
 
@@ -452,12 +460,12 @@ function PaymentModal({
                                 value={phone}
                                 onChange={(e) => onPhoneChange(e.target.value)}
                                 disabled={isProcessing}
-                                placeholder="254712345678"
+                                placeholder="0712 345 678"
                                 className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 focus:border-transparent focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50"
                             />
                         </div>
                         <p className="mt-1 text-xs text-gray-500">
-                            Format: 254XXXXXXXXX
+                            07XXXXXXXX or +254XXXXXXXXX
                         </p>
 
                         {error && (

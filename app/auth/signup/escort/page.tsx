@@ -62,6 +62,10 @@ function EscortSignupPageContent() {
     const [plansError, setPlansError] = useState<string | null>(null)
     const [activeTier, setActiveTier] = useState<EscortTier>('VVIP')
     const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanOption | null>(null)
+    // Set once the account exists, so a payment retry does not register twice
+    const [isRegistered, setIsRegistered] = useState(false)
+    // Only offer a free account when admin allows it (and once we know)
+    const freeSignupEnabled = pricing?.escortFreeSignupEnabled === true
 
     useEffect(() => {
         ButicalAPI.plans
@@ -208,7 +212,22 @@ function EscortSignupPageContent() {
         setError(null)
         setIsProcessing(true)
 
+        // Account already created on an earlier attempt: just retry the payment
+        if (isRegistered) {
+            await handlePayment()
+            return
+        }
+
         try {
+            // Check the M-Pesa number before creating the account, so a typo
+            // cannot leave a half-registered escort behind
+            if (!/^254\d{9}$/.test(convertPhoneTo254(formData.mpesaPhone || formData.phone))) {
+                throw new Error('Invalid M-Pesa number. Use 07XXXXXXXX or +254XXXXXXXXX')
+            }
+            if (!selectedPlan) {
+                throw new Error('Please choose a plan')
+            }
+
             // Validate passwords match
             if (formData.password !== formData.confirmPassword) {
                 throw new Error('Passwords do not match')
@@ -298,6 +317,7 @@ function EscortSignupPageContent() {
                 if (refreshToken) {
                     TokenService.setRefreshToken(refreshToken)
                 }
+                setIsRegistered(true)
 
                 // Pay for the chosen plan
                 await handlePayment()
@@ -314,6 +334,12 @@ function EscortSignupPageContent() {
     }
 
     const handleSkipPayment = async () => {
+        if (!freeSignupEnabled) return
+        // Registered on a failed payment attempt: the account already exists
+        if (isRegistered) {
+            router.push('/profile/escort')
+            return
+        }
         setError(null)
         setIsProcessing(true)
 
@@ -502,12 +528,9 @@ function EscortSignupPageContent() {
         } catch (error: any) {
             console.error('Payment error:', error)
             setPaymentStatus('failed')
-            setError(error.response?.data?.message || error.message || 'Payment failed. You can choose a plan later from your dashboard.')
-
-            // Still allow user to proceed after payment failure
-            setTimeout(() => {
-                router.push('/profile/escort')
-            }, 3000)
+            // Stay on the payment step so the escort can fix the number or
+            // plan and retry; a failed payment must not let them in
+            setError(error.response?.data?.message || error.message || 'Payment failed. Check the number and try again.')
         } finally {
             setIsProcessing(false)
         }
@@ -1196,7 +1219,8 @@ function EscortSignupPageContent() {
                                 )}
                             </div>
 
-                            {/* Free Account Option */}
+                            {/* Free Account Option (admin can turn this off) */}
+                            {freeSignupEnabled && (
                             <div className="p-4 bg-gray-100 rounded-xl border border-gray-200">
                                 <div className="text-center">
                                     <h4 className="font-medium text-gray-700 mb-2">Not ready to pay yet?</h4>
@@ -1213,6 +1237,7 @@ function EscortSignupPageContent() {
                                     </button>
                                 </div>
                             </div>
+                            )}
 
                             {/* Terms & Conditions */}
                             <div className="space-y-3 pt-4 border-t">
@@ -1305,7 +1330,9 @@ function EscortSignupPageContent() {
                                         Processing...
                                     </>
                                 ) : (
-                                    selectedPlan ? `Complete & Pay ${selectedPriceLabel}` : 'Choose a plan to continue'
+                                    !selectedPlan ? 'Choose a plan to continue'
+                        : isRegistered ? `Retry Payment ${selectedPriceLabel}`
+                        : `Complete & Pay ${selectedPriceLabel}`
                                 )}
                             </button>
                         )}

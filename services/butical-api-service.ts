@@ -236,6 +236,8 @@ export interface PublicPricing {
     datingSubscriptionPrice: number
     datingSubscriptionDays: number
     unlockEscortFee: number
+    /** Admin switch: when false, escorts must buy a plan at signup. */
+    escortFreeSignupEnabled: boolean
 }
 
 export interface EscortSubscriptionStatus {
