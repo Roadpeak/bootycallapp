@@ -23,7 +23,9 @@ import ButicalAPI, {
     DatingSearchParams as ApiDatingSearchParams,
     Subscription,
     PublicPricing,
+    AppNotification,
 } from '../../services/butical-api-service';
+import ChatService from '../../services/chat-service';
 
 type RegisterData = DatingUserRegistration | EscortRegistration | HookupUserRegistration;
 
@@ -1100,4 +1102,74 @@ export const usePublicPricing = (): { pricing: PublicPricing | null; isLoading: 
     }, []);
 
     return { pricing, isLoading };
+};
+
+// ==================== NOTIFICATIONS ====================
+
+/**
+ * The signed-in user's admin notifications for the bell. Polls the unread
+ * count, and also reacts instantly when a socket is open (chat pages).
+ */
+export const useNotifications = (enabled: boolean) => {
+    const [unread, setUnread] = useState(0);
+    const [items, setItems] = useState<AppNotification[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    const refreshCount = useCallback(async () => {
+        if (!enabled) return;
+        try {
+            const res = await ButicalAPI.notifications.unreadCount();
+            setUnread((res.data as any)?.data?.unread ?? 0);
+        } catch {
+            // signed out or offline: keep the last count
+        }
+    }, [enabled]);
+
+    const loadList = useCallback(async () => {
+        if (!enabled) return;
+        setLoading(true);
+        try {
+            const res = await ButicalAPI.notifications.list(1, 10);
+            const body = res.data as any;
+            setItems(body?.data ?? []);
+            setUnread(body?.unread ?? 0);
+        } catch {
+            setItems([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [enabled]);
+
+    useEffect(() => {
+        if (!enabled) { setUnread(0); setItems([]); return; }
+        refreshCount();
+        const timer = setInterval(refreshCount, 45000);
+        const onFocus = () => refreshCount();
+        window.addEventListener('focus', onFocus);
+
+        // Live delivery when a socket happens to be connected
+        const socket = ChatService.getSocket();
+        const onNotification = () => { refreshCount(); };
+        socket?.on('notification', onNotification);
+
+        return () => {
+            clearInterval(timer);
+            window.removeEventListener('focus', onFocus);
+            socket?.off('notification', onNotification);
+        };
+    }, [enabled, refreshCount]);
+
+    const markRead = useCallback(async (id: string) => {
+        setItems((list) => list.map((n) => (n.id === id ? { ...n, read: true } : n)));
+        setUnread((n) => Math.max(0, n - 1));
+        try { await ButicalAPI.notifications.markRead(id); } catch { refreshCount(); }
+    }, [refreshCount]);
+
+    const markAllRead = useCallback(async () => {
+        setItems((list) => list.map((n) => ({ ...n, read: true })));
+        setUnread(0);
+        try { await ButicalAPI.notifications.markAllRead(); } catch { refreshCount(); }
+    }, [refreshCount]);
+
+    return { unread, items, loading, loadList, markRead, markAllRead };
 };

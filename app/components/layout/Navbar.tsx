@@ -29,6 +29,7 @@ import {
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 import type { User as UserType, WalletSummary, ReferralCode } from '@/services/butical-api-service'
 import { getImageUrl } from '@/lib/utils/image'
+import { useNotifications } from '@/lib/hooks/butical-api-hooks'
 
 interface NavbarProps {
     forceLoggedIn?: boolean // For testing purposes
@@ -45,6 +46,8 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
 
     // User state
     const [isLoggedIn, setIsLoggedIn] = useState(false)
+    // Admin notifications for the bell
+    const { unread, items: notificationItems, loading: notificationsLoading, loadList, markRead, markAllRead } = useNotifications(isLoggedIn)
     const [user, setUser] = useState<UserType | null>(null)
     const [isLoading, setIsLoading] = useState(true)
 
@@ -55,7 +58,6 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
     })
 
     // Notifications from API
-    const [notifications, setNotifications] = useState<any[]>([])
 
     // Check authentication and fetch user data
     useEffect(() => {
@@ -451,14 +453,17 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
                                 className="dropdown-toggle p-2 text-gray-500 hover:text-pink-600 hover:bg-pink-50 rounded-full transition-all relative"
                                 onClick={(e) => {
                                     e.stopPropagation()
+                                    if (!notificationsOpen) loadList()
                                     setNotificationsOpen(!notificationsOpen)
                                     setProfileMenuOpen(false)
                                     setReferralMenuOpen(false)
                                 }}
                             >
                                 <Bell className="w-5 h-5" />
-                                {notifications.some(n => n.unread) && (
-                                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-pink-500 rounded-full border-2 border-white"></span>
+                                {unread > 0 && (
+                                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-pink-500 text-white text-[10px] font-bold rounded-full border-2 border-white flex items-center justify-center" aria-label={`${unread} unread notifications`}>
+                                        {unread > 9 ? '9+' : unread}
+                                    </span>
                                 )}
                             </button>
 
@@ -469,46 +474,49 @@ const Navbar: React.FC<NavbarProps> = ({ forceLoggedIn }) => {
                                 >
                                     <div className="px-4 py-2 border-b border-pink-100 flex justify-between items-center">
                                         <h3 className="font-medium text-gray-900">Notifications</h3>
-                                        <Link
-                                            href="/notifications"
-                                            className="text-xs text-pink-600 hover:text-pink-700"
-                                            onClick={() => setNotificationsOpen(false)}
-                                        >
-                                            View All
-                                        </Link>
+                                        <div className="flex items-center gap-3">
+                                            {unread > 0 && (
+                                                <button type="button" onClick={() => markAllRead()} className="text-xs text-gray-500 hover:text-gray-700">
+                                                    Mark all read
+                                                </button>
+                                            )}
+                                            <Link
+                                                href="/notifications"
+                                                className="text-xs text-pink-600 hover:text-pink-700"
+                                                onClick={() => setNotificationsOpen(false)}
+                                            >
+                                                View All
+                                            </Link>
+                                        </div>
                                     </div>
 
                                     <div className="max-h-80 overflow-y-auto">
-                                        {notifications.length > 0 ? (
-                                            notifications.map((notification) => (
-                                                <div
+                                        {notificationsLoading && notificationItems.length === 0 ? (
+                                            <div className="px-4 py-6 space-y-2">
+                                                <div className="h-4 bg-gray-100 rounded animate-pulse" />
+                                                <div className="h-4 bg-gray-100 rounded animate-pulse w-2/3" />
+                                            </div>
+                                        ) : notificationItems.length > 0 ? (
+                                            notificationItems.map((notification) => (
+                                                <button
+                                                    type="button"
                                                     key={notification.id}
-                                                    className={`px-4 py-3 flex items-start hover:bg-pink-50 transition-colors ${notification.unread ? 'bg-pink-50/50' : ''
-                                                        }`}
+                                                    onClick={() => {
+                                                        if (!notification.read) markRead(notification.id)
+                                                        setNotificationsOpen(false)
+                                                        router.push(notification.link || '/notifications')
+                                                    }}
+                                                    className={`w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-pink-50 transition-colors ${!notification.read ? 'bg-pink-50/60' : ''}`}
                                                 >
-                                                    <img
-                                                        src={notification.image}
-                                                        alt="User"
-                                                        className="w-10 h-10 rounded-full object-cover mr-3"
-                                                    />
+                                                    <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${notification.read ? 'bg-transparent' : 'bg-pink-500'}`} />
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-sm text-gray-900">
-                                                            {notification.message}
-                                                        </p>
-                                                        <p className="text-xs text-gray-500 mt-1">
-                                                            {notification.time}
+                                                        <p className="text-sm font-medium text-gray-900">{notification.title}</p>
+                                                        <p className="text-sm text-gray-600 line-clamp-2">{notification.body}</p>
+                                                        <p className="text-xs text-gray-400 mt-1">
+                                                            {new Date(notification.createdAt).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                                         </p>
                                                     </div>
-                                                    {notification.type === 'like' && (
-                                                        <Heart className="w-4 h-4 text-pink-500 flex-shrink-0" />
-                                                    )}
-                                                    {notification.type === 'message' && (
-                                                        <MessageCircle className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                                                    )}
-                                                    {notification.type === 'match' && (
-                                                        <Sparkles className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-                                                    )}
-                                                </div>
+                                                </button>
                                             ))
                                         ) : (
                                             <div className="px-4 py-8 text-center text-gray-500">
