@@ -19,7 +19,7 @@ export default function DatingActivityPage() {
     const router = useRouter()
     const [activeTab, setActiveTab] = useState<ActivityTab>('matches')
     const { user } = useAuth()
-    const { hasDatingAccess } = useSubscription()
+    const { canUseDating: hasDatingAccess } = useSubscription()
     const [showMatchModal, setShowMatchModal] = useState(false)
     const [newMatch, setNewMatch] = useState<MatchNotification | null>(null)
 

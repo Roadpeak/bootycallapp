@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import {
+import { Globe,
     ArrowLeft, MapPin, Star, Clock, Phone, MessageCircle,
     Crown, Check, X, Loader2, Share2, AlertCircle
 } from 'lucide-react'
@@ -266,6 +266,16 @@ export default function EscortViewPage() {
     const unlockPrice = pricing ? pricing.unlockEscortFee.toLocaleString() : '…'
     const hourlyRate = escort.pricing?.hourlyRate || escort.hourlyRate || 300
 
+    // Profile details saved at signup / in the escort profile editor
+    const ALL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    const availability = (escort.availability ?? {}) as { days?: string[]; hours?: string }
+    const workingDays = Array.isArray(availability.days) ? availability.days : []
+    const workingHours = typeof availability.hours === 'string' ? availability.hours : ''
+    const services: string[] = (Array.isArray(escort.services) ? escort.services : [])
+        .map((s: any) => (typeof s === 'string' ? s : s?.name))
+        .filter(Boolean)
+    const languages: string[] = Array.isArray((escort as any).languages) ? (escort as any).languages : []
+
     return (
         <div className="min-h-screen bg-gray-900">
             {/* Header */}
@@ -354,14 +364,51 @@ export default function EscortViewPage() {
                                         <p className="text-white font-medium">{locationStr}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <Clock className="w-5 h-5 text-green-400" />
+                                <div className="flex items-start gap-3">
+                                    <Clock className="w-5 h-5 text-green-400 mt-0.5" />
                                     <div>
-                                        <p className="text-sm text-gray-400">Status</p>
-                                        <p className="text-white font-medium">Available for booking</p>
+                                        <p className="text-sm text-gray-400">Working hours</p>
+                                        <p className="text-white font-medium">{workingHours || 'Not set'}</p>
+                                        {workingDays.length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5 mt-2">
+                                                {ALL_DAYS.map((day) => (
+                                                    <span
+                                                        key={day}
+                                                        className={`px-2 py-0.5 rounded-md text-xs font-medium ${workingDays.includes(day) ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'bg-gray-700 text-gray-500'}`}
+                                                    >
+                                                        {day.slice(0, 3)}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
+                                {languages.length > 0 && (
+                                    <div className="flex items-start gap-3">
+                                        <Globe className="w-5 h-5 text-blue-400 mt-0.5" />
+                                        <div>
+                                            <p className="text-sm text-gray-400">Languages</p>
+                                            <p className="text-white font-medium">{languages.join(', ')}</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+                        </div>
+
+                        {/* Services */}
+                        <div className="bg-gray-800 rounded-xl p-6 mt-4">
+                            <h2 className="text-xl font-bold text-white mb-4">Services</h2>
+                            {services.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {services.map((service) => (
+                                        <span key={service} className="px-3 py-1.5 rounded-full text-sm bg-pink-500/15 text-pink-200 border border-pink-500/30">
+                                            {service}
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-gray-400">No services listed.</p>
+                            )}
                         </div>
                     </div>
 
@@ -382,7 +429,7 @@ export default function EscortViewPage() {
                                 <div className="flex items-center gap-3">
                                     <div className="flex items-center gap-1">
                                         <span className="text-gray-400 text-sm">
-                                            {escort.views || 0} views
+                                            {(escort as any).totalViews ?? escort.views ?? 0} views
                                         </span>
                                     </div>
                                 </div>

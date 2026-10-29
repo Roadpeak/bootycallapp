@@ -93,7 +93,7 @@ function DatingPageContent() {
 
     // Check subscription and user info
     const { user } = useAuth()
-    const { hasDatingAccess, loading: subscriptionLoading } = useSubscription()
+    const { canUseDating: hasDatingAccess, loading: subscriptionLoading } = useSubscription()
 
     // Fetch dating profiles using the hook
     const { profiles: apiProfiles, loading: isLoading, error, refetch } = useDatingProfiles({

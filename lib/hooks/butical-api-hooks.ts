@@ -1013,6 +1013,8 @@ interface UseSubscriptionReturn {
     loading: boolean;
     error: string | null;
     hasDatingAccess: boolean;
+    /** May use the dating side: subscribed dating members and escorts on a plan */
+    canUseDating: boolean;
     refetch: () => Promise<void>;
 }
 
@@ -1021,6 +1023,9 @@ export const useSubscription = (): UseSubscriptionReturn => {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [hasDatingAccess, setHasDatingAccess] = useState<boolean>(false);
+    // Dating side access: subscribed dating members and escorts on a plan.
+    // Kept separate from hasDatingAccess, which also grants escort contacts.
+    const [canUseDating, setCanUseDating] = useState<boolean>(false);
 
     const fetchSubscription = useCallback(async () => {
         try {
@@ -1036,11 +1041,17 @@ export const useSubscription = (): UseSubscriptionReturn => {
             const isSubscribed = subscriptionData?.isSubscribed === true;
             const role = subscriptionData?.role;
             setHasDatingAccess(role === 'DATING_USER' || isSubscribed);
+            setCanUseDating(
+                typeof subscriptionData?.datingAccess === 'boolean'
+                    ? subscriptionData.datingAccess
+                    : role === 'DATING_USER' || isSubscribed,
+            );
         } catch (err: any) {
             // If user doesn't have a subscription, that's not really an error
             setError(null);
             setSubscription(null);
             setHasDatingAccess(false);
+            setCanUseDating(false);
         } finally {
             setLoading(false);
         }
@@ -1060,6 +1071,7 @@ export const useSubscription = (): UseSubscriptionReturn => {
         loading,
         error,
         hasDatingAccess,
+        canUseDating,
         refetch: fetchSubscription,
     };
 };
