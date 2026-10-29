@@ -5,6 +5,7 @@ import React, { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TrendingUp, Upload, X, Eye, EyeOff, Check, AlertCircle } from 'lucide-react'
+import { toMpesaPhone } from '@/lib/utils/phone'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 import type { EscortRegistration, SubscriptionPlanOption } from '@/services/butical-api-service'
 import { usePublicPricing } from '@/lib/hooks/butical-api-hooks'
@@ -183,14 +184,8 @@ function EscortSignupPageContent() {
         setPhotos(prev => prev.filter((_, i) => i !== index))
     }
 
-    // Convert phone number from 07... to 254...
-    const convertPhoneTo254 = (phone: string): string => {
-        const cleanedPhone = phone.replace(/\s+/g, '')
-        if (cleanedPhone.startsWith('0')) {
-            return '254' + cleanedPhone.substring(1)
-        }
-        return cleanedPhone
-    }
+    // Accepts +254 / 07 / spaces (browser autofill adds "+254")
+    const convertPhoneTo254 = toMpesaPhone
 
     // Convert files to base64
     const convertFilesToBase64 = async (files: File[]): Promise<string[]> => {
@@ -421,7 +416,7 @@ function EscortSignupPageContent() {
 
             // Validate phone format (254XXXXXXXXX)
             if (!/^254\d{9}$/.test(phoneNumber)) {
-                throw new Error('Invalid phone format. Use 07XXXXXXXX or 254XXXXXXXXX')
+                throw new Error('Invalid phone number. Use 07XXXXXXXX or +254XXXXXXXXX')
             }
 
             if (!selectedPlan) {
