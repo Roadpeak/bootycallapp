@@ -1,5 +1,5 @@
 // lib/hooks/butical-api-hooks.ts
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import ButicalAPI, {
     TokenService,
     User,
@@ -618,7 +618,6 @@ interface UsePaymentReturn {
     loading: boolean;
     error: string | null;
     subscribeDating: (phone: string) => Promise<ApiResponse<PaymentResponse>>;
-    unlockEscort: (escortId: string, phone: string) => Promise<ApiResponse<PaymentResponse>>;
     subscribeVIP: (phone: string) => Promise<ApiResponse<PaymentResponse>>;
     checkPaymentStatus: (paymentId: string, phone?: string) => Promise<ApiResponse<any>>;
 }
@@ -633,23 +632,6 @@ export const usePayment = (): UsePaymentReturn => {
             setError(null);
             const response = await ButicalAPI.payments.subscribeDating(phone);
             // Unwrap API response: { status, data: { paymentId, checkoutRequestId, message } }
-            const paymentData = (response.data as any)?.data || response.data;
-            return { success: true, data: paymentData };
-        } catch (err: any) {
-            const errorMsg = err.response?.data?.message || 'Payment failed';
-            setError(errorMsg);
-            return { success: false, error: errorMsg };
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const unlockEscort = async (escortId: string, phone: string): Promise<ApiResponse<PaymentResponse>> => {
-        try {
-            setLoading(true);
-            setError(null);
-            const response = await ButicalAPI.payments.unlockEscort(escortId, phone);
-            // Unwrap API response
             const paymentData = (response.data as any)?.data || response.data;
             return { success: true, data: paymentData };
         } catch (err: any) {
@@ -698,7 +680,6 @@ export const usePayment = (): UsePaymentReturn => {
         loading,
         error,
         subscribeDating,
-        unlockEscort,
         subscribeVIP,
         checkPaymentStatus,
     };
@@ -1079,41 +1060,59 @@ export const useSubscription = (): UseSubscriptionReturn => {
 };
 // ==================== PUBLIC PRICING ====================
 
-// One request per page load, shared by every component that needs prices.
+// Components mounting together share one request. It is not kept after it
+// settles: prices and signup offers change in admin, and a page left open
+// must not keep offering something that has been switched off.
 let pricingRequest: Promise<PublicPricing | null> | null = null;
 
+function loadPricing(): Promise<PublicPricing | null> {
+    if (!pricingRequest) {
+        pricingRequest = ButicalAPI.plans
+            .pricing()
+            .then((res) => ((res.data as any)?.data ?? res.data ?? null) as PublicPricing | null)
+            .catch(() => null)
+            .finally(() => {
+                pricingRequest = null;
+            });
+    }
+    return pricingRequest;
+}
+
 /**
- * Prices an admin can change in Platform Settings. `pricing` is null until
- * loaded (or if the request fails); callers must not let users pay before
- * it is known, so the amount they see matches what M-Pesa charges.
+ * Prices and signup offers an admin can change in Platform Settings.
+ * `pricing` is null until loaded (or if the request fails); callers must not
+ * let users pay before it is known, so the amount they see matches what
+ * M-Pesa charges. Reloaded on mount, when the tab regains focus, and on
+ * `refresh()`, so a switch in admin shows up without a full reload.
  */
-export const usePublicPricing = (): { pricing: PublicPricing | null; isLoading: boolean } => {
+export const usePublicPricing = (): {
+    pricing: PublicPricing | null;
+    isLoading: boolean;
+    refresh: () => Promise<PublicPricing | null>;
+} => {
     const [pricing, setPricing] = useState<PublicPricing | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const mounted = useRef(true);
 
-    useEffect(() => {
-        let cancelled = false;
-        if (!pricingRequest) {
-            pricingRequest = ButicalAPI.plans
-                .pricing()
-                .then((res) => ((res.data as any)?.data ?? res.data ?? null) as PublicPricing | null)
-                .catch(() => {
-                    pricingRequest = null; // allow a retry on the next mount
-                    return null;
-                });
-        }
-        pricingRequest.then((value) => {
-            if (!cancelled) {
-                setPricing(value);
-                setIsLoading(false);
-            }
-        });
-        return () => {
-            cancelled = true;
-        };
+    const refresh = useCallback(async () => {
+        const value = await loadPricing();
+        if (mounted.current && value) setPricing(value);
+        if (mounted.current) setIsLoading(false);
+        return value;
     }, []);
 
-    return { pricing, isLoading };
+    useEffect(() => {
+        mounted.current = true;
+        refresh();
+        const onFocus = () => { refresh(); };
+        window.addEventListener('focus', onFocus);
+        return () => {
+            mounted.current = false;
+            window.removeEventListener('focus', onFocus);
+        };
+    }, [refresh]);
+
+    return { pricing, isLoading, refresh };
 };
 
 // ==================== NOTIFICATIONS ====================

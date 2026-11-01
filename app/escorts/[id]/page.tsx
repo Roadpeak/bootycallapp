@@ -1,103 +1,26 @@
 // app/escorts/[id]/page.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Globe,
     ArrowLeft, MapPin, Star, Clock, Phone, MessageCircle,
-    Crown, Check, X, Loader2, Share2, AlertCircle
+    Crown, Check, Share2, AlertCircle
 } from 'lucide-react'
-import { useEscort, usePayment, useAuth, useSubscription, usePublicPricing } from '@/lib/hooks/butical-api-hooks'
+import { useEscort } from '@/lib/hooks/butical-api-hooks'
+import { escortProfileUrl, shareLink } from '@/lib/utils/share'
 import { getImageUrl, getImageUrls } from '@/lib/utils/image'
 import { getPublicDisplayName } from '@/lib/utils/display-name'
-
-// Helper functions to manage unlock state in localStorage (24 hour expiration)
-const UNLOCK_STORAGE_KEY = 'escort_unlocks'
-const UNLOCK_EXPIRY_HOURS = 24
-
-interface UnlockRecord {
-    escortId: string
-    unlockedAt: number // timestamp
-    expiresAt: number // timestamp
-}
-
-const getStoredUnlocks = (): UnlockRecord[] => {
-    if (typeof window === 'undefined') return []
-    try {
-        const stored = localStorage.getItem(UNLOCK_STORAGE_KEY)
-        if (!stored) return []
-        const unlocks: UnlockRecord[] = JSON.parse(stored)
-        // Filter out expired unlocks
-        const now = Date.now()
-        return unlocks.filter(u => u.expiresAt > now)
-    } catch {
-        return []
-    }
-}
-
-const isEscortUnlockedInStorage = (escortId: string): boolean => {
-    const unlocks = getStoredUnlocks()
-    return unlocks.some(u => u.escortId === escortId)
-}
-
-const saveUnlockToStorage = (escortId: string): void => {
-    if (typeof window === 'undefined') return
-    try {
-        const unlocks = getStoredUnlocks()
-        const now = Date.now()
-        const expiresAt = now + (UNLOCK_EXPIRY_HOURS * 60 * 60 * 1000) // 24 hours in ms
-
-        // Remove any existing record for this escort
-        const filtered = unlocks.filter(u => u.escortId !== escortId)
-
-        // Add new unlock record
-        filtered.push({
-            escortId,
-            unlockedAt: now,
-            expiresAt
-        })
-
-        localStorage.setItem(UNLOCK_STORAGE_KEY, JSON.stringify(filtered))
-    } catch {
-        // Silently fail if localStorage is not available
-    }
-}
 
 export default function EscortViewPage() {
     const params = useParams()
     const router = useRouter()
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0)
-    const [showPaymentModal, setShowPaymentModal] = useState(false)
-    const [mpesaPhone, setMpesaPhone] = useState('')
-    const [isUnlocked, setIsUnlocked] = useState(false)
-    const [isWaitingForPayment, setIsWaitingForPayment] = useState(false)
-
-    // Check localStorage for existing unlock on mount
-    useEffect(() => {
-        if (params.id) {
-            const unlocked = isEscortUnlockedInStorage(params.id as string)
-            if (unlocked) {
-                setIsUnlocked(true)
-            }
-        }
-    }, [params.id])
+    const [shareNote, setShareNote] = useState<string | null>(null)
 
     // Fetch escort data using the hook
     const { escort, loading: isLoading, error } = useEscort(params.id as string)
 
-    // Get user auth and subscription status
-    const { user } = useAuth()
-    const { hasDatingAccess } = useSubscription()
-    // Unlock fee is set by admin in Platform Settings
-    const { pricing } = usePublicPricing()
-
-    // Payment hook
-    const {
-        unlockEscort,
-        checkPaymentStatus,
-        loading: isProcessingPayment,
-        error: paymentError
-    } = usePayment()
 
     // Helper to get display name from escort
     const getDisplayName = (e: typeof escort): string => {
@@ -134,74 +57,16 @@ export default function EscortViewPage() {
     const isEscortVerified = escort?.verified || escort?.isVerified || false;
     const isEscortVip = escort?.vipStatus || escort?.isVIP || false;
 
-    const handleUnlock = () => {
-        if (!isContactUnlocked && escort) {
-            setShowPaymentModal(true)
-        }
-    }
-
-    const handlePayment = async () => {
-        if (!mpesaPhone.trim()) {
-            alert('Please enter your M-Pesa phone number')
-            return
-        }
-
-        if (!params.id) {
-            return
-        }
-
-        const result = await unlockEscort(params.id as string, mpesaPhone)
-
-        if (result.success && result.data?.paymentId) {
-            // STK push was sent, now poll for payment status
-            setIsWaitingForPayment(true)
-            const paymentId = result.data.paymentId
-            let attempts = 0
-            const maxAttempts = 30 // Poll for up to 60 seconds (every 2 seconds)
-
-            const pollPaymentStatus = async () => {
-                attempts++
-                try {
-                    const statusResult = await checkPaymentStatus(paymentId, mpesaPhone)
-                    const status = statusResult.data?.status
-
-                    if (status === 'COMPLETED') {
-                        setIsWaitingForPayment(false)
-                        setIsUnlocked(true)
-                        // Save unlock to localStorage for 24 hours
-                        saveUnlockToStorage(params.id as string)
-                        setShowPaymentModal(false)
-                        setMpesaPhone('')
-                        alert('Payment successful! Contact unlocked.')
-                        return
-                    } else if (status === 'FAILED') {
-                        setIsWaitingForPayment(false)
-                        alert('Payment failed. Please try again.')
-                        return
-                    } else if (attempts < maxAttempts) {
-                        // Still pending, continue polling
-                        setTimeout(pollPaymentStatus, 2000)
-                    } else {
-                        // Timeout - payment still pending
-                        setIsWaitingForPayment(false)
-                        alert('Payment is still processing. Please refresh the page in a few moments to check if payment was successful.')
-                        setShowPaymentModal(false)
-                    }
-                } catch (err) {
-                    console.error('Error checking payment status:', err)
-                    if (attempts < maxAttempts) {
-                        setTimeout(pollPaymentStatus, 2000)
-                    } else {
-                        setIsWaitingForPayment(false)
-                    }
-                }
-            }
-
-            // Start polling after a short delay to give user time to complete
-            setTimeout(pollPaymentStatus, 3000)
-        } else {
-            alert(result.error || 'Payment failed. Please try again.')
-        }
+    const handleShare = async () => {
+        if (!escort) return
+        const result = await shareLink({
+            url: escortProfileUrl(escort.id),
+            title: `${getDisplayName(escort)} on LoveBite`,
+            text: `Check out ${getDisplayName(escort)} on LoveBite`,
+        })
+        if (result === 'copied') setShareNote('Profile link copied')
+        else if (result === 'failed') setShareNote("Couldn't share. Copy the link from the address bar.")
+        if (result === 'copied' || result === 'failed') setTimeout(() => setShareNote(null), 2500)
     }
 
     if (isLoading) {
@@ -250,20 +115,12 @@ export default function EscortViewPage() {
     // Safe photo array with proper image URL handling
     const photos = getImageUrls(escort.photos)
 
-    // Check if contact should be unlocked
-    // - Escorts on any plan show their contact to everyone
-    // - Dating users get free access to all escort contacts
-    // - Escorts without a plan need the admin-set unlock fee
-    // The API returns the contact when the viewer may see it: the escort is
-    // on any plan, the viewer has dating access, or they paid to unlock.
-    // Only escorts without a plan need the unlock button.
-    const contactFromApi = Boolean(escort && !(escort as any).contactHidden && escort.contactPhone)
-    const isContactUnlocked = contactFromApi || isUnlocked || hasDatingAccess
+    // Contact details are shown to everyone, on every plan and free accounts
+    const contactPhone = escort.contactPhone
 
     // Get display values
     const displayName = getDisplayName(escort)
     const locationStr = getLocation(escort)
-    const unlockPrice = pricing ? pricing.unlockEscortFee.toLocaleString() : '…'
     const hourlyRate = escort.pricing?.hourlyRate || escort.hourlyRate || 300
 
     // Profile details saved at signup / in the escort profile editor
@@ -290,9 +147,22 @@ export default function EscortViewPage() {
                             <span className="font-medium">Back</span>
                         </button>
 
-                        <button className="p-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors">
-                            <Share2 className="w-5 h-5" />
-                        </button>
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={handleShare}
+                                aria-label="Share this profile"
+                                className="flex items-center gap-2 p-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+                            >
+                                <Share2 className="w-5 h-5" />
+                                <span className="hidden sm:inline text-sm font-medium">Share</span>
+                            </button>
+                            {shareNote && (
+                                <span role="status" className="absolute right-0 top-full mt-2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-1.5 text-xs text-white shadow">
+                                    {shareNote}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
             </header>
@@ -445,35 +315,21 @@ export default function EscortViewPage() {
                             </div>
 
                             {/* Contact Information */}
-                            {isContactUnlocked ? (
-                                <div className="mb-6 p-4 bg-green-500/20 border border-green-500/30 rounded-lg">
-                                    <div className="flex items-center gap-2 text-green-400 mb-2">
-                                        <Check className="w-5 h-5" />
-                                        <span className="font-semibold">Contact Unlocked</span>
+                            {contactPhone ? (
+                                <>
+                                    <div className="mb-6 p-4 bg-gray-700/50 border border-gray-600 rounded-lg">
+                                        <div className="flex items-center gap-2 text-white">
+                                            <Phone className="w-4 h-4" />
+                                            <span className="text-lg font-semibold">{contactPhone}</span>
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-2">
+                                            Call or message to book this escort
+                                        </p>
                                     </div>
-                                    <div className="flex items-center gap-2 text-white">
-                                        <Phone className="w-4 h-4" />
-                                        <span className="text-lg font-semibold">
-                                            {escort.contactPhone || 'Contact Available'}
-                                        </span>
-                                    </div>
-                                    <p className="text-xs text-gray-400 mt-2">
-                                        Call or message to book this escort
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="mb-6 p-4 bg-gray-700/50 border border-gray-600 rounded-lg text-center">
-                                    <p className="text-gray-400 text-sm mb-2">Contact information is locked</p>
-                                    <p className="text-white font-semibold">Pay KSh {unlockPrice} to unlock</p>
-                                </div>
-                            )}
 
-                            {/* Action Buttons */}
-                            <div className="space-y-3">
-                                {isContactUnlocked ? (
-                                    <>
+                                    <div className="space-y-3">
                                         <a
-                                            href={`tel:${escort.contactPhone}`}
+                                            href={`tel:${contactPhone}`}
                                             className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold transition-colors flex items-center justify-center gap-2"
                                         >
                                             <Phone className="w-5 h-5" />
@@ -481,7 +337,7 @@ export default function EscortViewPage() {
                                         </a>
 
                                         <a
-                                            href={`https://wa.me/${escort.contactPhone?.replace(/[^0-9]/g, '')}`}
+                                            href={`https://wa.me/${contactPhone.replace(/[^0-9]/g, '')}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="w-full px-4 py-3 border-2 border-green-500 text-green-400 rounded-lg hover:bg-green-500/10 font-semibold transition-colors flex items-center justify-center gap-2"
@@ -489,16 +345,13 @@ export default function EscortViewPage() {
                                             <MessageCircle className="w-5 h-5" />
                                             <span>WhatsApp Message</span>
                                         </a>
-                                    </>
-                                ) : (
-                                    <button
-                                        onClick={handleUnlock}
-                                        className="w-full px-4 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-semibold transition-colors"
-                                    >
-                                        Unlock Contact - KSh {unlockPrice}
-                                    </button>
-                                )}
-                            </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="mb-6 p-4 bg-gray-700/50 border border-gray-600 rounded-lg text-center">
+                                    <p className="text-gray-400 text-sm">This escort hasn&apos;t added a contact number yet.</p>
+                                </div>
+                            )}
 
                             {/* Safety Notice */}
                             <div className="mt-6 p-3 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
@@ -510,130 +363,6 @@ export default function EscortViewPage() {
                     </div>
                 </div>
             </main>
-
-            {/* Payment Modal */}
-            {showPaymentModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-                    <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold text-white">Unlock Contact</h2>
-                            <button
-                                onClick={() => {
-                                    setShowPaymentModal(false)
-                                    setMpesaPhone('')
-                                }}
-                                className="text-gray-400 hover:text-gray-200"
-                                disabled={isProcessingPayment}
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-
-                        <div className="mb-6">
-                            <div className="flex items-center gap-3 mb-4">
-                                <img
-                                    src={photos[0]}
-                                    alt={displayName}
-                                    className="w-16 h-16 rounded-lg object-cover"
-                                />
-                                <div>
-                                    <p className="text-white font-semibold">{displayName}</p>
-                                    <p className="text-sm text-gray-400">{locationStr}</p>
-                                </div>
-                            </div>
-
-                            <div className="bg-pink-500/20 border border-pink-500/30 p-4 rounded-lg text-center mb-4">
-                                <span className="text-white font-bold text-3xl">KSh {unlockPrice}</span>
-                                <p className="text-sm text-gray-300 mt-1">One-time unlock fee</p>
-                            </div>
-
-                            <div className="bg-gray-700/50 p-3 rounded-lg mb-4">
-                                <p className="text-sm text-gray-300 mb-2">✓ View phone number</p>
-                                <p className="text-sm text-gray-300 mb-2">✓ Direct call & SMS access</p>
-                                <p className="text-sm text-gray-300">✓ Permanent access</p>
-                            </div>
-
-                            {paymentError && (
-                                <div className="bg-red-500/20 border border-red-500/30 p-3 rounded-lg mb-4">
-                                    <p className="text-sm text-red-300">{paymentError}</p>
-                                </div>
-                            )}
-
-                            <p className="text-sm text-gray-400 mb-4">
-                                Enter your M-Pesa phone number to complete payment.
-                            </p>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">
-                                    M-Pesa Phone Number *
-                                </label>
-                                <input
-                                    type="tel"
-                                    value={mpesaPhone}
-                                    onChange={(e) => setMpesaPhone(e.target.value)}
-                                    placeholder="254712345678"
-                                    disabled={isProcessingPayment}
-                                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:opacity-50"
-                                />
-                                <p className="text-xs text-gray-400 mt-1">Format: 254XXXXXXXXX (no spaces or +)</p>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => {
-                                    setShowPaymentModal(false)
-                                    setMpesaPhone('')
-                                    setIsWaitingForPayment(false)
-                                }}
-                                disabled={isProcessingPayment || isWaitingForPayment}
-                                className="flex-1 px-4 py-3 border border-gray-600 text-gray-200 rounded-lg hover:bg-gray-700 font-medium transition-colors disabled:opacity-50"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handlePayment}
-                                disabled={isProcessingPayment || isWaitingForPayment || !pricing || !mpesaPhone.trim()}
-                                className="flex-1 px-4 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                                {isProcessingPayment ? (
-                                    <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        <span>Sending...</span>
-                                    </>
-                                ) : isWaitingForPayment ? (
-                                    <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        <span>Waiting for payment...</span>
-                                    </>
-                                ) : (
-                                    <span>Pay KSh {unlockPrice}</span>
-                                )}
-                            </button>
-                        </div>
-
-                        {isProcessingPayment && (
-                            <div className="mt-4 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
-                                <p className="text-sm text-blue-300 text-center">
-                                    Check your phone for M-Pesa prompt...
-                                </p>
-                            </div>
-                        )}
-
-                        {isWaitingForPayment && (
-                            <div className="mt-4 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
-                                <div className="flex items-center justify-center gap-2 mb-2">
-                                    <Loader2 className="w-5 h-5 animate-spin text-yellow-400" />
-                                    <p className="text-yellow-300 font-semibold">Processing Payment...</p>
-                                </div>
-                                <p className="text-sm text-yellow-200 text-center">
-                                    Please complete the M-Pesa payment on your phone. This page will update automatically once payment is confirmed.
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
         </div>
     )
 }

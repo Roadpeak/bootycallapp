@@ -24,24 +24,21 @@ const TIER_ORDER: EscortTier[] = ['VVIP', 'VIP', 'PRIME', 'REGULAR']
 const TIER_BENEFITS: Record<EscortTier, string[]> = {
     VVIP: [
         'Top placement — listed above every other tier',
-        'Contact details visible to everyone, no unlock needed',
         'Priority in search results',
         'Verification badge',
     ],
     VIP: [
         'Listed above Prime and Regular profiles',
-        'Contact details visible to everyone, no unlock needed',
         'Priority in search results',
         'Verification badge',
     ],
     PRIME: [
         'Listed above Regular profiles',
-        'Clients pay to unlock your contact',
         'Verification badge',
     ],
     REGULAR: [
-        'Profile visible on the site',
-        'Clients pay to unlock your contact',
+        'Listed above free profiles',
+        'Profile stays visible if subscriptions become required',
     ],
 }
 

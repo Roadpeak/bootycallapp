@@ -45,6 +45,8 @@ const ESCORT_FIELD_MAP: FieldMap = {
     'location.area': { field: 'area', step: 2 }, about: { field: 'description', step: 2 },
     languages: { field: 'languages', step: 2 }, photos: { field: 'photos', step: 2 },
     services: { field: 'services', step: 3 },
+    // The free trial or free account was switched off after the page loaded
+    signupOffer: { field: 'plan', step: 4 },
 }
 /** Payment calls only know about the M-Pesa number. */
 const PAYMENT_FIELD_MAP: FieldMap = { phone: { field: 'mpesaPhone', step: 4 }, planId: { field: 'plan', step: 4 } }
@@ -98,7 +100,7 @@ function EscortSignupPageContent() {
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'pending' | 'success' | 'failed'>('idle')
 
     // Escort plans and prices are managed in admin (Platform Settings)
-    const { pricing } = usePublicPricing()
+    const { pricing, refresh: refreshPricing } = usePublicPricing()
     const [plans, setPlans] = useState<SubscriptionPlanOption[]>([])
     const [plansError, setPlansError] = useState<string | null>(null)
     const [activeTier, setActiveTier] = useState<EscortTier>('VVIP')
@@ -325,6 +327,10 @@ function EscortSignupPageContent() {
     /** Turns a failed request into messages on the right step and field. */
     const showServerProblem = (err: any, fallback: string, map: FieldMap = ESCORT_FIELD_MAP) => {
         const problem = parseSignupError(err, map, fallback)
+        // An offer was switched off while the page was open: show the current ones
+        if (err?.response?.data?.errors?.some((e: { field: string }) => e.field === 'signupOffer')) {
+            refreshPricing()
+        }
         setFieldErrors(problem.fieldErrors)
         setError(problem.message)
         if (problem.step && problem.step !== currentStep) setCurrentStep(problem.step)
@@ -372,6 +378,8 @@ function EscortSignupPageContent() {
 
             // Prepare registration data with correct backend format
             const registrationData: any = {
+                // Checked against the live settings by the API
+                signupIntent: 'pay',
                 email: formData.email.trim(),
                 phone: convertPhoneTo254(formData.phone),
                 password: formData.password,
@@ -462,6 +470,8 @@ function EscortSignupPageContent() {
             const servicesFormatted = selectedServices.map(name => ({ name }))
 
             const registrationData: any = {
+                // Checked against the live settings by the API
+                signupIntent: freeTrial ? 'trial' : 'free',
                 email: formData.email.trim(),
                 phone: convertPhoneTo254(formData.phone),
                 password: formData.password,
@@ -619,6 +629,8 @@ function EscortSignupPageContent() {
         }
         setError(null)
         setFieldErrors({})
+        // The plan step shows what admin offers right now (trial, free account)
+        if (currentStep === 3) refreshPricing()
         setCurrentStep(prev => Math.min(prev + 1, 4))
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
@@ -795,7 +807,7 @@ function EscortSignupPageContent() {
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
                                 <FieldError message={fieldErrors.contactPhone} />
-                                <p className="text-xs text-gray-500 mt-1">Clients will see this number after unlock (Format: 07XXXXXXXX)</p>
+                                <p className="text-xs text-gray-500 mt-1">Clients see this number on your profile (Format: 07XXXXXXXX)</p>
                             </div>
 
                             <div>
@@ -1149,7 +1161,6 @@ function EscortSignupPageContent() {
                                     </h3>
                                     <p className="mt-2 text-sm text-gray-700">
                                         Your profile goes live straight away, listed above every other tier.
-                                        Clients can see your contact details without paying to unlock them.
                                     </p>
                                     <ul className="mx-auto mt-4 max-w-sm space-y-2 text-left text-sm text-gray-700">
                                         <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />Top placement, above every other tier</li>
@@ -1313,7 +1324,7 @@ function EscortSignupPageContent() {
                                 <div className="text-center">
                                     <h4 className="font-medium text-gray-700 mb-2">Not ready to pay yet?</h4>
                                     <p className="text-sm text-gray-500 mb-3">
-                                        You can start with a free account. Clients will pay {pricing ? `KSh ${pricing.unlockEscortFee.toLocaleString()}` : 'a small fee'} to unlock your contact info.
+                                        You can start with a free account. Your profile is listed in the Free section, below paid plans, with your contact details visible to clients.
                                     </p>
                                     <button
                                         type="button"

@@ -192,7 +192,8 @@ export interface Escort {
     tags: string[]
     user: EscortUser
     createdAt: string
-    contactHidden: boolean
+    /** No plan: listed in the Free section. Contacts are shown either way. */
+    isFree?: boolean
     // Additional profile fields
     dateOfBirth?: string
     gender?: string
@@ -853,9 +854,6 @@ const ButicalAPI = {
         // Subscribe to dating (KES 300/year) - free access to all escort contacts
         subscribeDating: (phone: string) =>
             apiClient.post<ApiResponseWrapper<PaymentInitiateResponse>>('/pay/subscribe', { phone }),
-        // Unlock escort contact (KES 150)
-        unlockEscort: (escortId: string, phone: string) =>
-            apiClient.post<ApiResponseWrapper<PaymentInitiateResponse>>('/pay/unlock', { phone, escortId }),
         // Subscribe to VIP (KES 3,000/year) - for ESCORTs only
         /** Buy or renew a specific tiered escort plan. */
         subscribeToPlan: (planId: string, phone: string) =>
