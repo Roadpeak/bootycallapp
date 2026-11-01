@@ -1158,8 +1158,15 @@ export const useNotifications = (enabled: boolean) => {
         const onFocus = () => refreshCount();
         window.addEventListener('focus', onFocus);
 
-        // Live delivery when a socket happens to be connected
-        const socket = ChatService.getSocket();
+        // Live delivery: the bell opens the same socket chat uses (connect()
+        // reuses it when already open), so a new notification shows at once
+        // on any page, not only after chat has been opened
+        let socket: ReturnType<typeof ChatService.getSocket> = null;
+        try {
+            socket = ChatService.connect();
+        } catch {
+            socket = ChatService.getSocket(); // no token yet; polling still covers it
+        }
         const onNotification = () => { refreshCount(); };
         socket?.on('notification', onNotification);
 
