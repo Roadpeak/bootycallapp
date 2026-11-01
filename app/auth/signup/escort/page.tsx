@@ -10,6 +10,46 @@ import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 import type { EscortRegistration, SubscriptionPlanOption } from '@/services/butical-api-service'
 import { usePublicPricing } from '@/lib/hooks/butical-api-hooks'
 import { TIER_STYLES, type EscortTier } from '@/app/components/cards/EscortCard'
+import { FieldError, StepErrorSummary } from '@/app/components/forms/FieldError'
+import {
+    collect, focusFirstError, required, validateAdultDob, validateEmail, validateKenyanPhone,
+    validateMinLength, validatePassword, validatePasswordMatch, type FieldErrors,
+} from '@/lib/signup/validators'
+import { parseSignupError, type FieldMap } from '@/lib/signup/errors'
+import { compressImagesToBase64 } from '@/lib/utils/compress-image'
+
+/** Fields on each step, in screen order (used to focus the first problem). */
+const STEP_FIELDS: Record<number, string[]> = {
+    1: ['firstName', 'lastName', 'displayName', 'email', 'phone', 'contactPhone', 'password', 'confirmPassword', 'dateOfBirth', 'gender', 'referralCode'],
+    2: ['city', 'area', 'description', 'languages', 'photos'],
+    3: ['services'],
+    4: ['plan', 'mpesaPhone', 'ageConfirmed', 'termsAccepted'],
+}
+
+const FIELD_LABELS: Record<string, string> = {
+    firstName: 'First name', lastName: 'Last name', displayName: 'Display name', email: 'Email',
+    phone: 'Phone', contactPhone: 'Contact phone', password: 'Password', confirmPassword: 'Confirm password',
+    dateOfBirth: 'Date of birth', gender: 'Gender', referralCode: 'Referral code', city: 'City', area: 'Area',
+    description: 'About you', languages: 'Languages', photos: 'Photos', services: 'Services', plan: 'Plan',
+    mpesaPhone: 'M-Pesa number', ageConfirmed: 'Age confirmation', termsAccepted: 'Terms',
+}
+
+/** API field -> form field and step, for errors the server sends back. */
+const ESCORT_FIELD_MAP: FieldMap = {
+    firstName: { field: 'firstName', step: 1 }, lastName: { field: 'lastName', step: 1 },
+    displayName: { field: 'displayName', step: 1 }, email: { field: 'email', step: 1 },
+    phone: { field: 'phone', step: 1 }, contactPhone: { field: 'contactPhone', step: 1 },
+    password: { field: 'password', step: 1 }, dateOfBirth: { field: 'dateOfBirth', step: 1 },
+    gender: { field: 'gender', step: 1 }, referralCode: { field: 'referralCode', step: 1 },
+    location: { field: 'city', step: 2 }, 'location.city': { field: 'city', step: 2 },
+    'location.area': { field: 'area', step: 2 }, about: { field: 'description', step: 2 },
+    languages: { field: 'languages', step: 2 }, photos: { field: 'photos', step: 2 },
+    services: { field: 'services', step: 3 },
+}
+/** Payment calls only know about the M-Pesa number. */
+const PAYMENT_FIELD_MAP: FieldMap = { phone: { field: 'mpesaPhone', step: 4 }, planId: { field: 'plan', step: 4 } }
+
+const MAX_PHOTO_MB = 20
 
 const SIGNUP_TIER_ORDER: EscortTier[] = ['VVIP', 'VIP', 'PRIME', 'REGULAR']
 const formatPlanDuration = (days: number) => `${days} Day${days === 1 ? '' : 's'}`
@@ -54,6 +94,7 @@ function EscortSignupPageContent() {
     const [currentStep, setCurrentStep] = useState(1)
     const [isProcessing, setIsProcessing] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'pending' | 'success' | 'failed'>('idle')
 
     // Escort plans and prices are managed in admin (Platform Settings)
@@ -133,6 +174,7 @@ function EscortSignupPageContent() {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target
+        clearFieldError(name)
 
         if (type === 'checkbox') {
             const checked = (e.target as HTMLInputElement).checked
@@ -142,7 +184,17 @@ function EscortSignupPageContent() {
         }
     }
 
+    const clearFieldError = (...names: string[]) => {
+        setFieldErrors(prev => {
+            if (!names.some(n => prev[n])) return prev
+            const next = { ...prev }
+            names.forEach(n => delete next[n])
+            return next
+        })
+    }
+
     const toggleService = (service: string) => {
+        clearFieldError('services')
         setSelectedServices(prev =>
             prev.includes(service)
                 ? prev.filter(s => s !== service)
@@ -151,6 +203,7 @@ function EscortSignupPageContent() {
     }
 
     const toggleLanguage = (language: string) => {
+        clearFieldError('languages')
         setFormData(prev => ({
             ...prev,
             languages: prev.languages.includes(language)
@@ -181,8 +234,20 @@ function EscortSignupPageContent() {
 
     const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            const newPhotos = Array.from(e.target.files).slice(0, 4 - photos.length)
+            const picked = Array.from(e.target.files)
+            const notImages = picked.filter(f => !f.type.startsWith('image/'))
+            const tooBig = picked.filter(f => f.type.startsWith('image/') && f.size > MAX_PHOTO_MB * 1024 * 1024)
+            const usable = picked.filter(f => f.type.startsWith('image/') && f.size <= MAX_PHOTO_MB * 1024 * 1024)
+            const newPhotos = usable.slice(0, 4 - photos.length)
             setPhotos(prev => [...prev, ...newPhotos])
+            const problems = [
+                notImages.length ? `${notImages.map(f => f.name).join(', ')} ${notImages.length === 1 ? 'is not a photo' : 'are not photos'}. Use JPG or PNG.` : '',
+                tooBig.length ? `${tooBig.map(f => f.name).join(', ')} ${tooBig.length === 1 ? 'is' : 'are'} over ${MAX_PHOTO_MB}MB.` : '',
+                usable.length > newPhotos.length ? `Only 4 photos are allowed, so ${usable.length - newPhotos.length} ${usable.length - newPhotos.length === 1 ? 'was' : 'were'} not added.` : '',
+            ].filter(Boolean).join(' ')
+            if (problems) setFieldErrors(prev => ({ ...prev, photos: problems }))
+            else if (newPhotos.length) clearFieldError('photos')
+            e.target.value = '' // allow picking the same file again after removing it
         }
     }
 
@@ -193,21 +258,81 @@ function EscortSignupPageContent() {
     // Accepts +254 / 07 / spaces (browser autofill adds "+254")
     const convertPhoneTo254 = toMpesaPhone
 
-    // Convert files to base64
-    const convertFilesToBase64 = async (files: File[]): Promise<string[]> => {
-        const promises = files.map(file => {
-            return new Promise<string>((resolve, reject) => {
-                const reader = new FileReader()
-                reader.onload = () => {
-                    const base64 = reader.result as string
-                    const base64Data = base64.split(',')[1]
-                    resolve(base64Data)
-                }
-                reader.onerror = reject
-                reader.readAsDataURL(file)
+    /** Problems on one step. `paying` adds the plan and M-Pesa checks. */
+    const validateStep = (step: number, opts: { paying?: boolean } = {}): FieldErrors => {
+        if (step === 1) {
+            return collect({
+                firstName: required(formData.firstName, 'First name'),
+                lastName: required(formData.lastName, 'Last name'),
+                displayName: formData.displayName.trim().length < 2
+                    ? 'Display name needs at least 2 characters'
+                    : formData.displayName.trim().length > 30 ? 'Keep your display name under 30 characters' : null,
+                email: validateEmail(formData.email),
+                phone: validateKenyanPhone(formData.phone),
+                contactPhone: validateKenyanPhone(formData.contactPhone, 'Contact phone'),
+                password: validatePassword(formData.password),
+                confirmPassword: validatePasswordMatch(formData.password, formData.confirmPassword),
+                dateOfBirth: validateAdultDob(formData.dateOfBirth),
+                gender: required(formData.gender, 'Gender'),
+                referralCode: formData.referralCode.trim() && !/^[A-Za-z0-9]{4,16}$/.test(formData.referralCode.trim())
+                    ? 'Referral codes are letters and numbers only. Check it, or leave it blank.' : null,
             })
+        }
+        if (step === 2) {
+            return collect({
+                city: required(formData.city, 'City'),
+                area: required(formData.area, 'Area'),
+                description: validateMinLength(formData.description, 20, 'About you'),
+                languages: formData.languages.length ? null : 'Choose at least one language',
+                photos: fieldErrors.photos && photos.length === 0 ? fieldErrors.photos
+                    : photos.length ? null : 'Add at least one photo',
+            })
+        }
+        if (step === 3) {
+            return collect({ services: selectedServices.length ? null : 'Choose at least one service' })
+        }
+        return collect({
+            plan: opts.paying && !selectedPlan ? 'Choose a plan' : null,
+            mpesaPhone: opts.paying ? validateKenyanPhone(formData.mpesaPhone || formData.phone, 'M-Pesa number') : null,
+            ageConfirmed: formData.ageConfirmed ? null : 'Confirm you are 18 or older',
+            termsAccepted: formData.termsAccepted ? null : 'Accept the terms to continue',
         })
-        return Promise.all(promises)
+    }
+
+    /** Shows problems on a step, moving there and to the first bad field. */
+    const showProblems = (errors: FieldErrors, step: number, message?: string) => {
+        const count = Object.keys(errors).length
+        setFieldErrors(errors)
+        setError(message ?? (count > 1 ? `Please fix ${count} things on this step.` : Object.values(errors)[0]))
+        if (step !== currentStep) setCurrentStep(step)
+        focusFirstError(errors, STEP_FIELDS[step] ?? [])
+    }
+
+    /** Checks every step before sending; returns true when something needs fixing. */
+    const validateAll = (opts: { paying?: boolean } = {}): boolean => {
+        for (const step of [1, 2, 3, 4]) {
+            const errors = validateStep(step, opts)
+            if (Object.keys(errors).length) {
+                showProblems(errors, step, step < currentStep
+                    ? `Something on step ${step} needs fixing before you can finish.`
+                    : undefined)
+                return true
+            }
+        }
+        return false
+    }
+
+    /** Turns a failed request into messages on the right step and field. */
+    const showServerProblem = (err: any, fallback: string, map: FieldMap = ESCORT_FIELD_MAP) => {
+        const problem = parseSignupError(err, map, fallback)
+        setFieldErrors(problem.fieldErrors)
+        setError(problem.message)
+        if (problem.step && problem.step !== currentStep) setCurrentStep(problem.step)
+        if (Object.keys(problem.fieldErrors).length && problem.step) {
+            focusFirstError(problem.fieldErrors, STEP_FIELDS[problem.step] ?? [])
+        } else {
+            setTimeout(() => document.getElementById('signup-errors')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
+        }
     }
 
     const handleRegistration = async () => {
@@ -221,45 +346,15 @@ function EscortSignupPageContent() {
         }
 
         try {
-            // Check the M-Pesa number before creating the account, so a typo
-            // cannot leave a half-registered escort behind
-            if (!/^254\d{9}$/.test(convertPhoneTo254(formData.mpesaPhone || formData.phone))) {
-                throw new Error('Invalid M-Pesa number. Use 07XXXXXXXX or +254XXXXXXXXX')
-            }
-            if (!selectedPlan) {
-                throw new Error('Please choose a plan')
+            // Check every step (and the M-Pesa number) before creating the
+            // account, so a typo cannot leave a half-registered escort behind
+            if (validateAll({ paying: true })) {
+                setIsProcessing(false)
+                return
             }
 
-            // Validate passwords match
-            if (formData.password !== formData.confirmPassword) {
-                throw new Error('Passwords do not match')
-            }
-
-            // Validate required fields
-            if (!formData.firstName || !formData.lastName || !formData.displayName ||
-                !formData.email || !formData.phone || !formData.password ||
-                !formData.contactPhone || !formData.description) {
-                throw new Error('Please fill in all required fields')
-            }
-
-            if (photos.length === 0) {
-                throw new Error('Please upload at least one photo')
-            }
-
-            if (formData.languages.length === 0) {
-                throw new Error('Please select at least one language')
-            }
-
-            if (selectedServices.length === 0) {
-                throw new Error('Please select at least one service')
-            }
-
-            if (!formData.ageConfirmed || !formData.termsAccepted) {
-                throw new Error('Please accept the terms and confirm your age')
-            }
-
-            // Convert photos to base64
-            const photoBase64 = await convertFilesToBase64(photos)
+            // Shrink photos first: full-size phone photos made signups fail
+            const photoBase64 = await compressImagesToBase64(photos)
 
             // Transform availability from day-by-day object to backend format { days: string[], hours: string }
             const availableDays = Object.entries(availability)
@@ -330,7 +425,7 @@ function EscortSignupPageContent() {
             }
         } catch (err: any) {
             console.error('Registration error:', err)
-            setError(err.response?.data?.message || err.message || 'Registration failed. Please try again.')
+            showServerProblem(err, 'Registration failed. Please try again.')
             setIsProcessing(false)
         }
     }
@@ -346,36 +441,13 @@ function EscortSignupPageContent() {
         setIsProcessing(true)
 
         try {
-            // Validate passwords match
-            if (formData.password !== formData.confirmPassword) {
-                throw new Error('Passwords do not match')
+            if (validateAll()) {
+                setIsProcessing(false)
+                return
             }
 
-            // Validate required fields
-            if (!formData.firstName || !formData.lastName || !formData.displayName ||
-                !formData.email || !formData.phone || !formData.password ||
-                !formData.contactPhone || !formData.description) {
-                throw new Error('Please fill in all required fields')
-            }
-
-            if (photos.length === 0) {
-                throw new Error('Please upload at least one photo')
-            }
-
-            if (formData.languages.length === 0) {
-                throw new Error('Please select at least one language')
-            }
-
-            if (selectedServices.length === 0) {
-                throw new Error('Please select at least one service')
-            }
-
-            if (!formData.ageConfirmed || !formData.termsAccepted) {
-                throw new Error('Please accept the terms and confirm your age')
-            }
-
-            // Convert photos to base64
-            const photoBase64 = await convertFilesToBase64(photos)
+            // Shrink photos first: full-size phone photos made signups fail
+            const photoBase64 = await compressImagesToBase64(photos)
 
             // Transform availability from day-by-day object to backend format { days: string[], hours: string }
             const availableDays = Object.entries(availability)
@@ -430,7 +502,7 @@ function EscortSignupPageContent() {
             router.push('/profile/escort')
         } catch (err: any) {
             console.error('Registration error:', err)
-            setError(err.response?.data?.message || err.message || 'Registration failed. Please try again.')
+            showServerProblem(err, 'Registration failed. Please try again.')
         } finally {
             setIsProcessing(false)
         }
@@ -532,69 +604,33 @@ function EscortSignupPageContent() {
             setPaymentStatus('failed')
             // Stay on the payment step so the escort can fix the number or
             // plan and retry; a failed payment must not let them in
-            setError(error.response?.data?.message || error.message || 'Payment failed. Check the number and try again.')
+            showServerProblem(error, 'Payment failed. Check the number and try again.', PAYMENT_FIELD_MAP)
         } finally {
             setIsProcessing(false)
         }
     }
 
     const nextStep = () => {
-        setError(null)
-
-        // Validate current step before proceeding
-        if (currentStep === 1) {
-            if (!formData.firstName || !formData.lastName || !formData.displayName ||
-                !formData.email || !formData.phone || !formData.contactPhone ||
-                !formData.password || !formData.gender || !formData.dateOfBirth) {
-                setError('Please fill in all required fields')
-                return
-            }
-            if (formData.password !== formData.confirmPassword) {
-                setError('Passwords do not match')
-                return
-            }
-            if (formData.password.length < 6) {
-                setError('Password must be at least 6 characters')
-                return
-            }
-        } else if (currentStep === 2) {
-            if (!formData.city || !formData.area || !formData.description || formData.languages.length === 0 || photos.length === 0) {
-                setError('Please complete all required fields (city, area, at least 1 language and 1 photo)')
-                return
-            }
-        } else if (currentStep === 3) {
-            if (selectedServices.length === 0) {
-                setError('Please select at least one service')
-                return
-            }
+        // Check this step before moving on
+        const errors = validateStep(currentStep)
+        if (Object.keys(errors).length) {
+            showProblems(errors, currentStep)
+            return
         }
-
+        setError(null)
+        setFieldErrors({})
         setCurrentStep(prev => Math.min(prev + 1, 4))
+        window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
     const prevStep = () => {
         setError(null)
+        setFieldErrors({})
         setCurrentStep(prev => Math.max(prev - 1, 1))
     }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 py-8 px-4">
-            {/* Error Display */}
-            {error && (
-                <div className="max-w-3xl mx-auto mb-4">
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                        <p className="text-red-800 text-sm flex-1">{error}</p>
-                        <button
-                            onClick={() => setError(null)}
-                            className="text-red-500 hover:text-red-700"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-                </div>
-            )}
-
             <div className="max-w-3xl mx-auto">
                 {/* Header */}
                 <div className="text-center mb-8">
@@ -640,6 +676,15 @@ function EscortSignupPageContent() {
 
                 {/* Form */}
                 <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
+                    <div id="signup-errors">
+                        <StepErrorSummary
+                            message={error}
+                            errors={fieldErrors}
+                            labels={FIELD_LABELS}
+                            onDismiss={() => setError(null)}
+                        />
+                    </div>
+
                     {/* Step 1: Basic Information */}
                     {currentStep === 1 && (
                         <div className="space-y-4">
@@ -653,13 +698,14 @@ function EscortSignupPageContent() {
                                     <input
                                         id="firstName"
                                         type="text"
-                                        name="firstName"
+                                        name="firstName" aria-invalid={!!fieldErrors.firstName}
                                         value={formData.firstName}
                                         onChange={handleInputChange}
                                         required
                                         autoComplete="given-name"
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     />
+                                    <FieldError message={fieldErrors.firstName} />
                                 </div>
                                 <div>
                                     <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -668,13 +714,14 @@ function EscortSignupPageContent() {
                                     <input
                                         id="lastName"
                                         type="text"
-                                        name="lastName"
+                                        name="lastName" aria-invalid={!!fieldErrors.lastName}
                                         value={formData.lastName}
                                         onChange={handleInputChange}
                                         required
                                         autoComplete="family-name"
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     />
+                                    <FieldError message={fieldErrors.lastName} />
                                 </div>
                             </div>
 
@@ -685,7 +732,7 @@ function EscortSignupPageContent() {
                                 <input
                                     id="displayName"
                                     type="text"
-                                    name="displayName"
+                                    name="displayName" aria-invalid={!!fieldErrors.displayName}
                                     value={formData.displayName}
                                     onChange={handleInputChange}
                                     required
@@ -693,6 +740,7 @@ function EscortSignupPageContent() {
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     placeholder="How clients will see you"
                                 />
+                                <FieldError message={fieldErrors.displayName} />
                             </div>
 
                             <div>
@@ -702,13 +750,14 @@ function EscortSignupPageContent() {
                                 <input
                                     id="email"
                                     type="email"
-                                    name="email"
+                                    name="email" aria-invalid={!!fieldErrors.email}
                                     value={formData.email}
                                     onChange={handleInputChange}
                                     required
                                     autoComplete="email"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
+                                <FieldError message={fieldErrors.email} />
                             </div>
 
                             <div>
@@ -718,7 +767,7 @@ function EscortSignupPageContent() {
                                 <input
                                     id="phone"
                                     type="tel"
-                                    name="phone"
+                                    name="phone" aria-invalid={!!fieldErrors.phone}
                                     value={formData.phone}
                                     onChange={handleInputChange}
                                     required
@@ -726,6 +775,7 @@ function EscortSignupPageContent() {
                                     placeholder="0712345678"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
+                                <FieldError message={fieldErrors.phone} />
                                 <p className="text-xs text-gray-500 mt-1">For account verification (Format: 07XXXXXXXX)</p>
                             </div>
 
@@ -736,7 +786,7 @@ function EscortSignupPageContent() {
                                 <input
                                     id="contactPhone"
                                     type="tel"
-                                    name="contactPhone"
+                                    name="contactPhone" aria-invalid={!!fieldErrors.contactPhone}
                                     value={formData.contactPhone}
                                     onChange={handleInputChange}
                                     required
@@ -744,6 +794,7 @@ function EscortSignupPageContent() {
                                     placeholder="0712345678"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
+                                <FieldError message={fieldErrors.contactPhone} />
                                 <p className="text-xs text-gray-500 mt-1">Clients will see this number after unlock (Format: 07XXXXXXXX)</p>
                             </div>
 
@@ -755,7 +806,7 @@ function EscortSignupPageContent() {
                                     <input
                                         id="password"
                                         type={showPassword ? 'text' : 'password'}
-                                        name="password"
+                                        name="password" aria-invalid={!!fieldErrors.password}
                                         value={formData.password}
                                         onChange={handleInputChange}
                                         required
@@ -771,6 +822,7 @@ function EscortSignupPageContent() {
                                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                     </button>
                                 </div>
+                                <FieldError message={fieldErrors.password} />
                             </div>
 
                             <div>
@@ -781,7 +833,7 @@ function EscortSignupPageContent() {
                                     <input
                                         id="confirmPassword"
                                         type={showConfirmPassword ? 'text' : 'password'}
-                                        name="confirmPassword"
+                                        name="confirmPassword" aria-invalid={!!fieldErrors.confirmPassword}
                                         value={formData.confirmPassword}
                                         onChange={handleInputChange}
                                         required
@@ -797,6 +849,7 @@ function EscortSignupPageContent() {
                                         {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                     </button>
                                 </div>
+                                <FieldError message={fieldErrors.confirmPassword} />
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -807,7 +860,7 @@ function EscortSignupPageContent() {
                                     <input
                                         id="dateOfBirth"
                                         type="date"
-                                        name="dateOfBirth"
+                                        name="dateOfBirth" aria-invalid={!!fieldErrors.dateOfBirth}
                                         value={formData.dateOfBirth}
                                         onChange={handleInputChange}
                                         required
@@ -815,6 +868,7 @@ function EscortSignupPageContent() {
                                         max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     />
+                                    <FieldError message={fieldErrors.dateOfBirth} />
                                 </div>
 
                                 <div>
@@ -823,7 +877,7 @@ function EscortSignupPageContent() {
                                     </label>
                                     <select
                                         id="gender"
-                                        name="gender"
+                                        name="gender" aria-invalid={!!fieldErrors.gender}
                                         value={formData.gender}
                                         onChange={handleInputChange}
                                         required
@@ -837,6 +891,7 @@ function EscortSignupPageContent() {
                                         <option value="trans-male">Trans Male</option>
                                         <option value="non-binary">Non-binary</option>
                                     </select>
+                                    <FieldError message={fieldErrors.gender} />
                                 </div>
                             </div>
 
@@ -847,13 +902,14 @@ function EscortSignupPageContent() {
                                 <input
                                     id="referralCode"
                                     type="text"
-                                    name="referralCode"
+                                    name="referralCode" aria-invalid={!!fieldErrors.referralCode}
                                     value={formData.referralCode}
                                     onChange={handleInputChange}
                                     autoComplete="off"
                                     placeholder="Enter referral code if you have one"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
+                                <FieldError message={fieldErrors.referralCode} />
                             </div>
                         </div>
                     )}
@@ -870,7 +926,7 @@ function EscortSignupPageContent() {
                                 <input
                                     id="city"
                                     type="text"
-                                    name="city"
+                                    name="city" aria-invalid={!!fieldErrors.city}
                                     value={formData.city}
                                     onChange={handleInputChange}
                                     required
@@ -878,6 +934,7 @@ function EscortSignupPageContent() {
                                     placeholder="e.g. Nairobi"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
+                                <FieldError message={fieldErrors.city} />
                             </div>
 
                             <div>
@@ -887,7 +944,7 @@ function EscortSignupPageContent() {
                                 <input
                                     id="area"
                                     type="text"
-                                    name="area"
+                                    name="area" aria-invalid={!!fieldErrors.area}
                                     value={formData.area}
                                     onChange={handleInputChange}
                                     required
@@ -895,6 +952,7 @@ function EscortSignupPageContent() {
                                     placeholder="e.g. Westlands, Kilimani, CBD"
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
+                                <FieldError message={fieldErrors.area} />
                                 <p className="text-xs text-gray-500 mt-1">The specific area where you are based</p>
                             </div>
 
@@ -904,7 +962,7 @@ function EscortSignupPageContent() {
                                 </label>
                                 <textarea
                                     id="description"
-                                    name="description"
+                                    name="description" aria-invalid={!!fieldErrors.description}
                                     value={formData.description}
                                     onChange={handleInputChange}
                                     required
@@ -913,13 +971,14 @@ function EscortSignupPageContent() {
                                     placeholder="Describe yourself and what makes you special..."
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
                                 />
+                                <FieldError message={fieldErrors.description} />
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Languages Spoken (Select at least one) *
                                 </label>
-                                <div className="flex flex-wrap gap-2">
+                                <div id="field-languages" tabIndex={-1} className="flex flex-wrap gap-2">
                                     {languageOptions.map((language) => (
                                         <button
                                             key={language}
@@ -934,6 +993,7 @@ function EscortSignupPageContent() {
                                         </button>
                                     ))}
                                 </div>
+                                <FieldError message={fieldErrors.languages} />
                             </div>
 
                             <div>
@@ -960,7 +1020,7 @@ function EscortSignupPageContent() {
                                     Add high-quality photos to attract clients
                                 </p>
 
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                <div id="field-photos" tabIndex={-1} className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                                     {photos.map((photo, index) => (
                                         <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
                                             <img
@@ -992,6 +1052,7 @@ function EscortSignupPageContent() {
                                         </label>
                                     )}
                                 </div>
+                                <FieldError message={fieldErrors.photos} />
                             </div>
                         </div>
                     )}
@@ -1005,7 +1066,7 @@ function EscortSignupPageContent() {
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Services Offered (Select all that apply) *
                                 </label>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                <div id="field-services" tabIndex={-1} className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                     {serviceOptions.map((service) => (
                                         <button
                                             key={service}
@@ -1020,6 +1081,7 @@ function EscortSignupPageContent() {
                                         </button>
                                     ))}
                                 </div>
+                                <FieldError message={fieldErrors.services} />
                             </div>
 
                             <div>
@@ -1132,12 +1194,12 @@ function EscortSignupPageContent() {
                                     </div>
                                 )}
 
-                                <div className="grid grid-cols-2 gap-3">
+                                <div id="field-plan" tabIndex={-1} className="grid grid-cols-2 gap-3">
                                     {tierPlans.map((plan) => (
                                         <button
                                             key={plan.id}
                                             type="button"
-                                            onClick={() => setSelectedPlan(plan)}
+                                            onClick={() => { setSelectedPlan(plan); clearFieldError('plan') }}
                                             className={`p-4 rounded-lg border-2 text-left transition-colors bg-white ${selectedPlan?.id === plan.id
                                                 ? 'border-purple-500 ring-2 ring-purple-200'
                                                 : 'border-gray-200 hover:border-purple-300'
@@ -1148,6 +1210,7 @@ function EscortSignupPageContent() {
                                         </button>
                                     ))}
                                 </div>
+                                <FieldError message={fieldErrors.plan} />
                             </div>
 
                             {/* Payment Section */}
@@ -1162,13 +1225,14 @@ function EscortSignupPageContent() {
                                         <input
                                             id="mpesaPhone"
                                             type="tel"
-                                            name="mpesaPhone"
+                                            name="mpesaPhone" aria-invalid={!!fieldErrors.mpesaPhone}
                                             value={formData.mpesaPhone || formData.phone}
                                             onChange={handleInputChange}
                                             autoComplete="tel"
                                             placeholder="0712345678"
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                         />
+                                        <FieldError message={fieldErrors.mpesaPhone} />
                                         <p className="text-xs text-gray-500 mt-1">
                                             You will receive an M-Pesa STK push on this number (Format: 07XXXXXXXX)
                                         </p>
@@ -1254,7 +1318,7 @@ function EscortSignupPageContent() {
                                     <button
                                         type="button"
                                         onClick={handleSkipPayment}
-                                        disabled={isProcessing || paymentStatus === 'success' || !formData.ageConfirmed || !formData.termsAccepted}
+                                        disabled={isProcessing || paymentStatus === 'success'}
                                         className="px-6 py-2 border-2 border-gray-400 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {isProcessing ? 'Processing...' : 'Skip & Continue with Free Account'}
@@ -1271,7 +1335,7 @@ function EscortSignupPageContent() {
                                     <input
                                         id="ageConfirmed"
                                         type="checkbox"
-                                        name="ageConfirmed"
+                                        name="ageConfirmed" aria-invalid={!!fieldErrors.ageConfirmed}
                                         checked={formData.ageConfirmed}
                                         onChange={handleInputChange}
                                         required
@@ -1281,12 +1345,13 @@ function EscortSignupPageContent() {
                                         I confirm that I am 18 years or older and all information provided is accurate *
                                     </span>
                                 </label>
+                                <FieldError message={fieldErrors.ageConfirmed} />
 
                                 <label htmlFor="termsAccepted" className="flex items-start">
                                     <input
                                         id="termsAccepted"
                                         type="checkbox"
-                                        name="termsAccepted"
+                                        name="termsAccepted" aria-invalid={!!fieldErrors.termsAccepted}
                                         checked={formData.termsAccepted}
                                         onChange={handleInputChange}
                                         required
@@ -1308,6 +1373,7 @@ function EscortSignupPageContent() {
                                         *
                                     </span>
                                 </label>
+                                <FieldError message={fieldErrors.termsAccepted} />
                             </div>
                         </div>
                     )}
@@ -1347,7 +1413,7 @@ function EscortSignupPageContent() {
                             <button
                                 type="button"
                                 onClick={handleSkipPayment}
-                                disabled={isProcessing || !formData.ageConfirmed || !formData.termsAccepted}
+                                disabled={isProcessing}
                                 className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                             >
                                 {isProcessing ? (
@@ -1363,7 +1429,7 @@ function EscortSignupPageContent() {
                             <button
                                 type="button"
                                 onClick={handleRegistration}
-                                disabled={isProcessing || !selectedPlan || paymentStatus === 'success'}
+                                disabled={isProcessing || paymentStatus === 'success'}
                                 className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                             >
                                 {isProcessing ? (

@@ -3,9 +3,28 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { Users, Eye, EyeOff, AlertCircle, X } from 'lucide-react'
+import { Users, Eye, EyeOff } from 'lucide-react'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 import type { HookupUserRegistration } from '@/services/butical-api-service'
+import { toMpesaPhone } from '@/lib/utils/phone'
+import { FieldError, StepErrorSummary } from '@/app/components/forms/FieldError'
+import {
+    collect, focusFirstError, required, validateEmail, validateKenyanPhone,
+    validatePassword, validatePasswordMatch, type FieldErrors,
+} from '@/lib/signup/validators'
+import { parseSignupError, type FieldMap } from '@/lib/signup/errors'
+
+const FIELD_ORDER = ['firstName', 'lastName', 'email', 'phone', 'password', 'confirmPassword', 'termsAccepted']
+
+const FIELD_LABELS: Record<string, string> = {
+    firstName: 'First name', lastName: 'Last name', email: 'Email', phone: 'Phone',
+    password: 'Password', confirmPassword: 'Confirm password', termsAccepted: 'Terms',
+}
+
+/** API field -> form field (one step only). */
+const HOOKUP_FIELD_MAP: FieldMap = Object.fromEntries(
+    ['firstName', 'lastName', 'email', 'phone', 'password', 'termsAccepted'].map(f => [f, { field: f, step: 1 }]),
+)
 
 export default function HookupSignupPage() {
     const [formData, setFormData] = useState({
@@ -22,9 +41,16 @@ export default function HookupSignupPage() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target
+        setFieldErrors(prev => {
+            if (!prev[name]) return prev
+            const next = { ...prev }
+            delete next[name]
+            return next
+        })
         setFormData(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value
@@ -34,32 +60,31 @@ export default function HookupSignupPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError(null)
+
+        const errors = collect({
+            firstName: required(formData.firstName, 'First name'),
+            lastName: required(formData.lastName, 'Last name'),
+            email: validateEmail(formData.email),
+            phone: validateKenyanPhone(formData.phone),
+            password: validatePassword(formData.password),
+            confirmPassword: validatePasswordMatch(formData.password, formData.confirmPassword),
+            termsAccepted: formData.termsAccepted ? null : 'Accept the terms to continue',
+        })
+        setFieldErrors(errors)
+        if (Object.keys(errors).length) {
+            const count = Object.keys(errors).length
+            setError(count > 1 ? `Please fix ${count} things below.` : Object.values(errors)[0])
+            focusFirstError(errors, FIELD_ORDER)
+            return
+        }
+
         setIsProcessing(true)
 
         try {
-            // Validate passwords match
-            if (formData.password !== formData.confirmPassword) {
-                throw new Error('Passwords do not match')
-            }
-
-            // Validate required fields
-            if (!formData.firstName || !formData.lastName || !formData.email ||
-                !formData.phone || !formData.password) {
-                throw new Error('Please fill in all required fields')
-            }
-
-            if (formData.password.length < 6) {
-                throw new Error('Password must be at least 6 characters')
-            }
-
-            if (!formData.termsAccepted) {
-                throw new Error('Please accept the terms and conditions')
-            }
-
             // Prepare registration data
             const registrationData: HookupUserRegistration = {
                 email: formData.email.trim(),
-                phone: formData.phone.replace(/\s+/g, ''), // Remove spaces
+                phone: toMpesaPhone(formData.phone),
                 password: formData.password,
                 firstName: formData.firstName.trim(),
                 lastName: formData.lastName.trim(),
@@ -91,7 +116,10 @@ export default function HookupSignupPage() {
             window.location.href = '/escorts'
         } catch (err: any) {
             console.error('Registration error:', err)
-            setError(err.response?.data?.message || err.message || 'Registration failed. Please try again.')
+            const problem = parseSignupError(err, HOOKUP_FIELD_MAP, 'Registration failed. Please try again.')
+            setFieldErrors(problem.fieldErrors)
+            setError(problem.message)
+            focusFirstError(problem.fieldErrors, FIELD_ORDER)
             setIsProcessing(false)
         }
     }
@@ -99,22 +127,6 @@ export default function HookupSignupPage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 flex items-center justify-center py-8 px-4">
             <div className="max-w-md w-full">
-                {/* Error Display */}
-                {error && (
-                    <div className="mb-4">
-                        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-                            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                            <p className="text-red-800 text-sm flex-1">{error}</p>
-                            <button
-                                onClick={() => setError(null)}
-                                className="text-red-500 hover:text-red-700"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                    </div>
-                )}
-
                 {/* Header */}
                 <div className="text-center mb-8">
                     <Link href="/" className="inline-flex items-center justify-center mb-4">
@@ -132,7 +144,13 @@ export default function HookupSignupPage() {
 
                 {/* Form */}
                 <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <StepErrorSummary
+                        message={error}
+                        errors={fieldErrors}
+                        labels={FIELD_LABELS}
+                        onDismiss={() => setError(null)}
+                    />
+                    <form onSubmit={handleSubmit} noValidate className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -141,13 +159,14 @@ export default function HookupSignupPage() {
                                 <input
                                     id="firstName"
                                     type="text"
-                                    name="firstName"
+                                    name="firstName" aria-invalid={!!fieldErrors.firstName}
                                     value={formData.firstName}
                                     onChange={handleInputChange}
                                     required
                                     autoComplete="given-name"
                                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
                                 />
+                                <FieldError message={fieldErrors.firstName} />
                             </div>
 
                             <div>
@@ -157,13 +176,14 @@ export default function HookupSignupPage() {
                                 <input
                                     id="lastName"
                                     type="text"
-                                    name="lastName"
+                                    name="lastName" aria-invalid={!!fieldErrors.lastName}
                                     value={formData.lastName}
                                     onChange={handleInputChange}
                                     required
                                     autoComplete="family-name"
                                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
                                 />
+                                <FieldError message={fieldErrors.lastName} />
                             </div>
                         </div>
 
@@ -174,7 +194,7 @@ export default function HookupSignupPage() {
                             <input
                                 id="email"
                                 type="email"
-                                name="email"
+                                name="email" aria-invalid={!!fieldErrors.email}
                                 value={formData.email}
                                 onChange={handleInputChange}
                                 required
@@ -182,6 +202,7 @@ export default function HookupSignupPage() {
                                 placeholder="your@email.com"
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
                             />
+                            <FieldError message={fieldErrors.email} />
                         </div>
 
                         <div>
@@ -191,7 +212,7 @@ export default function HookupSignupPage() {
                             <input
                                 id="phone"
                                 type="tel"
-                                name="phone"
+                                name="phone" aria-invalid={!!fieldErrors.phone}
                                 value={formData.phone}
                                 onChange={handleInputChange}
                                 required
@@ -199,6 +220,7 @@ export default function HookupSignupPage() {
                                 placeholder="254712345678"
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
                             />
+                            <FieldError message={fieldErrors.phone} />
                             <p className="text-xs text-gray-500 mt-1">Format: 254XXXXXXXXX</p>
                         </div>
 
@@ -210,7 +232,7 @@ export default function HookupSignupPage() {
                                 <input
                                     id="password"
                                     type={showPassword ? 'text' : 'password'}
-                                    name="password"
+                                    name="password" aria-invalid={!!fieldErrors.password}
                                     value={formData.password}
                                     onChange={handleInputChange}
                                     required
@@ -227,6 +249,7 @@ export default function HookupSignupPage() {
                                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                 </button>
                             </div>
+                            <FieldError message={fieldErrors.password} />
                         </div>
 
                         <div>
@@ -237,7 +260,7 @@ export default function HookupSignupPage() {
                                 <input
                                     id="confirmPassword"
                                     type={showConfirmPassword ? 'text' : 'password'}
-                                    name="confirmPassword"
+                                    name="confirmPassword" aria-invalid={!!fieldErrors.confirmPassword}
                                     value={formData.confirmPassword}
                                     onChange={handleInputChange}
                                     required
@@ -254,6 +277,7 @@ export default function HookupSignupPage() {
                                     {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                 </button>
                             </div>
+                            <FieldError message={fieldErrors.confirmPassword} />
                         </div>
 
                         <div className="pt-2">
@@ -261,7 +285,7 @@ export default function HookupSignupPage() {
                                 <input
                                     id="termsAccepted"
                                     type="checkbox"
-                                    name="termsAccepted"
+                                    name="termsAccepted" aria-invalid={!!fieldErrors.termsAccepted}
                                     checked={formData.termsAccepted}
                                     onChange={handleInputChange}
                                     required
@@ -279,6 +303,7 @@ export default function HookupSignupPage() {
                                     *
                                 </span>
                             </label>
+                            <FieldError message={fieldErrors.termsAccepted} />
                         </div>
 
                         <button
