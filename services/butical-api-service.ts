@@ -86,6 +86,8 @@ export interface LoginCredentials {
 
 export interface AuthResponse {
     user: User
+    /** Set when logging in brought back a deactivated account */
+    reactivated?: boolean
     accessToken?: string
     refreshToken?: string
     // Alternative nested structure that the API might use
@@ -786,6 +788,12 @@ const ButicalAPI = {
         getMe: () => apiClient.get<ApiResponseWrapper<User>>('/users/me'),
         updateMe: (data: Partial<User>) => apiClient.put<ApiResponseWrapper<User>>('/users/me', data),
         getSubscription: () => apiClient.get<ApiResponseWrapper<Subscription>>('/users/subscription'),
+        /** Hides the account and ends sessions; logging in again restores it. */
+        deactivateMe: (data: { password: string; reason?: string }) =>
+            apiClient.post<ApiResponseWrapper<{ accountStatus: string }>>('/users/me/deactivate', data),
+        /** Erases the account for good. */
+        deleteMe: (data: { password: string; confirm: string; reason?: string; forfeitBalance?: boolean }) =>
+            apiClient.delete<ApiResponseWrapper<{ accountStatus: string }>>('/users/me', { data }),
     },
 
     // ESCORTS

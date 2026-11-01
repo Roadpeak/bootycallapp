@@ -123,8 +123,14 @@ function LoginContent() {
             // Use window.location for reliable redirect after auth state change
             console.log('Redirecting to:', redirectPath)
 
-            // Small delay to ensure tokens are saved to localStorage
-            await new Promise(resolve => setTimeout(resolve, 100))
+            // Logging in brings back an account the member had deactivated
+            if (authData?.reactivated) {
+                setSuccessMessage('Welcome back! Your account is active again.')
+            }
+
+            // Small delay to ensure tokens are saved to localStorage (longer
+            // after a reactivation, so the welcome message can be read)
+            await new Promise(resolve => setTimeout(resolve, authData?.reactivated ? 1800 : 100))
             console.log('Tokens should be saved. Checking localStorage...')
             console.log('Access token in storage:', !!TokenService.getAccessToken())
             console.log('Refresh token in storage:', !!TokenService.getRefreshToken())
@@ -134,7 +140,10 @@ function LoginContent() {
             console.error('Login error:', err)
 
             // Handle specific error messages
-            if (err.response?.status === 401) {
+            if (err.response?.status === 403) {
+                // Suspended by an admin: the server says so and how to get help
+                setError(err.response?.data?.message || 'This account has been suspended. Contact support.')
+            } else if (err.response?.status === 401) {
                 setError('Invalid email/phone or password. Please try again.')
             } else if (err.response?.status === 404) {
                 setError('No account found with this email/phone. Please sign up first.')

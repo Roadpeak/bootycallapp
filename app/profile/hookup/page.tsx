@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 import type { User, WalletSummary, ReferralCode } from '@/services/butical-api-service'
+import AccountDangerZone from '@/app/components/account/AccountDangerZone'
 
 export default function HookupProfilePage() {
     const router = useRouter()
@@ -604,24 +605,7 @@ export default function HookupProfilePage() {
                     </Link>
                 </div>
 
-                {/* Delete Account */}
-                <div className="mt-6 bg-white rounded-lg shadow-sm p-6">
-                    <h2 className="text-xl font-bold text-red-600 mb-2">Danger Zone</h2>
-                    <p className="text-gray-600 mb-4">
-                        Once you delete your account, there is no going back. All your data will be permanently removed.
-                    </p>
-                    <button
-                        onClick={() => {
-                            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-                                // TODO: Implement account deletion
-                                alert('Account deletion not yet implemented')
-                            }
-                        }}
-                        className="px-4 py-2 border-2 border-red-500 text-red-600 rounded-lg hover:bg-red-50 font-medium transition-colors"
-                    >
-                        Delete Account
-                    </button>
-                </div>
+                <AccountDangerZone />
             </main>
         </div>
     )
