@@ -4,7 +4,7 @@
 import React, { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { TrendingUp, Upload, X, Eye, EyeOff, Check, AlertCircle } from 'lucide-react'
+import { TrendingUp, Upload, X, Eye, EyeOff, Check, AlertCircle, Crown } from 'lucide-react'
 import { toMpesaPhone } from '@/lib/utils/phone'
 import ButicalAPI, { TokenService } from '@/services/butical-api-service'
 import type { EscortRegistration, SubscriptionPlanOption } from '@/services/butical-api-service'
@@ -66,6 +66,8 @@ function EscortSignupPageContent() {
     const [isRegistered, setIsRegistered] = useState(false)
     // Only offer a free account when admin allows it (and once we know)
     const freeSignupEnabled = pricing?.escortFreeSignupEnabled === true
+    // Admin free trial: new escorts get VVIP free and are not asked to pay
+    const freeTrial = pricing?.escortFreeTrial?.enabled ? pricing.escortFreeTrial : null
 
     useEffect(() => {
         ButicalAPI.plans
@@ -334,7 +336,7 @@ function EscortSignupPageContent() {
     }
 
     const handleSkipPayment = async () => {
-        if (!freeSignupEnabled) return
+        if (!freeSignupEnabled && !freeTrial) return
         // Registered on a failed payment attempt: the account already exists
         if (isRegistered) {
             router.push('/profile/escort')
@@ -1069,10 +1071,32 @@ function EscortSignupPageContent() {
                             <div className="text-center mb-6">
                                 <h2 className="text-xl font-bold text-gray-900 mb-2">Complete Your Registration</h2>
                                 <p className="text-gray-600">
-                                    Pick a plan to get listed and start earning!
+                                    {freeTrial
+                                        ? `Your first ${freeTrial.days} days of VVIP are on us. No payment needed.`
+                                        : 'Pick a plan to get listed and start earning!'}
                                 </p>
                             </div>
 
+                            {freeTrial ? (
+                                <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-6 text-center">
+                                    <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500">
+                                        <Crown className="h-7 w-7 text-white" />
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-gray-900">
+                                        {freeTrial.days} days of VVIP, free
+                                    </h3>
+                                    <p className="mt-2 text-sm text-gray-700">
+                                        Your profile goes live straight away, listed above every other tier.
+                                        Clients can see your contact details without paying to unlock them.
+                                    </p>
+                                    <ul className="mx-auto mt-4 max-w-sm space-y-2 text-left text-sm text-gray-700">
+                                        <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />Top placement, above every other tier</li>
+                                        <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />Contact details free for clients to view</li>
+                                        <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />Access to the dating side</li>
+                                        <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />No M-Pesa payment now. Choose a plan any time from your profile.</li>
+                                    </ul>
+                                </div>
+                            ) : (<>
                             {/* Plan picker - tiers and prices come from admin */}
                             <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-300">
                                 <div className="text-center mb-4">
@@ -1239,6 +1263,8 @@ function EscortSignupPageContent() {
                             </div>
                             )}
 
+                            </>)}
+
                             {/* Terms & Conditions */}
                             <div className="space-y-3 pt-4 border-t">
                                 <label htmlFor="ageConfirmed" className="flex items-start">
@@ -1316,6 +1342,22 @@ function EscortSignupPageContent() {
                                 className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-medium transition-colors disabled:opacity-50"
                             >
                                 Next
+                            </button>
+                        ) : freeTrial ? (
+                            <button
+                                type="button"
+                                onClick={handleSkipPayment}
+                                disabled={isProcessing || !formData.ageConfirmed || !formData.termsAccepted}
+                                className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                {isProcessing ? (
+                                    <>
+                                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                                        Creating account...
+                                    </>
+                                ) : (
+                                    `Create account · ${freeTrial.days} days VVIP free`
+                                )}
                             </button>
                         ) : (
                             <button

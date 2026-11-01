@@ -86,6 +86,7 @@ function EscortPageContent() {
     // Extra detail for tier plans: what was paid, and anything queued after
     const [planDetails, setPlanDetails] = useState<{
         amountPaid: number | null
+        isFreeTrial: boolean
         upcoming: { tier: string; startsAt: string; expiresAt: string }[]
         coverageEndsAt: string | null
     } | null>(null)
@@ -192,6 +193,7 @@ function EscortPageContent() {
                     } as unknown as Subscription)
                     setPlanDetails({
                         amountPaid: planStatus.current?.amountPaid ?? null,
+                        isFreeTrial: planStatus.current?.isFreeTrial === true,
                         upcoming: Array.isArray(planStatus.upcoming) ? planStatus.upcoming : [],
                         coverageEndsAt: planStatus.coverageEndsAt ?? null,
                     })
@@ -754,7 +756,9 @@ function EscortPageContent() {
                                 <div className="flex-1">
                                     <h3 className="font-semibold text-gray-900">{getCurrentPlan()?.name} Plan</h3>
                                     <p className="text-sm text-gray-600">
-                                        {planDetails?.amountPaid
+                                        {planDetails?.isFreeTrial
+                                            ? `Free trial · ends ${subscription.expiresAt ? new Date(subscription.expiresAt as any).toLocaleDateString() : 'soon'}`
+                                            : planDetails?.amountPaid
                                             ? `KSh ${planDetails.amountPaid.toLocaleString()} paid`
                                             : planDetails && planDetails.amountPaid === 0
                                                 ? 'Resumed after an upgrade'

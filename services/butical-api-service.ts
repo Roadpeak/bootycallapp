@@ -238,6 +238,8 @@ export interface PublicPricing {
     unlockEscortFee: number
     /** Admin switch: when false, escorts must buy a plan at signup. */
     escortFreeSignupEnabled: boolean
+    /** Admin switch: new escorts get this tier free at signup and skip payment. */
+    escortFreeTrial?: { enabled: boolean; days: number; tier: 'VVIP' }
 }
 
 /** An admin notification shown in the bell. */
@@ -261,7 +263,7 @@ export interface EscortSubscriptionStatus {
     mustPay: boolean
     hiddenFromListings: boolean
     /** The plan running now. */
-    current?: { tier: string; startsAt: string; expiresAt: string; amountPaid: number } | null
+    current?: { tier: string; startsAt: string; expiresAt: string; amountPaid: number; isFreeTrial?: boolean } | null
     /** Paid periods queued after the current one. */
     upcoming?: { tier: string; startsAt: string; expiresAt: string }[]
     /** When paid time runs out, counting queued periods. */
