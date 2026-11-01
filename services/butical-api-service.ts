@@ -289,6 +289,10 @@ export interface WithdrawalLimits {
     maximum: number
     /** True when payouts go straight to M-Pesa instead of awaiting review. */
     autoPayout: boolean
+    /** This member must subscribe to a plan before withdrawing (admin setting). */
+    requiresPlan?: boolean
+    /** Why withdrawing is blocked, when it is. */
+    blockedReason?: string | null
 }
 
 export interface EscortListParams {

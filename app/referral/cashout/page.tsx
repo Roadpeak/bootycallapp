@@ -197,6 +197,22 @@ export default function CashoutPage() {
                     </h2>
                 </div>
 
+                {/* Free escorts must subscribe first when admin requires it */}
+                {limits.requiresPlan && (
+                    <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-5">
+                        <p className="font-semibold text-amber-900">Subscribe to withdraw</p>
+                        <p className="mt-1 text-sm text-amber-800">
+                            {limits.blockedReason || 'Subscribe to any plan to withdraw your earnings. Your balance is safe and keeps growing meanwhile.'}
+                        </p>
+                        <Link
+                            href="/subscription/escort"
+                            className="mt-3 inline-block rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700"
+                        >
+                            See plans
+                        </Link>
+                    </div>
+                )}
+
                 {/* Withdrawal Form */}
                 <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
                     <h3 className="text-lg font-bold text-gray-900 mb-6">Withdrawal Details</h3>
@@ -289,7 +305,7 @@ export default function CashoutPage() {
                     {/* Withdrawal Button */}
                     <button
                         onClick={handleWithdrawal}
-                        disabled={isProcessing || availableBalance < limits.minimum}
+                        disabled={isProcessing || availableBalance < limits.minimum || Boolean(limits.requiresPlan)}
                         className="w-full px-6 py-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {isProcessing ? (
