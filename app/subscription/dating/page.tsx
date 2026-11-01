@@ -25,8 +25,7 @@ const BASE_DATING_PLANS = [
             'Send unlimited messages',
             'View full profiles',
             'Profile verification badge',
-            'Priority customer support',
-            'Free access to all escort contacts'
+            'Priority customer support'
         ],
         popular: true
     }

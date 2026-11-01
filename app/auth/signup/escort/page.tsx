@@ -110,7 +110,10 @@ function EscortSignupPageContent() {
     // Only offer a free account when admin allows it (and once we know)
     const freeSignupEnabled = pricing?.escortFreeSignupEnabled === true
     // Admin free trial: new escorts get VVIP free and are not asked to pay
-    const freeTrial = pricing?.escortFreeTrial?.enabled ? pricing.escortFreeTrial : null
+    // Set when the API says this number already had the trial: the trial is
+    // still on for everyone else, so reloading the offers would bring it back
+    const [trialUsed, setTrialUsed] = useState(false)
+    const freeTrial = pricing?.escortFreeTrial?.enabled && !trialUsed ? pricing.escortFreeTrial : null
 
     useEffect(() => {
         ButicalAPI.plans
@@ -328,7 +331,9 @@ function EscortSignupPageContent() {
     const showServerProblem = (err: any, fallback: string, map: FieldMap = ESCORT_FIELD_MAP) => {
         const problem = parseSignupError(err, map, fallback)
         // An offer was switched off while the page was open: show the current ones
-        if (err?.response?.data?.errors?.some((e: { field: string }) => e.field === 'signupOffer')) {
+        const offerIssue = err?.response?.data?.errors?.find((e: { field: string }) => e.field === 'signupOffer')
+        if (offerIssue) {
+            if (/already had the free trial/.test(offerIssue.message)) setTrialUsed(true)
             refreshPricing()
         }
         setFieldErrors(problem.fieldErrors)

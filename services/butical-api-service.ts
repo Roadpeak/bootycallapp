@@ -851,7 +851,7 @@ const ButicalAPI = {
 
     // PAYMENTS
     payments: {
-        // Subscribe to dating (KES 300/year) - free access to all escort contacts
+        // Subscribe to dating (price and length are set in admin)
         subscribeDating: (phone: string) =>
             apiClient.post<ApiResponseWrapper<PaymentInitiateResponse>>('/pay/subscribe', { phone }),
         // Subscribe to VIP (KES 3,000/year) - for ESCORTs only
