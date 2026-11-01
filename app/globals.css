@@ -92,3 +92,11 @@ html {
   outline: 2px solid #ec4899;
   outline-offset: 2px;
 }
+
+/* Signup forms: fields with an error get a red outline */
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 1px #ef4444;
+}
