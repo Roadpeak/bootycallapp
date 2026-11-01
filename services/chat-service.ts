@@ -176,8 +176,9 @@ class ChatService {
      * Connect to WebSocket server
      */
     connect(): Socket {
-        if (this.socket?.connected) {
-            console.log('Socket already connected')
+        // Reuse a socket that is connected or still connecting, so the chat,
+        // the bell and the notifications page share one connection
+        if (this.socket && (this.socket.connected || this.socket.active)) {
             return this.socket
         }
 

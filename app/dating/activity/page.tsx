@@ -18,6 +18,12 @@ type ActivityTab = 'matches' | 'likes' | 'liked-by'
 export default function DatingActivityPage() {
     const router = useRouter()
     const [activeTab, setActiveTab] = useState<ActivityTab>('matches')
+
+    // Notifications link straight to a tab, e.g. ?tab=liked-by for a new like
+    useEffect(() => {
+        const tab = new URLSearchParams(window.location.search).get('tab')
+        if (tab === 'matches' || tab === 'likes' || tab === 'liked-by') setActiveTab(tab)
+    }, [])
     const { user } = useAuth()
     const { canUseDating: hasDatingAccess } = useSubscription()
     const [showMatchModal, setShowMatchModal] = useState(false)

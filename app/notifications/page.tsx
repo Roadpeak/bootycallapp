@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Bell, CheckCheck, ChevronRight, Loader2 } from 'lucide-react'
 import ButicalAPI, { TokenService, type AppNotification } from '@/services/butical-api-service'
+import ChatService from '@/services/chat-service'
 
 /** Everything admins have sent to this member, newest first. */
 export default function NotificationsPage() {
@@ -39,6 +40,20 @@ export default function NotificationsPage() {
         }
         load(1)
     }, [load, router])
+
+    // A notification arriving while the page is open appears at the top
+    useEffect(() => {
+        // connect() reuses the bell's socket when it is already open
+        let socket: ReturnType<typeof ChatService.getSocket> = null
+        try {
+            socket = ChatService.connect()
+        } catch {
+            socket = null // not signed in; the redirect above handles it
+        }
+        const onNotification = () => { load(1) }
+        socket?.on('notification', onNotification)
+        return () => { socket?.off('notification', onNotification) }
+    }, [load])
 
     async function open(n: AppNotification) {
         if (!n.read) {
