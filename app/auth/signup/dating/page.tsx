@@ -64,8 +64,7 @@ const BASE_SUBSCRIPTION_PLAN = {
         'See who likes you',
         'Advanced matching',
         'Priority support',
-        'Boost profile weekly',
-        'Free escort unlocks (5/month)'
+        'Boost profile weekly'
     ]
 }
 

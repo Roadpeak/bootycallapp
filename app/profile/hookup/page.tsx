@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-    ArrowLeft, Edit2, Save, X, Heart, Eye, Lock, Unlock,
+    ArrowLeft, Edit2, Save, X, Heart, Eye, Lock,
     Phone, Mail, Shield, Gift, TrendingUp, ChevronRight,
     AlertCircle, RefreshCw, Loader2
 } from 'lucide-react'
@@ -29,7 +29,6 @@ export default function HookupProfilePage() {
     // Stats (TODO: Get from API when available)
     const [stats] = useState({
         favorites: 0,
-        unlocked: 0,
         views: 0
     })
 
@@ -272,13 +271,9 @@ export default function HookupProfilePage() {
                             <div>
                                 <h3 className="text-lg font-bold mb-2">Upgrade to Dating Subscription</h3>
                                 <p className="text-sm text-pink-100 mb-3">
-                                    Get unlimited access to all escort contacts without unlock fees
+                                    Meet people looking for something real
                                 </p>
                                 <ul className="text-sm space-y-1">
-                                    <li className="flex items-center gap-2">
-                                        <Unlock className="w-4 h-4" />
-                                        <span>Free access to all contacts</span>
-                                    </li>
                                     <li className="flex items-center gap-2">
                                         <Heart className="w-4 h-4" />
                                         <span>Access to dating features</span>
@@ -328,16 +323,11 @@ export default function HookupProfilePage() {
                 )}
 
                 {/* Profile Stats */}
-                <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="bg-white rounded-lg p-4 text-center">
                         <Heart className="w-6 h-6 text-pink-500 mx-auto mb-2" />
                         <p className="text-2xl font-bold text-gray-900">{stats.favorites}</p>
                         <p className="text-sm text-gray-600">Favorites</p>
-                    </div>
-                    <div className="bg-white rounded-lg p-4 text-center">
-                        <Unlock className="w-6 h-6 text-pink-500 mx-auto mb-2" />
-                        <p className="text-2xl font-bold text-gray-900">{stats.unlocked}</p>
-                        <p className="text-sm text-gray-600">Unlocked</p>
                     </div>
                     <div className="bg-white rounded-lg p-4 text-center">
                         <Eye className="w-6 h-6 text-pink-500 mx-auto mb-2" />
@@ -508,20 +498,6 @@ export default function HookupProfilePage() {
                                     <div>
                                         <p className="font-medium text-gray-900">My Favorites</p>
                                         <p className="text-sm text-gray-600">{stats.favorites} escorts saved</p>
-                                    </div>
-                                </div>
-                                <ChevronRight className="w-5 h-5 text-gray-400" />
-                            </Link>
-
-                            <Link
-                                href="/unlocked"
-                                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Unlock className="w-5 h-5 text-purple-500" />
-                                    <div>
-                                        <p className="font-medium text-gray-900">Unlocked Contacts</p>
-                                        <p className="text-sm text-gray-600">{stats.unlocked} contacts accessed</p>
                                     </div>
                                 </div>
                                 <ChevronRight className="w-5 h-5 text-gray-400" />

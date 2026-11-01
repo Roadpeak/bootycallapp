@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { Heart, MessageSquare, Lock, Unlock, Phone, MapPin, Image as ImageIcon, Video, Star } from 'lucide-react'
+import { Heart, MessageSquare, Phone, MapPin, Image as ImageIcon, Video, Star } from 'lucide-react'
 import { getImageUrl } from '@/lib/utils/image'
 
 export type EscortTier = 'REGULAR' | 'PRIME' | 'VIP' | 'VVIP'
@@ -36,6 +36,12 @@ export const TIER_STYLES: Record<EscortTier, { label: string; text: string; badg
         badge: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white',
         card: 'border-t-4 border-orange-400 ring-1 ring-orange-200 bg-orange-50',
     },
+}
+
+/** Escorts without a plan: listed in their own section after every paid tier. */
+export const FREE_TIER_STYLE = {
+    label: 'Free',
+    badge: 'bg-gray-600 text-white',
 }
 
 // Combined interface for all profile types
@@ -194,24 +200,17 @@ export const DatingCard: React.FC<DatingCardProps> = ({
 // Escort Card Component
 export const EscortCard: React.FC<EscortCardProps> = ({
     profile,
-    onUnlock,
     onCall,
     className = '',
 }) => {
     const {
         id, name, age, location, city, ethnicity, category, photos, photoCount,
-        isVerified, isVip, isNew, price, isUnlocked, hasDirectCall, services, bio, tier
+        isVerified, isVip, isNew, services, bio, tier
     } = profile
 
     // Helper to get service name from service (can be string or object)
     const getServiceName = (service: string | { name: string }): string => {
         return typeof service === 'string' ? service : service.name
-    }
-
-    const handleUnlock = (e: React.MouseEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-        if (onUnlock) onUnlock(id)
     }
 
     const handleCall = (e: React.MouseEvent) => {
@@ -235,11 +234,9 @@ export const EscortCard: React.FC<EscortCardProps> = ({
                     />
 
                     {/* Plan badge */}
-                    {tier && (
-                        <div className={`absolute top-2 left-2 text-xs font-bold px-2.5 py-1 rounded-full shadow ${TIER_STYLES[tier].badge}`}>
-                            {TIER_STYLES[tier].label}
-                        </div>
-                    )}
+                    <div className={`absolute top-2 left-2 text-xs font-bold px-2.5 py-1 rounded-full shadow ${tier ? TIER_STYLES[tier].badge : FREE_TIER_STYLE.badge}`}>
+                        {tier ? TIER_STYLES[tier].label : FREE_TIER_STYLE.label}
+                    </div>
 
                     {/* New Badge */}
                     {isNew && (
@@ -348,23 +345,14 @@ export const EscortCard: React.FC<EscortCardProps> = ({
 
             {/* Action Button */}
             <div className="px-3 pb-3">
-                {hasDirectCall || isVip || isUnlocked ? (
-                    <button
-                        onClick={handleCall}
-                        className="w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white"
-                    >
-                        <Phone className="w-4 h-4" />
-                        Call Now
-                    </button>
-                ) : (
-                    <button
-                        onClick={handleUnlock}
-                        className="w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 bg-pink-500 hover:bg-pink-600 text-white"
-                    >
-                        <Lock className="w-4 h-4" />
-                        Unlock
-                    </button>
-                )}
+                {/* Contacts are free for every escort, so everyone gets Call Now */}
+                <button
+                    onClick={handleCall}
+                    className="w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white"
+                >
+                    <Phone className="w-4 h-4" />
+                    Call Now
+                </button>
             </div>
         </div>
     )

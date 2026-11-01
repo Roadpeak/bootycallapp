@@ -84,13 +84,13 @@ export default function AboutPage() {
                                 </div>
                                 <h3 className="text-xl font-semibold text-gray-900 mb-3">Hookup Service</h3>
                                 <p className="text-gray-600 text-sm mb-3">
-                                    Quick connections with a pay-per-unlock model for casual encounters.
+                                    Quick connections for casual encounters.
                                 </p>
                                 <ul className="text-sm text-gray-600 space-y-2">
                                     <li>✓ Browse profiles freely</li>
-                                    <li>✓ Unlock contact info</li>
+                                    <li>✓ Contact details on every profile</li>
                                     <li>✓ No subscription needed</li>
-                                    <li>✓ KSh 150 per unlock</li>
+                                    <li>✓ Call or WhatsApp directly</li>
                                 </ul>
                             </div>
 

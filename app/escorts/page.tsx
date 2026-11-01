@@ -3,10 +3,10 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Search, Filter, MapPin, X, Loader2, AlertCircle } from 'lucide-react'
-import { EscortCard, TIER_STYLES, type EscortTier } from '../components/cards/EscortCard'
+import { Search, Filter, MapPin, X, AlertCircle } from 'lucide-react'
+import { EscortCard, FREE_TIER_STYLE, TIER_STYLES, type EscortTier } from '../components/cards/EscortCard'
 import type { ProfileData } from '../components/cards/EscortCard'
-import { useEscorts, usePayment, usePublicPricing } from '@/lib/hooks/butical-api-hooks'
+import { useEscorts } from '@/lib/hooks/butical-api-hooks'
 import type { Escort } from '@/services/butical-api-service'
 import ButicalAPI from '@/services/butical-api-service'
 import { getPublicDisplayName } from '@/lib/utils/display-name'
@@ -30,12 +30,6 @@ export default function HookupPage() {
     const [isFilterOpen, setIsFilterOpen] = useState(false)
     const [isLocationOpen, setIsLocationOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
-    const [showPaymentModal, setShowPaymentModal] = useState(false)
-    // Unlock fee is set by admin in Platform Settings
-    const { pricing } = usePublicPricing()
-    const unlockFeeLabel = pricing ? `KSh ${pricing.unlockEscortFee.toLocaleString()}` : 'KSh …'
-    const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
-    const [mpesaPhone, setMpesaPhone] = useState('')
     const [selectedLocation, setSelectedLocation] = useState('Nairobi')
     const [popularLocations, setPopularLocations] = useState<{ city: string; count: number }[]>([])
     // Search runs on the server (all counties), a moment after typing stops
@@ -109,14 +103,6 @@ export default function HookupPage() {
         page: 1,
         limit: 50,
     })
-
-    // Payment hook
-    const {
-        unlockEscort,
-        checkPaymentStatus,
-        loading: isProcessingPayment,
-        error: paymentError
-    } = usePayment()
 
     // Safe escorts array
     const safeEscorts = Array.isArray(escorts) ? escorts : []
@@ -195,88 +181,17 @@ export default function HookupPage() {
         tier: escort.tier ?? null,
         isNew: escort.isNew || false,
         rating: escort.rating || 4.5,
-        price: pricing?.unlockEscortFee ?? 0,
-        // The listing reports contactLocked; escorts on any plan are free
-        isUnlocked: !(escort as any).contactLocked,
-        hasDirectCall: !(escort as any).contactLocked,
+        // Contact details are free for every escort, free accounts included
+        hasDirectCall: true,
         services: escort.services || [],
     };
     })
-
-    // Handle unlock action
-    const handleUnlock = (profileId: string) => {
-        const profile = profiles.find(p => p.id === profileId)
-        if (profile && !profile.isUnlocked && !profile.isVip) {
-            setSelectedProfileId(profileId)
-            setShowPaymentModal(true)
-        }
-    }
 
     // Handle view contact/profile
     const handleCall = (profileId: string) => {
         const profile = profiles.find(p => p.id === profileId)
         if (profile) {
             window.location.href = `/escorts/${profileId}`
-        }
-    }
-
-    // Handle M-Pesa payment
-    const handlePayment = async () => {
-        if (!mpesaPhone.trim()) {
-            alert('Please enter your M-Pesa phone number')
-            return
-        }
-
-        if (!selectedProfileId) {
-            return
-        }
-
-        const result = await unlockEscort(selectedProfileId, mpesaPhone)
-
-        if (result.success && result.data?.paymentId) {
-            // STK push was sent, now poll for payment status
-            const paymentId = result.data.paymentId
-            let attempts = 0
-            const maxAttempts = 30 // Poll for up to 60 seconds (every 2 seconds)
-
-            const pollPaymentStatus = async () => {
-                attempts++
-                try {
-                    const statusResult = await checkPaymentStatus(paymentId, mpesaPhone)
-                    const status = statusResult.data?.status
-
-                    if (status === 'COMPLETED') {
-                        setShowPaymentModal(false)
-                        setSelectedProfileId(null)
-                        setMpesaPhone('')
-                        alert('Payment successful! Contact unlocked.')
-                        refetch()
-                        return
-                    } else if (status === 'FAILED') {
-                        alert('Payment failed. Please try again.')
-                        return
-                    } else if (attempts < maxAttempts) {
-                        // Still pending, continue polling
-                        setTimeout(pollPaymentStatus, 2000)
-                    } else {
-                        // Timeout - payment still pending
-                        alert('Payment is still processing. Please refresh the page in a few moments to check if payment was successful.')
-                        setShowPaymentModal(false)
-                        setSelectedProfileId(null)
-                        setMpesaPhone('')
-                    }
-                } catch (err) {
-                    console.error('Error checking payment status:', err)
-                    if (attempts < maxAttempts) {
-                        setTimeout(pollPaymentStatus, 2000)
-                    }
-                }
-            }
-
-            // Start polling after a short delay to give user time to complete
-            setTimeout(pollPaymentStatus, 3000)
-        } else {
-            alert(result.error || 'Payment failed. Please try again.')
         }
     }
 
@@ -534,9 +449,9 @@ export default function HookupPage() {
                         <div className="sticky top-[280px] space-y-4">
                             {/* Premium Ad Banner */}
                             <div className="bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl p-6 text-white">
-                                <h3 className="text-xl font-bold mb-2">Go Premium</h3>
+                                <h3 className="text-xl font-bold mb-2">Try LoveBite Dating</h3>
                                 <p className="text-sm mb-4 text-white/90">
-                                    Unlock unlimited access to all profiles
+                                    Meet people near you looking for something real
                                 </p>
                                 <Link href="/auth/signup/dating">
                                     <button className="w-full bg-white text-rose-600 font-semibold py-2 rounded-lg hover:bg-rose-50 transition-colors">
@@ -593,8 +508,8 @@ export default function HookupPage() {
                                                     {TIER_STYLES[tier].label}
                                                 </span>
                                             ) : (
-                                                <span className="px-3 py-1 rounded-full text-sm font-bold bg-gray-700 text-gray-200">
-                                                    More escorts
+                                                <span className={`px-3 py-1 rounded-full text-sm font-bold ${FREE_TIER_STYLE.badge}`}>
+                                                    {FREE_TIER_STYLE.label}
                                                 </span>
                                             )}
                                             <span className="text-sm text-gray-400">{items.length}</span>
@@ -605,7 +520,6 @@ export default function HookupPage() {
                                                 <EscortCard
                                                     key={profile.id}
                                                     profile={profile}
-                                                    onUnlock={handleUnlock}
                                                     onCall={handleCall}
                                                 />
                                             ))}
@@ -623,123 +537,6 @@ export default function HookupPage() {
                 </div>
             </main>
 
-            {/* M-Pesa Payment Modal */}
-            {showPaymentModal && selectedProfileId && (
-                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-                    <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold text-white">Unlock Escort</h2>
-                            <button
-                                onClick={() => {
-                                    setShowPaymentModal(false)
-                                    setMpesaPhone('')
-                                    setSelectedProfileId(null)
-                                }}
-                                className="text-gray-400 hover:text-gray-200"
-                                disabled={isProcessingPayment}
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-
-                        <div className="mb-6">
-                            <div className="flex items-center gap-3 mb-4">
-                                <img
-                                    src={profiles.find(p => p.id === selectedProfileId)?.photos[0]}
-                                    alt={profiles.find(p => p.id === selectedProfileId)?.name}
-                                    className="w-16 h-16 rounded-lg object-cover"
-                                />
-                                <div>
-                                    <p className="text-white font-semibold">
-                                        {profiles.find(p => p.id === selectedProfileId)?.name}
-                                    </p>
-                                    <p className="text-sm text-gray-400">
-                                        Age {profiles.find(p => p.id === selectedProfileId)?.age}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="bg-pink-500/20 border border-pink-500/30 p-4 rounded-lg text-center mb-4">
-                                <span className="text-white font-bold text-3xl">{unlockFeeLabel}</span>
-                                <p className="text-sm text-gray-300 mt-1">One-time unlock fee</p>
-                            </div>
-
-                            <div className="bg-gray-700/50 p-3 rounded-lg mb-4">
-                                <p className="text-sm text-gray-300 mb-2">
-                                    ✓ View full contact information
-                                </p>
-                                <p className="text-sm text-gray-300 mb-2">
-                                    ✓ Direct phone number access
-                                </p>
-                                <p className="text-sm text-gray-300">
-                                    ✓ Permanent access to profile
-                                </p>
-                            </div>
-
-                            {paymentError && (
-                                <div className="bg-red-500/20 border border-red-500/30 p-3 rounded-lg mb-4">
-                                    <p className="text-sm text-red-300">{paymentError}</p>
-                                </div>
-                            )}
-
-                            <p className="text-sm text-gray-400 mb-4">
-                                Enter your M-Pesa phone number. You'll receive a prompt to complete payment.
-                            </p>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">
-                                    M-Pesa Phone Number *
-                                </label>
-                                <input
-                                    type="tel"
-                                    value={mpesaPhone}
-                                    onChange={(e) => setMpesaPhone(e.target.value)}
-                                    placeholder="254712345678"
-                                    disabled={isProcessingPayment}
-                                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:opacity-50"
-                                />
-                                <p className="text-xs text-gray-400 mt-1">Format: 254XXXXXXXXX (no spaces or +)</p>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => {
-                                    setShowPaymentModal(false)
-                                    setMpesaPhone('')
-                                    setSelectedProfileId(null)
-                                }}
-                                disabled={isProcessingPayment}
-                                className="flex-1 px-4 py-3 border border-gray-600 text-gray-200 rounded-lg hover:bg-gray-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handlePayment}
-                                disabled={isProcessingPayment || !pricing || !mpesaPhone.trim()}
-                                className="flex-1 px-4 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            >
-                                {isProcessingPayment ? (
-                                    <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        <span>Processing...</span>
-                                    </>
-                                ) : (
-                                    <span>Pay {unlockFeeLabel}</span>
-                                )}
-                            </button>
-                        </div>
-
-                        {isProcessingPayment && (
-                            <div className="mt-4 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
-                                <p className="text-sm text-blue-300 text-center">
-                                    Check your phone for M-Pesa prompt...
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
         </div>
     )
 }

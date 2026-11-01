@@ -15,6 +15,8 @@ import type { User, Escort, Subscription, WalletSummary, ReferralCode } from '@/
 import { getImageUrl } from '@/lib/utils/image'
 import EscortPaywall from '@/app/components/common/EscortPaywall'
 import AccountDangerZone from '@/app/components/account/AccountDangerZone'
+import { getPublicDisplayName } from '@/lib/utils/display-name'
+import ShareProfileCard from '@/app/components/escort/ShareProfileCard'
 
 // Subscription plan details
 const SUBSCRIPTION_PLANS = {
@@ -211,8 +213,12 @@ function EscortPageContent() {
                         endDate: escortData.vipExpiresAt,
                         autoRenew: false
                     } as Subscription)
+                } else if (planStatus) {
+                    // An escort with no plan is on the free account, not an
+                    // expired one; /users/subscription describes dating plans
+                    setSubscription(null)
                 } else {
-                    // No VIP subscription - try to get from subscription response
+                    // Plan status unavailable - fall back to the subscription response
                     setSubscription(subscriptionResponse ? unwrap(subscriptionResponse.data) : null)
                 }
             } else {
@@ -689,9 +695,9 @@ function EscortPageContent() {
                                 <Sparkles className="w-7 h-7" />
                             </div>
                             <div className="flex-1">
-                                <h3 className="font-bold text-xl mb-1">Boost Your Visibility!</h3>
+                                <h3 className="font-bold text-xl mb-1">You&apos;re on the Free plan</h3>
                                 <p className="text-purple-100">
-                                    Subscribe to get more views, more clients, and earn more money. VIP members earn 3x more!
+                                    Your profile and contact details are visible in the Free section, below paid escorts. Subscribe to move up the listing and get more clients.
                                 </p>
                             </div>
                             <Link
@@ -836,6 +842,10 @@ function EscortPageContent() {
                             </div>
                         </div>
                     </div>
+                )}
+
+                {profile?.id && (
+                    <ShareProfileCard escortId={profile.id} name={getPublicDisplayName(profile, profile.user)} />
                 )}
 
                 {/* Profile Content */}
@@ -1129,7 +1139,7 @@ function EscortPageContent() {
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                        This number will be shown to clients after unlock
+                                        Clients see this number on your profile
                                     </p>
                                 </div>
                             </div>
